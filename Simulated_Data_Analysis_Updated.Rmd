@@ -125,7 +125,7 @@ my_table <- function(data, pca, plsda){
 ## Create Function to Generate Data
 This code chunk creates the function `sim.vcov()` which generates a dataset where we can tune signal, noise, discriminating variables, strength of signal, and strength of discriminating variables. I'm using the notation `n` for number of observations and `p` for number of variables. `sim.vcov()` requires the following arguments:
 
-- `p_noise`: how many variables with covariance = 0?
+- `p_noise`: how many variables with covariance = 0.001?
 - `p_signal`: how many variables with some covariance (covariance = `cov_signal`)?
 - `p_disc`: how many discriminating variables?
 - `cov_signal`: the covariance for the variables with non-zero covariance.
@@ -136,14 +136,6 @@ This code chunk creates the function `sim.vcov()` which generates a dataset wher
 *Note: I took a slightly different approach.  Instead of creating one variance-covariance matrix for the whole dataset, I generate each type of variable (noise, signal, discriminating) separately and bind the columns together.*
 
 ```{r}
-# p_noise = 10
-# p_signal = 0
-# p_disc = 5
-# cov_signal = 0.5
-# diff_disc = 1
-# N = 20
-# seed = 100
-
 sim.vcov <- function(p_noise,
                      p_signal,
                      p_disc,
@@ -157,7 +149,7 @@ sim.vcov <- function(p_noise,
   }
   # make noise data
   if(p_noise > 0){
-  S_noise <- matrix(rep(0, p_noise^2), ncol = p_noise)
+  S_noise <- matrix(rep(0.001, p_noise^2), ncol = p_noise)
   diag(S_noise) <- 1
   set.seed(seed)
   data_noise <- mvrnorm(n = N, Sigma = S_noise, mu = rep(0, p_noise)) %>%
@@ -207,7 +199,8 @@ sim.vcov <- function(p_noise,
 # Set global options
 I'll set a few global options here to make it easier to play around with the simulation
 ```{r global options}
-N = 20 #total observations
+N = 20 #total number of observations
+P = 40 #total number of variables
 signal.prop = 0.25 #when there is signal, what proportion of variables are signal
 cov_signal = 0.5 #covariance for signal variables
 disc.prop = 0.25 #when there are discriminating variables, what proportion
@@ -216,16 +209,15 @@ nperm = 100 #how many perumutations
 seed = 100 #seed
 
 #calculated values
-p_signal = round(N*signal.prop)
-p_disc = round(N*disc.prop)
+p_signal = round(P*signal.prop)
+p_disc = round(P*disc.prop)
 ```
-
 
 
 # 1. No Covariance, No Discrimination
 ## Generate data
 ```{r}
-sim.data1 <- sim.vcov(p_noise = N,
+sim.data1 <- sim.vcov(p_noise = P,
                       p_signal = 0,
                       p_disc = 0,
                       cov_signal = 0,
@@ -273,7 +265,7 @@ my_table(sim.data1, sim.pca1, sim.plsda1) %>% arrange(desc(VIP))
 First, make a bunch of datasets with the same parameters
 ```{r}
 sim.data1.list <- map(1:nperm,
-    ~sim.vcov(p_noise = N,
+    ~sim.vcov(p_noise = P,
               p_signal = 0,
               p_disc = 0,
               cov_signal = 0,
@@ -282,18 +274,18 @@ sim.data1.list <- map(1:nperm,
               seed = NA))
 ```
 
-Now, do PCA on all of them and get loadings.
+Now, do PCA on all of them and get scores
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 pca.data1.list <- map(sim.data1.list, ~opls(select(., -group), plotL = FALSE))
-loadings.data1.list <- map(pca.data1.list, get_loadings)
+#loadings.data1.list <- map(pca.data1.list, get_loadings)
+scores.data1.list <- map(pca.data1.list, ~get_plotdata(.) %>% .$plot_data)
 ```
 
 Now do t-tests on all of them along PCs 1 and 2 and get p-values
 ```{r}
 #The 'group' variable is the same in all datasets.
 grouping <- sim.data1.list[[1]]$group
-
-p1.testresults <- loadings.data1.list %>%
+p1.testresults <- scores.data1.list %>%
   #maps t.test() function to all dataframes and converts output into dataframe with tidy()
   map_df(~t.test(.$p1 ~ grouping) %>% tidy()) %>% 
   #selects just columns of interest
@@ -301,7 +293,7 @@ p1.testresults <- loadings.data1.list %>%
          PC1.t = "statistic",
          PC1.p.value = "p.value")
 
-p2.testresults <- loadings.data1.list %>%
+p2.testresults <- scores.data1.list %>%
   map_df(~t.test(.$p2 ~ grouping) %>% tidy()) %>%
   select(PC2.effect.size = "estimate",
          PC2.t = "statistic",
@@ -342,7 +334,7 @@ p1
 ## Generate Data:
 ```{r}
 set.seed(100)
-sim.data2 <- sim.vcov(p_noise = N - p_signal,
+sim.data2 <- sim.vcov(p_noise = P - p_signal,
                       p_signal = p_signal,
                       p_disc = 0,
                       cov_signal = cov_signal,
@@ -390,7 +382,7 @@ my_table(sim.data2, sim.pca2, sim.plsda2) %>% arrange(desc(VIP))
 First, make a bunch of datasets with the same parameters
 ```{r}
 sim.data2.list <- map(1:nperm,
-                      ~sim.vcov(p_noise = N - p_signal,
+                      ~sim.vcov(p_noise = P - p_signal,
                                 p_signal = p_signal,
                                 p_disc = 0,
                                 cov_signal = cov_signal,
@@ -402,7 +394,8 @@ sim.data2.list <- map(1:nperm,
 Now, do PCA on all of them and get loadings.
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 pca.data2.list <- map(sim.data2.list, ~opls(select(., -group), plotL = FALSE))
-loadings.data2.list <- map(pca.data2.list, get_loadings)
+#loadings.data2.list <- map(pca.data2.list, get_loadings)
+scores.data2.list <- map(pca.data2.list, ~get_plotdata(.) %>% .$plot_data)
 ```
 
 Now do t-tests on all of them along PCs 1 and 2 and get p-values
@@ -410,7 +403,7 @@ Now do t-tests on all of them along PCs 1 and 2 and get p-values
 #The 'group' variable is the same in all datasets.
 grouping <- sim.data2.list[[1]]$group
 
-p1.testresults <- loadings.data2.list %>%
+p1.testresults <- scores.data2.list %>%
   #maps t.test() function to all dataframes and converts output into dataframe with tidy()
   map_df(~t.test(.$p1~grouping) %>% tidy()) %>% 
   #selects just columns of interest
@@ -418,7 +411,7 @@ p1.testresults <- loadings.data2.list %>%
          PC1.t = "statistic",
          PC1.p.value = "p.value")
 
-p2.testresults <- loadings.data2.list %>%
+p2.testresults <- scores.data2.list %>%
   map_df(~t.test(.$p2~grouping) %>% tidy()) %>%
   select(PC2.effect.size = "estimate",
          PC2.t = "statistic",
@@ -457,7 +450,7 @@ p2
 ## Generate Data:
 ```{r}
 set.seed(100)
-sim.data3 <- sim.vcov(p_noise = N - p_disc,
+sim.data3 <- sim.vcov(p_noise = P - p_disc,
                       p_signal = 0,
                       p_disc = p_disc,
                       cov_signal = cov_signal,
@@ -506,7 +499,7 @@ my_table(sim.data3, sim.pca3, sim.plsda3) %>% arrange(desc(VIP))
 First, make a bunch of datasets with the same parameters
 ```{r}
 sim.data3.list <- map(1:nperm,
-                      ~sim.vcov(p_noise = N - p_disc,
+                      ~sim.vcov(p_noise = P - p_disc,
                                 p_signal = 0,
                                 p_disc = p_disc,
                                 cov_signal = 0,
@@ -518,7 +511,8 @@ sim.data3.list <- map(1:nperm,
 Now, do PCA on all of them and get loadings.
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 pca.data3.list <- map(sim.data3.list, ~opls(select(., -group), plotL = FALSE))
-loadings.data3.list <- map(pca.data3.list, get_loadings)
+# loadings.data3.list <- map(pca.data3.list, get_loadings)
+scores.data3.list <- map(pca.data3.list, ~get_plotdata(.) %>% .$plot_data)
 ```
 
 Now do t-tests on all of them along PCs 1 and 2 and get p-values
@@ -526,7 +520,7 @@ Now do t-tests on all of them along PCs 1 and 2 and get p-values
 #The 'group' variable is the same in all datasets.
 grouping <- sim.data3.list[[1]]$group
 
-p1.testresults <- loadings.data3.list %>%
+p1.testresults <- scores.data3.list %>%
   #maps t.test() function to all dataframes and converts output into dataframe with tidy()
   map_df(~t.test(.$p1~grouping) %>% tidy()) %>% 
   #selects just columns of interest
@@ -534,7 +528,7 @@ p1.testresults <- loadings.data3.list %>%
          PC1.t = "statistic",
          PC1.p.value = "p.value")
 
-p2.testresults <- loadings.data3.list %>%
+p2.testresults <- scores.data3.list %>%
   map_df(~t.test(.$p2~grouping) %>% tidy()) %>%
   select(PC2.effect.size = "estimate",
          PC2.t = "statistic",
@@ -572,7 +566,7 @@ p3
 # 4. Yes Covariance, Yes Discrimination
 ## Generate Data:
 ```{r}
-sim.data4 <- sim.vcov(p_noise = N - p_signal - p_disc,
+sim.data4 <- sim.vcov(p_noise = P - p_signal - p_disc,
                       p_signal = p_signal,
                       p_disc = p_disc,
                       cov_signal = cov_signal,
@@ -621,7 +615,7 @@ my_table(sim.data4, sim.pca4, sim.plsda4) %>% arrange(desc(VIP))
 First, make a bunch of datasets with the same parameters
 ```{r}
 sim.data4.list <- map(1:nperm,
-                      ~sim.vcov(p_noise = N - p_signal - p_disc,
+                      ~sim.vcov(p_noise = P - p_signal - p_disc,
                                 p_signal = p_signal,
                                 p_disc = p_disc,
                                 cov_signal = cov_signal,
@@ -633,7 +627,8 @@ sim.data4.list <- map(1:nperm,
 Now, do PCA on all of them and get loadings.
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 pca.data4.list <- map(sim.data4.list, ~opls(select(., -group), plotL = FALSE))
-loadings.data4.list <- map(pca.data4.list, get_loadings)
+# loadings.data4.list <- map(pca.data4.list, get_loadings)
+scores.data4.list <- map(pca.data4.list, ~get_plotdata(.) %>% .$plot_data)
 ```
 
 Now do t-tests on all of them along PCs 1 and 2 and get p-values
@@ -641,7 +636,7 @@ Now do t-tests on all of them along PCs 1 and 2 and get p-values
 #The 'group' variable is the same in all datasets.
 grouping <- sim.data4.list[[1]]$group
 
-p1.testresults <- loadings.data4.list %>%
+p1.testresults <- scores.data4.list %>%
   #maps t.test() function to all dataframes and converts output into dataframe with tidy()
   map_df(~t.test(.$p1~grouping) %>% tidy()) %>% 
   #selects just columns of interest
@@ -649,7 +644,7 @@ p1.testresults <- loadings.data4.list %>%
          PC1.t = "statistic",
          PC1.p.value = "p.value")
 
-p2.testresults <- loadings.data4.list %>%
+p2.testresults <- scores.data4.list %>%
   map_df(~t.test(.$p2~grouping) %>% tidy()) %>%
   select(PC2.effect.size = "estimate",
          PC2.t = "statistic",
