@@ -125,7 +125,7 @@ my_table <- function(data, pca, plsda){
 ## Create Function to Generate Data
 This code chunk creates the function `sim.vcov()` which generates a dataset where we can tune signal, noise, discriminating variables, strength of signal, and strength of discriminating variables. I'm using the notation `n` for number of observations and `p` for number of variables. `sim.vcov()` requires the following arguments:
 
-- `p_noise`: how many variables with covariance = 0.001?
+- `p_noise`: how many variables with covariance = 0.01?
 - `p_signal`: how many variables with some covariance (covariance = `cov_signal`)?
 - `p_disc`: how many discriminating variables?
 - `cov_signal`: the covariance for the variables with non-zero covariance.
@@ -149,7 +149,7 @@ sim.vcov <- function(p_noise,
   }
   # make noise data
   if(p_noise > 0){
-  S_noise <- matrix(rep(0.001, p_noise^2), ncol = p_noise)
+  S_noise <- matrix(rep(0.01, p_noise^2), ncol = p_noise)
   diag(S_noise) <- 1
   set.seed(seed)
   data_noise <- mvrnorm(n = N, Sigma = S_noise, mu = rep(0, p_noise)) %>%
@@ -200,7 +200,7 @@ sim.vcov <- function(p_noise,
 I'll set a few global options here to make it easier to play around with the simulation
 ```{r global options}
 N = 20 #total number of observations
-P = 40 #total number of variables
+P = 20 #total number of variables
 signal.prop = 0.25 #when there is signal, what proportion of variables are signal
 cov_signal = 0.5 #covariance for signal variables
 disc.prop = 0.25 #when there are discriminating variables, what proportion
@@ -683,6 +683,12 @@ p4
 plots <- plot_grid(p1, p2, p3, p4, ncol = 2, nrow = 2)
 p.val_figure <- plot_grid(ggplot() + ggtitle("Distr. of p values from t-tests on PC1 (blue), PLS-DA (red), PERMANOVA (green)"), plots, ncol = 1, rel_heights = c(0.1, 1))
 p.val_figure
-#save_plot("figs/fig2.png", p.val_figure, ncol = 2, nrow = 2, base_aspect_ratio = 1.5)
+save_plot("figs/fig2.png", p.val_figure, ncol = 2, nrow = 2, base_aspect_ratio = 1.5)
 ```
 
+# Conclusions
+None of the methods give more false positives than they should---that is, no differences are found when there are no discriminating variables.
+
+PERMANOVA seems to perform the best in these simulations, followed by PLS-DA.  PCA is shit at finding separation when discriminating variables are a small portion of the total variables measured (needle in a haystack scenario).
+
+When covariance is added to the "haystack", or to both the "haystack" and the "needle", the performance of PERMANOVA drops, while the performance of PLS-DA remains about the same. I should play around with this in a separate notebook.
