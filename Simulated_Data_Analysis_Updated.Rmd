@@ -1,0 +1,693 @@
+---
+title: "Simulated Data Analyzed with PCA and PLS-DA"
+author: Eric R Scott
+output: 
+  html_notebook: 
+    code_folding: hide
+    highlight: haddock
+    theme: flatly
+    toc: yes
+    toc_float: yes
+---
+
+# Overview
+After discussion with Elizabeth we decided to create the following combination of datasets:
+
+1. Without signal (no covariance) and without discriminating variables.  We would predict poor PCA and no separation by PLS-DA
+2. With signal (covariance) and without discriminating variables.  We would expect good PCA (high % var explained), but no separation in PCA or PLS-DA
+3. Without signal (covariance) and **with** discriminating variables. We would expect poor PCA, but significant PLS-DA
+4. With signal **and** discriminating variables.  We would expect good PCA, but little separation in PCA space if only a few discriminating variables, but significant PLS-DA.
+
+I am consider making a Shiny app that allows you to tweak the parameters that generate the data and plots PCA and PLS-DA side-by-side.
+
+*Permutation testing:*
+What about using each of these 4 parameter combinations to create ~100 randomly generated datasets.  Then with each, I could do PCA followed by t-tests on the PC axes vs. PLS-DA to demonstrate which is better at detecting real separation in the data.  Maybe the cherry-picked figure is enough, but this would only be a few sentences in the manuscript and would be valuable I think.
+
+To-Do: Add MANNOVA or PERMANOVA to this
+
+# Setup
+## Load Packages
+```{r message=FALSE, warning=FALSE}
+# Required Packages
+library(MASS)
+library(tidyverse)
+library(ropls)
+library(chemhelper)
+#chemhelper contains custom functions for interfacing with ropls package in a friendlier way (and other things).  
+#Install with devtools::install_github("Aariq/chemhelper")
+library(cowplot) #for making and saving prettier plots
+library(broom) #for tidy(), which turns model output into dataframes
+library(vegan) #for PERMANOVA
+```
+
+## Create Custom Plotting Functions
+```{r}
+# Functions for plotting
+library(latex2exp)
+pca_plot <- function(pca.opls, group_var){
+  plotdata <- chemhelper::get_plotdata(pca.opls)
+  ggplot(plotdata$plot_data, aes(x = p1, y = p2, color = group_var)) +
+  geom_point() +
+  stat_ellipse() +
+  labs(x = paste0("PC1 (", plotdata$var_explained$R2X[1] * 100, "%)"),
+       y = paste0("PC2 (", plotdata$var_explained$R2X[2] * 100, "%)")) +
+  scale_colour_discrete("Group Membership") +
+  theme_bw() +
+  ggtitle("PCA") +
+    labs(caption = TeX(
+            paste0(nrow(plotdata$var_explained), " principal components;",
+                   "$R^2(cumulative) = ", max(plotdata$var_explained$`R2X(cum)`, "$"))))
+}
+
+plsda_plot <- function(plsda.opls){
+  plotdata <- chemhelper::get_plotdata(plsda.opls)
+  ggplot(plotdata$plot_data, aes(x = p1, y = p2, color = y1)) +
+  geom_point() +
+  stat_ellipse() +
+  labs(x = paste0("P1 (", plotdata$axis_stats$R2X[1] * 100, "%)"),
+       y = paste0("P2 (", plotdata$axis_stats$R2X[2] * 100, "%)")) +
+  scale_color_discrete("Group Membership") +
+  theme_bw() +
+  ggtitle("PLS-DA") +
+    labs(caption = TeX(
+    paste0("$R^{2}_{Y} = ", plotdata$model_stats$`R2Y(cum)`, "$; ",
+           "$Q^{2} = ", plotdata$model_stats$`Q2(cum)`, "$; ",
+           "$p_{Q^{2}} = ", plotdata$model_stats$pQ2, "$"),
+    output = "expression"))
+}
+
+oplsda_plot <- function(oplsda.opls){
+  plotdata <- chemhelper::get_plotdata(oplsda.opls)
+  ggplot(plotdata$plot_data, aes(x = p1, y = o1, color = y1)) +
+  geom_point() +
+  stat_ellipse() +
+  labs(x = paste0("Pred (", plotdata$axis_stats$R2X[1] * 100, "%)"),
+       y = paste0("Ortho (", plotdata$axis_stats$R2X[2] * 100, "%)")) +
+  scale_color_discrete("Group Membership") +
+  theme_bw() +
+  ggtitle("OPLS-DA") +
+    labs(caption = TeX(
+    paste0("$R^{2}_{Y}=", plotdata$model_stats$`R2Y(cum)`, "$; ",
+           "$Q^{2}=", plotdata$model_stats$`Q2(cum)`, "$; ",
+           "$p_{Q^{2}}=", plotdata$model_stats$pQ2, "$"),
+    output = "expression"))
+}
+```
+
+## Create Custom Summary Table Function
+```{r}
+my_table <- function(data, pca, plsda){
+  VIPs <- get_VIP(plsda)
+  
+  loadings_pls <- getLoadingMN(plsda) %>%
+    as.data.frame() %>%
+    rownames_to_column(var = "Variable") %>% 
+    rename(p1_loading = p1, p2_loading = p2)
+  
+  loadings_pca <- getLoadingMN(pca) %>%
+    as.data.frame() %>% 
+    rownames_to_column(var = "Variable") %>% 
+    select(Variable, PC1_loading = p1, PC2_loading = p2)
+  
+  t_tests <- data %>%
+    select(-group) %>%
+    map_df(~t.test(.~data$group)$p.value) %>%
+    gather(key = Variable, value = t_test_p.value)
+  
+  join1 <- full_join(VIPs, loadings_pls)
+  join2 <- full_join(join1, loadings_pca)
+  join3 <- full_join(join2, t_tests)
+  return(join3)
+}
+```
+
+
+## Create Function to Generate Data
+This code chunk creates the function `sim.vcov()` which generates a dataset where we can tune signal, noise, discriminating variables, strength of signal, and strength of discriminating variables. I'm using the notation `n` for number of observations and `p` for number of variables. `sim.vcov()` requires the following arguments:
+
+- `p_noise`: how many variables with covariance = 0?
+- `p_signal`: how many variables with some covariance (covariance = `cov_signal`)?
+- `p_disc`: how many discriminating variables?
+- `cov_signal`: the covariance for the variables with non-zero covariance.
+- `diff_disc`: the difference in means for the discriminating variables between the two groups.
+- `N`: how many observations?
+- `seed`: passed to `set.seed()`
+
+*Note: I took a slightly different approach.  Instead of creating one variance-covariance matrix for the whole dataset, I generate each type of variable (noise, signal, discriminating) separately and bind the columns together.*
+
+```{r}
+# p_noise = 10
+# p_signal = 0
+# p_disc = 5
+# cov_signal = 0.5
+# diff_disc = 1
+# N = 20
+# seed = 100
+
+sim.vcov <- function(p_noise,
+                     p_signal,
+                     p_disc,
+                     cov_signal,
+                     diff_disc,
+                     N,
+                     seed = NA){
+  # Choose a random number for seed if none is supplied
+  if(is.na(seed)){
+    seed = as.integer(runif(1) * 10e6)
+  }
+  # make noise data
+  if(p_noise > 0){
+  S_noise <- matrix(rep(0, p_noise^2), ncol = p_noise)
+  diag(S_noise) <- 1
+  set.seed(seed)
+  data_noise <- mvrnorm(n = N, Sigma = S_noise, mu = rep(0, p_noise)) %>%
+    as.data.frame()
+  colnames(data_noise) <- paste0("noise_", 1:p_noise)
+  } else {data_noise <- list()}
+  
+  # make signal data
+  if(p_signal > 0){
+    S_signal <- matrix(rep(cov_signal, p_signal^2), ncol = p_signal)
+    diag(S_signal) <- 1
+    set.seed(seed)
+    data_signal <- mvrnorm(n = N, Sigma = S_signal, mu = rep(0, p_signal)) %>%
+      as.data.frame()
+    colnames(data_signal) <- paste0("signal_", 1:p_signal)
+  } else {data_signal <- list()}
+  
+  # make discriminating data
+  if(p_disc > 0){
+  S_disc <- matrix(rep(0, p_disc^2), ncol = p_disc)
+  diag(S_disc) <- 1
+  
+  # make data for group A
+  set.seed(seed)
+  means_A <- rep((diff_disc/2), p_disc)
+  data_A <- mvrnorm(n = N/2, mu = means_A, Sigma = S_disc) %>%
+    as.data.frame()
+  
+  # make data for group B
+  set.seed(seed+1)
+  means_B <- rep(-1*(diff_disc/2), p_disc)
+  data_B <- mvrnorm(n = N/2, mu = means_B, Sigma = S_disc) %>%
+    as.data.frame()
+  
+  data_disc <- bind_rows(data_A, data_B)
+  colnames(data_disc) <- paste0("disc_", 1:p_disc)
+  } else{data_disc <- list()}
+  
+  # column bind it all together
+  sim.data <- bind_cols(data_disc, data_signal, data_noise) %>%
+    add_column(group = rep(c("a","b"), each = N/2), .before = 1)
+  
+  return(sim.data)
+}
+```
+
+# Set global options
+I'll set a few global options here to make it easier to play around with the simulation
+```{r global options}
+N = 20 #total observations
+signal.prop = 0.25 #when there is signal, what proportion of variables are signal
+cov_signal = 0.5 #covariance for signal variables
+disc.prop = 0.25 #when there are discriminating variables, what proportion
+diff_disc = 1 #mean difference between groups for discriminating variables
+nperm = 100 #how many perumutations
+seed = 100 #seed
+
+#calculated values
+p_signal = round(N*signal.prop)
+p_disc = round(N*disc.prop)
+```
+
+
+
+# 1. No Covariance, No Discrimination
+## Generate data
+```{r}
+sim.data1 <- sim.vcov(p_noise = N,
+                      p_signal = 0,
+                      p_disc = 0,
+                      cov_signal = 0,
+                      diff_disc = 0,
+                      N = N,
+                      seed = seed)
+```
+
+## PCA & PLS-DA
+### Run PCA
+```{r}
+sim.pca1 <- opls(select(sim.data1, -group), plotL = FALSE)
+```
+### Run PLS-DA
+```{r}
+sim.plsda1 <- try(opls(select(sim.data1, -group), sim.data1$group,
+                  plotL = FALSE))
+```
+This fails, but I'll force two axes for the sake of plotting.
+```{r}
+## Must force axes
+sim.plsda1 <- opls(select(sim.data1, -group), sim.data1$group,
+                   predI = 2,
+                   permI = 200,
+                   plotL = FALSE)
+```
+## Plots:
+```{r message=FALSE, warning=FALSE}
+p1 <- plot_grid(pca_plot(sim.pca1, sim.data1$group) +
+                 theme(legend.position = "none") +
+                 ggtitle("PCA", subtitle = "No covariance, no discriminating variables"),
+               plsda_plot(sim.plsda1) +
+                 theme(legend.position = "none") +
+                 ggtitle("PLS-DA", subtitle = "No covariance, no discriminating variables"))
+p1
+```
+
+## Get PC axis loadings and VIP scores.
+Note: It's probably not very responsible to look at VIP scores from a PLS-DA model that is not significant
+```{r}
+my_table(sim.data1, sim.pca1, sim.plsda1) %>% arrange(desc(VIP))
+```
+
+## Permutation testing
+First, make a bunch of datasets with the same parameters
+```{r}
+sim.data1.list <- map(1:nperm,
+    ~sim.vcov(p_noise = N,
+              p_signal = 0,
+              p_disc = 0,
+              cov_signal = 0,
+              diff_disc = 0,
+              N = N,
+              seed = NA))
+```
+
+Now, do PCA on all of them and get loadings.
+```{r message=FALSE, warning=FALSE, include=FALSE}
+pca.data1.list <- map(sim.data1.list, ~opls(select(., -group), plotL = FALSE))
+loadings.data1.list <- map(pca.data1.list, get_loadings)
+```
+
+Now do t-tests on all of them along PCs 1 and 2 and get p-values
+```{r}
+#The 'group' variable is the same in all datasets.
+grouping <- sim.data1.list[[1]]$group
+
+p1.testresults <- loadings.data1.list %>%
+  #maps t.test() function to all dataframes and converts output into dataframe with tidy()
+  map_df(~t.test(.$p1 ~ grouping) %>% tidy()) %>% 
+  #selects just columns of interest
+  select(PC1.effect.size = "estimate",
+         PC1.t = "statistic",
+         PC1.p.value = "p.value")
+
+p2.testresults <- loadings.data1.list %>%
+  map_df(~t.test(.$p2 ~ grouping) %>% tidy()) %>%
+  select(PC2.effect.size = "estimate",
+         PC2.t = "statistic",
+         PC2.p.value = "p.value")
+
+data1.PCAresults <- bind_cols(p1.testresults, p2.testresults)
+```
+
+And do PERMANOVA on all of them
+```{r}
+data1.permanova <- map_dbl(sim.data1.list,
+    ~ adonis(select(., -group) ~ grouping, method = "eu")$aov.tab$`Pr(>F)`[1])
+```
+
+
+Now do PLS-DA on all of them and get p-values (this will take a long time)
+```{r include=FALSE}
+pls.data1.list <- map(sim.data1.list, ~opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE))
+```
+```{r message=FALSE, warning=FALSE}
+data1.PLSresults <- pls.data1.list %>% map_df(~get_plotdata(.)$model_stats)
+data1.PLSresults
+
+data1.comparison <- bind_cols(data1.PCAresults, data1.PLSresults, "permanova" = data1.permanova)
+
+p1 <- ggplot(data1.comparison) +
+  geom_density(aes(PC1.p.value), fill = "blue", alpha = 0.33) +
+  geom_density(aes(pQ2), fill = "red", alpha = 0.33) +
+  geom_density(aes(permanova), fill = "green", alpha = 0.33) +
+  labs(x = "p value") +
+  geom_vline(xintercept = 0.05, linetype = 5) +
+  ggtitle("1. -Covariance, -Discriminating variables")
+p1
+```
+
+
+# 2. Yes Covariance, No Discrimination
+## Generate Data:
+```{r}
+set.seed(100)
+sim.data2 <- sim.vcov(p_noise = N - p_signal,
+                      p_signal = p_signal,
+                      p_disc = 0,
+                      cov_signal = cov_signal,
+                      diff_disc = 0,
+                      N = N,
+                      seed = seed)
+```
+
+## PCA & PLS-DA
+### Run PCA
+```{r}
+sim.pca2 <- opls(select(sim.data2, -group), plotL = FALSE)
+```
+### Run PLS-DA
+```{r}
+sim.plsda2 <- try(opls(select(sim.data2, -group), sim.data2$group,
+                  plotL = FALSE))
+```
+This fails, but I'll force two axes for the sake of plotting.
+```{r}
+## Must force axes
+sim.plsda2 <- opls(select(sim.data2, -group), sim.data2$group,
+                   predI = 2,
+                   permI = 200, plotL = FALSE)
+```
+### Plots:
+```{r message=FALSE, warning=FALSE}
+p2 <- plot_grid(pca_plot(sim.pca2, sim.data2$group) +
+                 theme(legend.position = "none") +
+                 ggtitle("PCA", subtitle = "Yes covariance, no discriminating variables"),
+               plsda_plot(sim.plsda2) +
+                 theme(legend.position = "none") +
+                 ggtitle("PLS-DA", subtitle = "Yes covariance, no discriminating variables"))
+p2
+```
+PC1 slightly better, but overall R^2 the same. PLS-DA still not significant
+
+## Get PC axis loadings and VIP scores.
+Note: It's probably not responsible to look at VIP scores from a PLS-DA model that is not significant
+```{r}
+my_table(sim.data2, sim.pca2, sim.plsda2) %>% arrange(desc(VIP))
+```
+
+## Permutation testing
+First, make a bunch of datasets with the same parameters
+```{r}
+sim.data2.list <- map(1:nperm,
+                      ~sim.vcov(p_noise = N - p_signal,
+                                p_signal = p_signal,
+                                p_disc = 0,
+                                cov_signal = cov_signal,
+                                diff_disc = 0,
+                                N = N,
+                                seed = NA))
+```
+
+Now, do PCA on all of them and get loadings.
+```{r message=FALSE, warning=FALSE, include=FALSE}
+pca.data2.list <- map(sim.data2.list, ~opls(select(., -group), plotL = FALSE))
+loadings.data2.list <- map(pca.data2.list, get_loadings)
+```
+
+Now do t-tests on all of them along PCs 1 and 2 and get p-values
+```{r}
+#The 'group' variable is the same in all datasets.
+grouping <- sim.data2.list[[1]]$group
+
+p1.testresults <- loadings.data2.list %>%
+  #maps t.test() function to all dataframes and converts output into dataframe with tidy()
+  map_df(~t.test(.$p1~grouping) %>% tidy()) %>% 
+  #selects just columns of interest
+  select(PC1.effect.size = "estimate",
+         PC1.t = "statistic",
+         PC1.p.value = "p.value")
+
+p2.testresults <- loadings.data2.list %>%
+  map_df(~t.test(.$p2~grouping) %>% tidy()) %>%
+  select(PC2.effect.size = "estimate",
+         PC2.t = "statistic",
+         PC2.p.value = "p.value")
+
+data2.PCAresults <- bind_cols(p1.testresults, p2.testresults)
+```
+
+And do PERMANOVA on all of them
+```{r}
+data2.permanova <- map_dbl(sim.data2.list,
+    ~ adonis(select(., -group) ~ grouping, method = "eu")$aov.tab$`Pr(>F)`[1])
+```
+
+Now do PLS-DA on all of them and get p-values (this will take a long time)
+```{r include=FALSE}
+pls.data2.list <- map(sim.data2.list, ~opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE))
+```
+```{r message=FALSE, warning=FALSE}
+data2.PLSresults <- pls.data2.list %>% map_df(~get_plotdata(.)$model_stats)
+data2.PLSresults
+
+data2.comparison <- bind_cols(data2.PCAresults, data2.PLSresults, "permanova" = data2.permanova)
+
+p2 <- ggplot(data2.comparison) +
+  geom_density(aes(PC1.p.value), fill = "blue", alpha = 0.33) +
+  geom_density(aes(pQ2), fill = "red", alpha = 0.33) +
+  geom_density(aes(permanova), fill = "green", alpha = 0.33) +
+  labs(x = "p value") +
+  geom_vline(xintercept = 0.05, linetype = 5) +
+  ggtitle("2. + Covariance, - Discriminating variables")
+p2
+```
+
+# 3. No Covariance, Yes Discrimination
+## Generate Data:
+```{r}
+set.seed(100)
+sim.data3 <- sim.vcov(p_noise = N - p_disc,
+                      p_signal = 0,
+                      p_disc = p_disc,
+                      cov_signal = cov_signal,
+                      diff_disc = diff_disc,
+                      N = N,
+                      seed = seed)
+```
+
+## PCA & PLS-DA
+### Run PCA
+```{r}
+sim.pca3 <- opls(select(sim.data3, -group), plotL = FALSE)
+```
+### Run PLS-DA
+```{r}
+sim.plsda3 <- opls(select(sim.data3, -group), sim.data3$group,
+                   permI = 200,
+                   plotL = FALSE)
+```
+Single component model only, so force two axes for the sake of plotting:
+```{r}
+sim.plsda3 <- opls(select(sim.data3, -group), sim.data3$group,
+                   permI = 200,
+                   predI = 2,
+                   plotL = FALSE)
+```
+
+### Plots:
+```{r message=FALSE, warning=FALSE}
+p3 <- plot_grid(pca_plot(sim.pca3, sim.data3$group) +
+                 theme(legend.position = "none") +
+                 ggtitle("PCA", subtitle = "No covariance, yes discriminating variables"),
+               plsda_plot(sim.plsda3) +
+                 theme(legend.position = "none") +
+                 ggtitle("PLS-DA", subtitle = "No covariance, yes discriminating variables"))
+p3
+```
+PLS-DA is still not great.  Single component model is signifcant.  Forced 2 axes for PLS-DA plot.  It might be the case that some co-variance between discriminating variables is required for PLS-DA to pull them out.  If they are completely orthogonal, how can it draw the "regression line" through 5-dimensional space?
+
+## Get PC axis loadings and VIP scores.
+```{r}
+my_table(sim.data3, sim.pca3, sim.plsda3) %>% arrange(desc(VIP))
+```
+
+## Permutation testing
+First, make a bunch of datasets with the same parameters
+```{r}
+sim.data3.list <- map(1:nperm,
+                      ~sim.vcov(p_noise = N - p_disc,
+                                p_signal = 0,
+                                p_disc = p_disc,
+                                cov_signal = 0,
+                                diff_disc = diff_disc,
+                                N = N,
+                                seed = NA))
+```
+
+Now, do PCA on all of them and get loadings.
+```{r message=FALSE, warning=FALSE, include=FALSE}
+pca.data3.list <- map(sim.data3.list, ~opls(select(., -group), plotL = FALSE))
+loadings.data3.list <- map(pca.data3.list, get_loadings)
+```
+
+Now do t-tests on all of them along PCs 1 and 2 and get p-values
+```{r}
+#The 'group' variable is the same in all datasets.
+grouping <- sim.data3.list[[1]]$group
+
+p1.testresults <- loadings.data3.list %>%
+  #maps t.test() function to all dataframes and converts output into dataframe with tidy()
+  map_df(~t.test(.$p1~grouping) %>% tidy()) %>% 
+  #selects just columns of interest
+  select(PC1.effect.size = "estimate",
+         PC1.t = "statistic",
+         PC1.p.value = "p.value")
+
+p2.testresults <- loadings.data3.list %>%
+  map_df(~t.test(.$p2~grouping) %>% tidy()) %>%
+  select(PC2.effect.size = "estimate",
+         PC2.t = "statistic",
+         PC2.p.value = "p.value")
+
+data3.PCAresults <- bind_cols(p1.testresults, p2.testresults)
+```
+
+And do PERMANOVA on all of them
+```{r}
+data3.permanova <- map_dbl(sim.data3.list,
+    ~ adonis(select(., -group) ~ grouping, method = "eu")$aov.tab$`Pr(>F)`[1])
+```
+
+Now do PLS-DA on all of them and get p-values (this will take a long time)
+```{r include=FALSE}
+pls.data3.list <- map(sim.data3.list, ~opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE))
+```
+```{r message=FALSE, warning=FALSE}
+data3.PLSresults <- pls.data3.list %>% map_df(~get_plotdata(.)$model_stats)
+data3.PLSresults
+
+data3.comparison <- bind_cols(data3.PCAresults, data3.PLSresults, "permanova" = data3.permanova)
+
+p3 <- ggplot(data3.comparison) +
+  geom_density(aes(PC1.p.value), fill = "blue", alpha = 0.33) +
+  geom_density(aes(pQ2), fill = "red", alpha = 0.33) +
+  geom_density(aes(permanova), fill = "green", alpha = 0.33) +
+  labs(x = "p value") +
+  geom_vline(xintercept = 0.05, linetype = 5) +
+  ggtitle("3. - Covariance, + Discriminating variables")
+p3
+```
+
+# 4. Yes Covariance, Yes Discrimination
+## Generate Data:
+```{r}
+sim.data4 <- sim.vcov(p_noise = N - p_signal - p_disc,
+                      p_signal = p_signal,
+                      p_disc = p_disc,
+                      cov_signal = cov_signal,
+                      diff_disc = diff_disc,
+                      N = N,
+                      seed = seed)
+```
+
+## PCA & PLS-DA
+### Run PCA
+```{r}
+sim.pca4 <- opls(select(sim.data4, -group), plotL = FALSE)
+```
+### Run PLS-DA
+```{r}
+sim.plsda4 <- opls(select(sim.data4, -group), sim.data4$group,
+                   permI = 200,
+                   plotL = FALSE)
+```
+This produces a 1-component model.  I'll force two axes for the sake of plotting:
+```{r}
+sim.plsda4 <- opls(select(sim.data4, -group), sim.data4$group,
+                   permI = 200,
+                   predI = 2,
+                   plotL = FALSE)
+```
+
+### Plots:
+```{r message=FALSE, warning=FALSE}
+p4 <- plot_grid(pca_plot(sim.pca4, sim.data4$group) +
+                 theme(legend.position = "none") +
+                 ggtitle("PCA", subtitle = "Yes covariance, Yes discriminating variables"),
+               plsda_plot(sim.plsda4) +
+                 theme(legend.position = "none") +
+                 ggtitle("PLS-DA", subtitle = "Yes covariance, Yes discriminating variables"))
+p4
+```
+
+
+## Get PC axis loadings and VIP scores.
+```{r}
+my_table(sim.data4, sim.pca4, sim.plsda4) %>% arrange(desc(VIP))
+```
+
+## Permutation testing
+First, make a bunch of datasets with the same parameters
+```{r}
+sim.data4.list <- map(1:nperm,
+                      ~sim.vcov(p_noise = N - p_signal - p_disc,
+                                p_signal = p_signal,
+                                p_disc = p_disc,
+                                cov_signal = cov_signal,
+                                diff_disc = diff_disc,
+                                N = N,
+                                seed = NA))
+```
+
+Now, do PCA on all of them and get loadings.
+```{r message=FALSE, warning=FALSE, include=FALSE}
+pca.data4.list <- map(sim.data4.list, ~opls(select(., -group), plotL = FALSE))
+loadings.data4.list <- map(pca.data4.list, get_loadings)
+```
+
+Now do t-tests on all of them along PCs 1 and 2 and get p-values
+```{r}
+#The 'group' variable is the same in all datasets.
+grouping <- sim.data4.list[[1]]$group
+
+p1.testresults <- loadings.data4.list %>%
+  #maps t.test() function to all dataframes and converts output into dataframe with tidy()
+  map_df(~t.test(.$p1~grouping) %>% tidy()) %>% 
+  #selects just columns of interest
+  select(PC1.effect.size = "estimate",
+         PC1.t = "statistic",
+         PC1.p.value = "p.value")
+
+p2.testresults <- loadings.data4.list %>%
+  map_df(~t.test(.$p2~grouping) %>% tidy()) %>%
+  select(PC2.effect.size = "estimate",
+         PC2.t = "statistic",
+         PC2.p.value = "p.value")
+
+data4.PCAresults <- bind_cols(p1.testresults, p2.testresults)
+```
+
+And do PERMANOVA on all of them
+```{r}
+data4.permanova <- map_dbl(sim.data4.list,
+    ~ adonis(select(., -group) ~ grouping, method = "eu")$aov.tab$`Pr(>F)`[1])
+```
+
+Now do PLS-DA on all of them and get p-values (this will take a long time)
+```{r include=FALSE}
+pls.data4.list <- map(sim.data4.list, ~opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE))
+```
+```{r message=FALSE, warning=FALSE}
+data4.PLSresults <- pls.data4.list %>% map_df(~get_plotdata(.)$model_stats)
+data4.PLSresults
+
+data4.comparison <- bind_cols(data4.PCAresults, data4.PLSresults, "permanova" = data4.permanova)
+
+p4 <- ggplot(data4.comparison) +
+  geom_density(aes(PC1.p.value), fill = "blue", alpha = 0.33) +
+  geom_density(aes(pQ2), fill = "red", alpha = 0.33) +
+  geom_density(aes(permanova), fill = "green", alpha = 0.33) +
+  labs(x = "p value") +
+  geom_vline(xintercept = 0.05, linetype = 5) +
+  ggtitle("4. + Covariance, + Discriminating variables")
+p4
+```
+
+```{r}
+plots <- plot_grid(p1, p2, p3, p4, ncol = 2, nrow = 2)
+p.val_figure <- plot_grid(ggplot() + ggtitle("Distr. of p values from t-tests on PC1 (blue), PLS-DA (red), PERMANOVA (green)"), plots, ncol = 1, rel_heights = c(0.1, 1))
+p.val_figure
+#save_plot("figs/fig2.png", p.val_figure, ncol = 2, nrow = 2, base_aspect_ratio = 1.5)
+```
+
