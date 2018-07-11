@@ -101,9 +101,9 @@ nperm = 100 #how many perumutations
 
 #generate data
 sim.data.list <- map(1:nperm,
-                      ~sim.vcov(p_noise = 10,
-                                p_signal = 0,
-                                p_disc = 5,
+                      ~sim.vcov(p_noise = 0,
+                                p_signal = 5,
+                                p_disc = 15,
                                 cov_signal = 0.5,
                                 diff_disc = 1,
                                 cov_disc = 0.5,

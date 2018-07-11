@@ -1,0 +1,140 @@
+---
+title: "Fern Physiology and Morphology"
+output: html_notebook
+---
+# To-do:
+- Finish tidying all excel tabs
+- Make sure to retain plant_ID when appropriate
+- Figure out when its appropriate to join by plant_ID by reading the paper
+- Do some kind of analysis. Dependent variable = canopy transmittance (`canopy`)
+
+
+```{r}
+library(tidyverse)
+library(readxl)
+read_excel("SessaGivnishFEdata.xlsx")
+```
+oh my gosh these spreadsheets are *terrrrrrrrible*
+
+```{r}
+canopy <- read_excel("SessaGivnishFEdata.xlsx", col_names = FALSE, sheet = 1)
+```
+
+So basically we can eventually delete column 2, but it might be useful for parsing for now.
+```{r}
+canopy.tidy <- canopy %>% 
+  mutate(genus = ifelse(X__2 == "plant # ->", X__1, NA)) %>%
+  select(genus, everything()) %>% 
+  mutate(X__1 = ifelse(!is.na(genus), "plant_ID", X__1)) %>% 
+  fill(genus) %>% 
+  filter(X__1 == "Mean canopy:" | X__1 == "plant_ID") %>% 
+  select(-X__2) %>% 
+  gather(-genus, -X__1, key = colnum, value = canopy) %>% 
+  spread(key = X__1, value = canopy) %>% 
+  select(-colnum) %>%
+  rename(canopy = "Mean canopy:") %>% 
+  filter(!is.na(canopy)) %>% 
+  arrange(genus, plant_ID) %>% 
+  select(genus, plant_ID, canopy)
+
+genera <- canopy.tidy$genus %>% unique()
+genera <- c(genera, "Fragrans")
+```
+
+```{r}
+gas <- read_excel("SessaGivnishFEdata.xlsx", col_names = FALSE, sheet = 2, skip = 2)
+```
+```{r}
+gas.vars <- c("Amax", "R", "k", "ICP", "LCP", "Amax,mass", "Rmass", "gs (cond)")
+gas.tidy <- gas %>% 
+  mutate(genus = ifelse(X__1 %in% gas.vars, NA, X__1)) %>% 
+  select(genus, everything()) %>% 
+  mutate(X__1 = ifelse(X__1 %in% genera, "plant_ID", X__1)) %>% 
+  fill(genus) %>% 
+  select(-X__2, -X__3) %>% #this is the mean and SE
+  gather(-genus, -X__1, key = colnum, value = value) %>% 
+  filter(!is.na(X__1)) %>% 
+  spread(key = X__1, value = value) %>% 
+  select(-colnum) %>% 
+  filter(complete.cases(.)) %>% 
+  select(genus, plant_ID, everything()) %>% 
+  arrange(genus, plant_ID)
+```
+
+```{r}
+sla <- read_excel("SessaGivnishFEdata.xlsx", col_names = FALSE, sheet = 3, skip = 2)
+```
+
+```{r}
+sla.tidy <- sla %>% 
+  mutate(genus = ifelse(X__2 == "plant # ->", X__1, NA)) %>% 
+  select(genus, everything()) %>% 
+  fill(genus) %>% 
+  mutate(X__1 = ifelse(X__1 %in% genera, "plant_ID", X__1)) %>% 
+  filter(X__1 == "Mean SLA:" | X__1 == "plant_ID") %>% 
+  select(-X__2) %>% 
+  gather(-genus, -X__1, key = colnum, value = SLA) %>% 
+  filter(!is.na(SLA)) %>% 
+  spread(key = X__1, value = SLA) %>% 
+  rename(SLA = "Mean SLA:") %>% 
+  select(-colnum) %>% 
+  arrange(genus, plant_ID) %>% 
+  select(genus, plant_ID, SLA)
+```
+
+```{r}
+stomata <- read_excel("SessaGivnishFEdata.xlsx", col_names = FALSE, sheet = 4, skip = 2)
+```
+Ummm...I think you mean stomatal density, not SLA
+```{r}
+stomata.tidy <- stomata %>% 
+  mutate(genus = ifelse(X__2 == "plant # ->", X__1, NA)) %>% 
+  select(genus, everything()) %>% 
+  fill(genus) %>% 
+  filter(X__1 == "Mean SLA:") %>% 
+  select(-X__1, -X__2) %>% 
+  gather(-genus, key = plantno, value = stomatal_density) %>% 
+  select(-plantno) %>% 
+  filter(!is.na(stomatal_density)) %>% 
+  arrange(genus)
+```
+
+```{r}
+frond <- read_excel("SessaGivnishFEdata.xlsx", col_names = FALSE, sheet = 5, skip = 2)
+```
+```{r}
+genera <- gas.tidy$genus %>% unique()
+frond.tidy <- frond %>% 
+  mutate(genus = ifelse(X__1 %in% genera, X__1, NA)) %>% 
+  select(genus, everything()) %>% 
+  fill(genus) %>% 
+  filter(X__1 == "Mean length:" | X__1 == "Mean width:") %>% 
+  select(-X__2) %>% 
+  mutate(X__1 = case_when(X__1 == "Mean length:" ~ "length",
+                          X__1 == "Mean width:" ~ "width")) %>% 
+  gather(-genus, -X__1, key = plantno, value = value) %>% 
+  spread(key = X__1, value = value) %>% 
+  filter(complete.cases(.)) %>% 
+  select(-plantno) %>% 
+  mutate(frond.narrowness = length/width)
+```
+```{r}
+plant <- read_excel("SessaGivnishFEdata.xlsx", col_names = FALSE, sheet = 6, skip = 2)
+plant
+```
+```{r}
+plant %>% 
+  mutate(genus = ifelse(X__1 %in% genera, X__1, NA)) %>% 
+  select(genus, everything()) %>% 
+  fill(genus) %>% 
+  filter(X__1 == "Mean height:" | X__1 == "Mean width:") %>% 
+  select(-X__2) %>% 
+  mutate(X__1 = case_when(X__1 == "Mean height:" ~ "height",
+                          X__1 == "Mean width:" ~ "width")) %>% 
+  gather(-genus, -X__1, key = plantno, value = value) %>% 
+  spread(key = X__1, value = value) %>% 
+  filter(complete.cases(.)) %>% 
+  select(-plantno) %>% 
+  mutate(plant.narrowness = height/width)
+```
+
