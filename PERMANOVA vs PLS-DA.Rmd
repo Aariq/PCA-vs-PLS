@@ -5,6 +5,11 @@ output: html_notebook
 
 It seems like PERMANOVA is pretty good at doing discriminant analyses.  When is PLS-DA better, if ever?
 
+#To-Do:
+ - Try modifying function to allow for different variances between groups.  PERMANOVA is not robust to differences in variances between groups.  See how PLS-DA does.
+ 
+*Looks like both methods are sensitive to departures from homogeniety of variances.*
+
 # Setup
 ## Load packages
 ```{r message=FALSE, warning=FALSE}
@@ -32,12 +37,23 @@ This code chunk creates the function `sim.vcov()` which generates a dataset wher
 - `seed`: passed to `set.seed()`
 
 ```{r}
+# p_noise = 0
+# p_signal = 5
+# p_disc = 15
+# cov_signal = 0.5
+# diff_disc = 1
+# cov_disc = 0.5
+# group_vars = c(1,2)
+# N = 20
+# seed = NA
+
 sim.vcov <- function(p_noise,
                      p_signal,
                      p_disc,
                      cov_signal,
                      cov_disc,
                      diff_disc,
+                     group_vars,
                      N,
                      seed = NA){
   # Choose a random number for seed if none is supplied
@@ -57,25 +73,35 @@ sim.vcov <- function(p_noise,
   # make signal data
   if(p_signal > 0){
     S_signal <- matrix(rep(cov_signal, p_signal^2), ncol = p_signal)
-    diag(S_signal) <- 1
+    # diag(S_signal) <- 1
     set.seed(seed)
-    data_signal <- mvrnorm(n = N, Sigma = S_signal, mu = rep(0, p_signal)) %>%
-      as.data.frame()
-    colnames(data_signal) <- paste0("signal_", 1:p_signal)
+    # data_signal <- mvrnorm(n = N, Sigma = S_signal, mu = rep(0, p_signal)) %>%
+    #   as.data.frame()
+    S_signal_B <- S_signal_A <- S_signal
+   diag(S_signal_A) <- group_vars[1]
+   signal_A <- mvrnorm(n = N/2, Sigma = S_signal_A, mu = rep(0, p_signal)) %>% 
+     as.data.frame()
+   
+   diag(S_signal_B) <- group_vars[2]
+   signal_B <- mvrnorm(n = N/2, Sigma = S_signal_B, mu = rep(0, p_signal)) %>% 
+     as.data.frame()
+   data_signal <- bind_rows(signal_A, signal_B)
+   colnames(data_signal) <- paste0("signal_", 1:p_signal)
   } else {data_signal <- list()}
   
   # make discriminating data
   if(p_disc > 0){
   S_disc <- matrix(rep(cov_disc, p_disc^2), ncol = p_disc)
-  diag(S_disc) <- 1
   
   # make data for group A
+  diag(S_disc) <- group_vars[1]
   set.seed(seed)
   means_A <- rep((diff_disc/2), p_disc)
   data_A <- mvrnorm(n = N/2, mu = means_A, Sigma = S_disc) %>%
     as.data.frame()
   
   # make data for group B
+  diag(S_disc) <- group_vars[2]
   set.seed(seed+1)
   means_B <- rep(-1*(diff_disc/2), p_disc)
   data_B <- mvrnorm(n = N/2, mu = means_B, Sigma = S_disc) %>%
@@ -102,11 +128,12 @@ nperm = 100 #how many perumutations
 #generate data
 sim.data.list <- map(1:nperm,
                       ~sim.vcov(p_noise = 0,
-                                p_signal = 5,
-                                p_disc = 15,
+                                p_signal = 15,
+                                p_disc = 5,
                                 cov_signal = 0.5,
                                 diff_disc = 1,
                                 cov_disc = 0.5,
+                                group_vars = c(1,1),
                                 N = 20,
                                 seed = NA))
 ```
@@ -134,11 +161,12 @@ PLSresults
 ```{r}
 comparison <- bind_cols("permanova"= PERMANOVAresults, PLSresults)
 
-p <- ggplot(comparison) +
+p2 <- ggplot(comparison) +
   geom_density(aes(pQ2), fill = "red", alpha = 0.33) +
   geom_density(aes(permanova), fill = "green", alpha = 0.33) +
   labs(x = "p value") +
   geom_vline(xintercept = 0.05, linetype = 5) +
   ggtitle("Needle in a Haystack",subtitle="red = PLS-DA, green = PERMANOVA")
 p
+p2
 ```
