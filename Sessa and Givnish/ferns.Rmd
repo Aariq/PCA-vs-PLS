@@ -2,43 +2,53 @@
 title: "Fern Physiology and Morphology"
 output: html_notebook
 ---
-# To-do:
-- Finish tidying all excel tabs
-- Make sure to retain plant_ID when appropriate
-- Figure out when its appropriate to join by plant_ID by reading the paper
-- Do some kind of analysis. Dependent variable = canopy transmittance (`canopy`)
+Data from congeneric ferns growing under different levels of canopy cover.  The authors collected data on morphology (front shape, plant shape, frond angle, specific leaf are, stomatal density) and physiology (Li-COR).
+
+This dataset is great but unfortunate.  It's great in that there is a ton of data of different types! The bad part is that not every measurement was collected on the same plants.  Only some of the tabs of the spreadsheet contain plant IDs, and it's not clear from the publication whether they are the same or not.  The publication analyzes all datasets separately or uses species level means, so I'm guessing they're not the same individual plants.
+
+My conclusions basically match those of the paper, but only when I use data from individuals for the licor data only.  Putting all the species means into the PLS yields a non-significant model.
 
 
+# Load required packages
 ```{r}
 library(tidyverse)
 library(readxl)
-read_excel("SessaGivnishFEdata.xlsx")
+library(ropls)
+library(chemhelper)
 ```
-oh my gosh these spreadsheets are *terrrrrrrrible*
 
+
+# Wrangling
+The excel sheet the data are in is *terrible*.  This huge mess of code wrangles it into a useable format.  For each type of data I create a tidied version and a version with species means.
 ```{r}
 canopy <- read_excel("SessaGivnishFEdata.xlsx", col_names = FALSE, sheet = 1)
 ```
 
-So basically we can eventually delete column 2, but it might be useful for parsing for now.
 ```{r}
 canopy.tidy <- canopy %>% 
-  mutate(genus = ifelse(X__2 == "plant # ->", X__1, NA)) %>%
-  select(genus, everything()) %>% 
-  mutate(X__1 = ifelse(!is.na(genus), "plant_ID", X__1)) %>% 
-  fill(genus) %>% 
+  mutate(species = ifelse(X__2 == "plant # ->", X__1, NA)) %>%
+  select(species, everything()) %>% 
+  mutate(X__1 = ifelse(!is.na(species), "plant_ID", X__1)) %>% 
+  fill(species) %>% 
   filter(X__1 == "Mean canopy:" | X__1 == "plant_ID") %>% 
   select(-X__2) %>% 
-  gather(-genus, -X__1, key = colnum, value = canopy) %>% 
+  gather(-species, -X__1, key = colnum, value = canopy) %>% 
   spread(key = X__1, value = canopy) %>% 
   select(-colnum) %>%
   rename(canopy = "Mean canopy:") %>% 
   filter(!is.na(canopy)) %>% 
-  arrange(genus, plant_ID) %>% 
-  select(genus, plant_ID, canopy)
-
-genera <- canopy.tidy$genus %>% unique()
-genera <- c(genera, "Fragrans")
+  arrange(species, plant_ID) %>% 
+  select(species, plant_ID, canopy) %>% 
+  mutate(species = ifelse(species == "Fragrans**", "Fragrans", species))
+```
+```{r}
+all.species <- canopy.tidy$species %>% unique()
+all.species <- c(all.species, "Fragrans")
+```
+```{r}
+canopy.mean <- canopy.tidy %>%
+  group_by(species) %>% 
+  summarise(canopy = mean(canopy))
 ```
 
 ```{r}
@@ -47,18 +57,25 @@ gas <- read_excel("SessaGivnishFEdata.xlsx", col_names = FALSE, sheet = 2, skip 
 ```{r}
 gas.vars <- c("Amax", "R", "k", "ICP", "LCP", "Amax,mass", "Rmass", "gs (cond)")
 gas.tidy <- gas %>% 
-  mutate(genus = ifelse(X__1 %in% gas.vars, NA, X__1)) %>% 
-  select(genus, everything()) %>% 
-  mutate(X__1 = ifelse(X__1 %in% genera, "plant_ID", X__1)) %>% 
-  fill(genus) %>% 
+  mutate(species = ifelse(X__1 %in% gas.vars, NA, X__1)) %>% 
+  select(species, everything()) %>% 
+  mutate(X__1 = ifelse(X__1 %in% all.species, "plant_ID", X__1)) %>% 
+  fill(species) %>% 
   select(-X__2, -X__3) %>% #this is the mean and SE
-  gather(-genus, -X__1, key = colnum, value = value) %>% 
+  gather(-species, -X__1, key = colnum, value = value) %>% 
   filter(!is.na(X__1)) %>% 
   spread(key = X__1, value = value) %>% 
   select(-colnum) %>% 
   filter(complete.cases(.)) %>% 
-  select(genus, plant_ID, everything()) %>% 
-  arrange(genus, plant_ID)
+  select(species, plant_ID, everything()) %>% 
+  arrange(species, plant_ID)
+```
+```{r}
+gas.mean <- gas.tidy %>% 
+  group_by(species) %>% 
+  select(-plant_ID) %>% 
+  summarise_if(is.double, mean)
+gas.mean
 ```
 
 ```{r}
@@ -67,19 +84,24 @@ sla <- read_excel("SessaGivnishFEdata.xlsx", col_names = FALSE, sheet = 3, skip 
 
 ```{r}
 sla.tidy <- sla %>% 
-  mutate(genus = ifelse(X__2 == "plant # ->", X__1, NA)) %>% 
-  select(genus, everything()) %>% 
-  fill(genus) %>% 
-  mutate(X__1 = ifelse(X__1 %in% genera, "plant_ID", X__1)) %>% 
+  mutate(species = ifelse(X__2 == "plant # ->", X__1, NA)) %>% 
+  select(species, everything()) %>% 
+  fill(species) %>% 
+  mutate(X__1 = ifelse(X__1 %in% all.species, "plant_ID", X__1)) %>% 
   filter(X__1 == "Mean SLA:" | X__1 == "plant_ID") %>% 
   select(-X__2) %>% 
-  gather(-genus, -X__1, key = colnum, value = SLA) %>% 
+  gather(-species, -X__1, key = colnum, value = SLA) %>% 
   filter(!is.na(SLA)) %>% 
   spread(key = X__1, value = SLA) %>% 
   rename(SLA = "Mean SLA:") %>% 
   select(-colnum) %>% 
-  arrange(genus, plant_ID) %>% 
-  select(genus, plant_ID, SLA)
+  arrange(species, plant_ID) %>% 
+  select(species, plant_ID, SLA)
+```
+```{r}
+sla.mean <- sla.tidy %>% 
+  group_by(species) %>% 
+  summarise(SLA = mean(SLA))
 ```
 
 ```{r}
@@ -88,53 +110,128 @@ stomata <- read_excel("SessaGivnishFEdata.xlsx", col_names = FALSE, sheet = 4, s
 Ummm...I think you mean stomatal density, not SLA
 ```{r}
 stomata.tidy <- stomata %>% 
-  mutate(genus = ifelse(X__2 == "plant # ->", X__1, NA)) %>% 
-  select(genus, everything()) %>% 
-  fill(genus) %>% 
+  mutate(species = ifelse(X__2 == "plant # ->", X__1, NA)) %>% 
+  select(species, everything()) %>% 
+  fill(species) %>% 
   filter(X__1 == "Mean SLA:") %>% 
   select(-X__1, -X__2) %>% 
-  gather(-genus, key = plantno, value = stomatal_density) %>% 
+  gather(-species, key = plantno, value = stomatal_density) %>% 
   select(-plantno) %>% 
   filter(!is.na(stomatal_density)) %>% 
-  arrange(genus)
+  arrange(species)
+```
+```{r}
+stomata.mean <- stomata.tidy %>% 
+  group_by(species) %>% 
+  summarise(stomatal_density = mean(stomatal_density))
 ```
 
 ```{r}
 frond <- read_excel("SessaGivnishFEdata.xlsx", col_names = FALSE, sheet = 5, skip = 2)
 ```
 ```{r}
-genera <- gas.tidy$genus %>% unique()
+all.species <- gas.tidy$species %>% unique()
 frond.tidy <- frond %>% 
-  mutate(genus = ifelse(X__1 %in% genera, X__1, NA)) %>% 
-  select(genus, everything()) %>% 
-  fill(genus) %>% 
+  mutate(species = ifelse(X__1 %in% all.species, X__1, NA)) %>% 
+  select(species, everything()) %>% 
+  fill(species) %>% 
   filter(X__1 == "Mean length:" | X__1 == "Mean width:") %>% 
   select(-X__2) %>% 
-  mutate(X__1 = case_when(X__1 == "Mean length:" ~ "length",
-                          X__1 == "Mean width:" ~ "width")) %>% 
-  gather(-genus, -X__1, key = plantno, value = value) %>% 
+  mutate(X__1 = case_when(X__1 == "Mean length:" ~ "frond.length",
+                          X__1 == "Mean width:" ~ "frond.width")) %>% 
+  gather(-species, -X__1, key = plantno, value = value) %>% 
   spread(key = X__1, value = value) %>% 
   filter(complete.cases(.)) %>% 
   select(-plantno) %>% 
-  mutate(frond.narrowness = length/width)
+  mutate(frond.narrowness = frond.length/frond.width)
+```
+```{r}
+frond.mean <- frond.tidy %>% 
+  group_by(species) %>% 
+  summarise_if(is.double, mean)
 ```
 ```{r}
 plant <- read_excel("SessaGivnishFEdata.xlsx", col_names = FALSE, sheet = 6, skip = 2)
-plant
 ```
 ```{r}
-plant %>% 
-  mutate(genus = ifelse(X__1 %in% genera, X__1, NA)) %>% 
-  select(genus, everything()) %>% 
-  fill(genus) %>% 
+plant.tidy <- plant %>% 
+  mutate(species = ifelse(X__1 %in% all.species, X__1, NA)) %>% 
+  select(species, everything()) %>% 
+  fill(species) %>% 
   filter(X__1 == "Mean height:" | X__1 == "Mean width:") %>% 
   select(-X__2) %>% 
-  mutate(X__1 = case_when(X__1 == "Mean height:" ~ "height",
-                          X__1 == "Mean width:" ~ "width")) %>% 
-  gather(-genus, -X__1, key = plantno, value = value) %>% 
+  mutate(X__1 = case_when(X__1 == "Mean height:" ~ "plant.height",
+                          X__1 == "Mean width:" ~ "plant.width")) %>% 
+  gather(-species, -X__1, key = plantno, value = value) %>% 
   spread(key = X__1, value = value) %>% 
   filter(complete.cases(.)) %>% 
   select(-plantno) %>% 
-  mutate(plant.narrowness = height/width)
+  mutate(plant.narrowness = plant.height/plant.width)
+```
+```{r}
+plant.mean <- plant.tidy %>% 
+  group_by(species) %>% 
+  summarise_if(is.double, mean)
+```
+```{r}
+angle <- read_excel("SessaGivnishFEdata.xlsx", col_names = FALSE, sheet = 7, skip = 2)
+```
+```{r}
+angle.tidy <- angle %>% 
+  mutate(species = ifelse(X__1 %in% all.species, X__1, NA)) %>% 
+  select(species, everything()) %>% 
+  fill(species) %>% 
+  filter(X__1 == "Average:") %>% 
+  select(-X__2, -X__1) %>% 
+  gather(-species, key = colnum, value = angle) %>% 
+  select(-colnum) %>% 
+  filter(!is.na(angle)) %>% 
+  arrange(species)
+```
+```{r}
+angle.mean <- angle.tidy %>% 
+  group_by(species) %>% 
+  summarise(angle = mean(angle))
 ```
 
+# Merge into one table
+```{r}
+plsdata <- full_join(canopy.mean, angle.mean) %>%
+  full_join(frond.mean) %>%
+  full_join(plant.mean) %>%
+  full_join(gas.mean) %>%
+  full_join(sla.mean) %>% 
+  full_join(stomata.mean)
+```
+
+# PCA
+```{r}
+library(ropls)
+fern.pca <- opls(select(plsdata, -species, -canopy))
+```
+# PLS
+```{r}
+fern.pls <- opls(select(plsdata, -species, -canopy, -plant.height, -plant.width, -frond.length, -frond.width), plsdata$canopy)
+```
+Terrible.  No signal with all the types of data included.  Probably because species means used.
+
+# PLS on only licor data
+Within the `gas.tidy` dataframe there are multiple variables and more observations.  Let's see if PLS can make any sense of it.
+```{r}
+plsdata2 <- gas.tidy %>% full_join(canopy.mean)
+gas.pls <- opls(plsdata2 %>% select(-species, -canopy, -plant_ID), plsdata2$canopy,
+                predI = 1,
+                orthoI = NA,
+                permI = 200)
+```
+much less bad.  R^2 is low, but Q^2 is similar to R^2.  RMSEE is low, I think (still not sure what units are). P-value is low.
+
+# Conclusion
+```{r}
+gas.pls %>%
+  get_VIP() %>%
+  arrange(desc(VIP)) %>%
+  filter(VIP>1) %>% 
+  left_join(get_loadings(gas.pls))
+```
+As canopy cover increases, so does stomatal conductance and Amax, but Rmass goes down.
