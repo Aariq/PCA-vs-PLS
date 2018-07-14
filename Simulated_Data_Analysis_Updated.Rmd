@@ -9,6 +9,8 @@ output:
     toc: yes
     toc_float: yes
 ---
+# To-Do
+I made a safe version of opls() because I was getting errors randomly on some runs of this notebook.  That introduced the occasional `NULL` to lists of results (of PCA only, it seems).  That resulted in the PCA results and PLS results dataframes not having the same number of rows.  Buh..  Not sure how to fix, but basically if the PCA gives a NULL, I want to remove that dataframe from the list before doing PLS on it.
 
 # Overview
 After discussion with Elizabeth we decided to create the following combination of datasets:
@@ -47,50 +49,48 @@ library(latex2exp)
 pca_plot <- function(pca.opls, group_var){
   plotdata <- chemhelper::get_plotdata(pca.opls)
   ggplot(plotdata$plot_data, aes(x = p1, y = p2, color = group_var)) +
-  geom_point() +
-  stat_ellipse() +
-  labs(x = paste0("PC1 (", plotdata$var_explained$R2X[1] * 100, "%)"),
-       y = paste0("PC2 (", plotdata$var_explained$R2X[2] * 100, "%)")) +
-  scale_colour_discrete("Group Membership") +
-  theme_bw() +
-  ggtitle("PCA") +
+    geom_point() +
+    stat_ellipse() +
+    labs(x = paste0("PC1 (", plotdata$var_explained$R2X[1] * 100, "%)"),
+         y = paste0("PC2 (", plotdata$var_explained$R2X[2] * 100, "%)")) +
+    scale_colour_discrete("Group Membership") +
+    theme_bw() +
+    ggtitle("PCA") +
     labs(caption = TeX(
-            paste0(nrow(plotdata$var_explained), " principal components;",
-                   "$R^2(cumulative) = ", max(plotdata$var_explained$`R2X(cum)`, "$"))))
+      paste0(nrow(plotdata$var_explained), " principal components;",
+             "$R^2(cumulative) = ", max(plotdata$var_explained$`R2X(cum)`, "$"))))
 }
 
 plsda_plot <- function(plsda.opls){
   plotdata <- chemhelper::get_plotdata(plsda.opls)
   ggplot(plotdata$plot_data, aes(x = p1, y = p2, color = y1)) +
-  geom_point() +
-  stat_ellipse() +
-  labs(x = paste0("P1 (", plotdata$axis_stats$R2X[1] * 100, "%)"),
-       y = paste0("P2 (", plotdata$axis_stats$R2X[2] * 100, "%)")) +
-  scale_color_discrete("Group Membership") +
-  theme_bw() +
-  ggtitle("PLS-DA") +
+    geom_point() +
+    stat_ellipse() +
+    labs(x = paste0("P1 (", plotdata$axis_stats$R2X[1] * 100, "%)"),
+         y = paste0("P2 (", plotdata$axis_stats$R2X[2] * 100, "%)")) +
+    scale_color_discrete("Group Membership") +
+    theme_bw() +
+    ggtitle("PLS-DA") +
     labs(caption = TeX(
-    paste0("$R^{2}_{Y} = ", plotdata$model_stats$`R2Y(cum)`, "$; ",
-           "$Q^{2} = ", plotdata$model_stats$`Q2(cum)`, "$; ",
-           "$p_{Q^{2}} = ", plotdata$model_stats$pQ2, "$"),
-    output = "expression"))
+      paste0("$R^{2}_{Y} = ", plotdata$model_stats$`R2Y(cum)`, "$; ",
+             "$Q^{2} = ", plotdata$model_stats$`Q2(cum)`, "$; ",
+             "$p_{Q^{2}} = ", plotdata$model_stats$pQ2, "$")))
 }
 
 oplsda_plot <- function(oplsda.opls){
   plotdata <- chemhelper::get_plotdata(oplsda.opls)
   ggplot(plotdata$plot_data, aes(x = p1, y = o1, color = y1)) +
-  geom_point() +
-  stat_ellipse() +
-  labs(x = paste0("Pred (", plotdata$axis_stats$R2X[1] * 100, "%)"),
-       y = paste0("Ortho (", plotdata$axis_stats$R2X[2] * 100, "%)")) +
-  scale_color_discrete("Group Membership") +
-  theme_bw() +
-  ggtitle("OPLS-DA") +
+    geom_point() +
+    stat_ellipse() +
+    labs(x = paste0("Pred (", plotdata$axis_stats$R2X[1] * 100, "%)"),
+         y = paste0("Ortho (", plotdata$axis_stats$R2X[2] * 100, "%)")) +
+    scale_color_discrete("Group Membership") +
+    theme_bw() +
+    ggtitle("OPLS-DA") +
     labs(caption = TeX(
-    paste0("$R^{2}_{Y}=", plotdata$model_stats$`R2Y(cum)`, "$; ",
-           "$Q^{2}=", plotdata$model_stats$`Q2(cum)`, "$; ",
-           "$p_{Q^{2}}=", plotdata$model_stats$pQ2, "$"),
-    output = "expression"))
+      paste0("$R^{2}_{Y}=", plotdata$model_stats$`R2Y(cum)`, "$; ",
+             "$Q^{2}=", plotdata$model_stats$`Q2(cum)`, "$; ",
+             "$p_{Q^{2}}=", plotdata$model_stats$pQ2, "$")))
 }
 ```
 
@@ -196,11 +196,20 @@ sim.vcov <- function(p_noise,
 }
 ```
 
-# Set global options
-I'll set a few global options here to make it easier to play around with the simulation
+# Create safe version of opls()
+Occasionally I was getting 'matrix is singular' type errors from `opls()`, which I think is just a chance occurrance with the random data.  This "safe" version will always return `NULL` when there is any kind of error.
+```{r}
+safe.opls <- possibly(opls, otherwise = NULL)
+```
+
+
+# Set global options (needle in haystack scenario)
+I'll set a few global options here to make it easier to play around with the simulation.
+
+These options basically create a situation where when there are real differences between groups, it's only due to a small percentage of variables. Other variables can have mild covariation or none at all.
 ```{r global options}
 N = 20 #total number of observations
-P = 20 #total number of variables
+P = 40 #total number of variables
 signal.prop = 0.25 #when there is signal, what proportion of variables are signal
 cov_signal = 0.5 #covariance for signal variables
 disc.prop = 0.25 #when there are discriminating variables, what proportion
@@ -229,7 +238,7 @@ sim.data1 <- sim.vcov(p_noise = P,
 ## PCA & PLS-DA
 ### Run PCA
 ```{r}
-sim.pca1 <- opls(select(sim.data1, -group), plotL = FALSE)
+sim.pca1 <- safe.opls(select(sim.data1, -group), plotL = FALSE)
 ```
 ### Run PLS-DA
 ```{r}
@@ -276,7 +285,7 @@ sim.data1.list <- map(1:nperm,
 
 Now, do PCA on all of them and get scores
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-pca.data1.list <- map(sim.data1.list, ~opls(select(., -group), plotL = FALSE))
+pca.data1.list <- map(sim.data1.list, ~safe.opls(select(., -group), plotL = FALSE))
 #loadings.data1.list <- map(pca.data1.list, get_loadings)
 scores.data1.list <- map(pca.data1.list, ~get_plotdata(.) %>% .$plot_data)
 ```
@@ -311,7 +320,7 @@ data1.permanova <- map_dbl(sim.data1.list,
 
 Now do PLS-DA on all of them and get p-values (this will take a long time)
 ```{r include=FALSE}
-pls.data1.list <- map(sim.data1.list, ~opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE))
+pls.data1.list <- map(sim.data1.list, ~safe.opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE))
 ```
 ```{r message=FALSE, warning=FALSE}
 data1.PLSresults <- pls.data1.list %>% map_df(~get_plotdata(.)$model_stats)
@@ -319,14 +328,14 @@ data1.PLSresults
 
 data1.comparison <- bind_cols(data1.PCAresults, data1.PLSresults, "permanova" = data1.permanova)
 
-p1 <- ggplot(data1.comparison) +
+p1.perm <- ggplot(data1.comparison) +
   geom_density(aes(PC1.p.value), fill = "blue", alpha = 0.33) +
   geom_density(aes(pQ2), fill = "red", alpha = 0.33) +
   geom_density(aes(permanova), fill = "green", alpha = 0.33) +
   labs(x = "p value") +
   geom_vline(xintercept = 0.05, linetype = 5) +
   ggtitle("1. -Covariance, -Discriminating variables")
-p1
+p1.perm
 ```
 
 
@@ -393,7 +402,7 @@ sim.data2.list <- map(1:nperm,
 
 Now, do PCA on all of them and get loadings.
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-pca.data2.list <- map(sim.data2.list, ~opls(select(., -group), plotL = FALSE))
+pca.data2.list <- map(sim.data2.list, ~safe.opls(select(., -group), plotL = FALSE)) %>% compact()
 #loadings.data2.list <- map(pca.data2.list, get_loadings)
 scores.data2.list <- map(pca.data2.list, ~get_plotdata(.) %>% .$plot_data)
 ```
@@ -428,7 +437,7 @@ data2.permanova <- map_dbl(sim.data2.list,
 
 Now do PLS-DA on all of them and get p-values (this will take a long time)
 ```{r include=FALSE}
-pls.data2.list <- map(sim.data2.list, ~opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE))
+pls.data2.list <- map(sim.data2.list, ~safe.opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE)) %>% compact()
 ```
 ```{r message=FALSE, warning=FALSE}
 data2.PLSresults <- pls.data2.list %>% map_df(~get_plotdata(.)$model_stats)
@@ -436,14 +445,14 @@ data2.PLSresults
 
 data2.comparison <- bind_cols(data2.PCAresults, data2.PLSresults, "permanova" = data2.permanova)
 
-p2 <- ggplot(data2.comparison) +
+p2.perm <- ggplot(data2.comparison) +
   geom_density(aes(PC1.p.value), fill = "blue", alpha = 0.33) +
   geom_density(aes(pQ2), fill = "red", alpha = 0.33) +
   geom_density(aes(permanova), fill = "green", alpha = 0.33) +
   labs(x = "p value") +
   geom_vline(xintercept = 0.05, linetype = 5) +
   ggtitle("2. + Covariance, - Discriminating variables")
-p2
+p2.perm
 ```
 
 # 3. No Covariance, Yes Discrimination
@@ -510,7 +519,7 @@ sim.data3.list <- map(1:nperm,
 
 Now, do PCA on all of them and get loadings.
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-pca.data3.list <- map(sim.data3.list, ~opls(select(., -group), plotL = FALSE))
+pca.data3.list <- map(sim.data3.list, ~safe.opls(select(., -group), plotL = FALSE)) %>% compact()
 # loadings.data3.list <- map(pca.data3.list, get_loadings)
 scores.data3.list <- map(pca.data3.list, ~get_plotdata(.) %>% .$plot_data)
 ```
@@ -545,7 +554,7 @@ data3.permanova <- map_dbl(sim.data3.list,
 
 Now do PLS-DA on all of them and get p-values (this will take a long time)
 ```{r include=FALSE}
-pls.data3.list <- map(sim.data3.list, ~opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE))
+pls.data3.list <- map(sim.data3.list, ~safe.opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE)) %>% compact()
 ```
 ```{r message=FALSE, warning=FALSE}
 data3.PLSresults <- pls.data3.list %>% map_df(~get_plotdata(.)$model_stats)
@@ -553,14 +562,14 @@ data3.PLSresults
 
 data3.comparison <- bind_cols(data3.PCAresults, data3.PLSresults, "permanova" = data3.permanova)
 
-p3 <- ggplot(data3.comparison) +
+p3.perm <- ggplot(data3.comparison) +
   geom_density(aes(PC1.p.value), fill = "blue", alpha = 0.33) +
   geom_density(aes(pQ2), fill = "red", alpha = 0.33) +
   geom_density(aes(permanova), fill = "green", alpha = 0.33) +
   labs(x = "p value") +
   geom_vline(xintercept = 0.05, linetype = 5) +
   ggtitle("3. - Covariance, + Discriminating variables")
-p3
+p3.perm
 ```
 
 # 4. Yes Covariance, Yes Discrimination
@@ -626,7 +635,7 @@ sim.data4.list <- map(1:nperm,
 
 Now, do PCA on all of them and get loadings.
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-pca.data4.list <- map(sim.data4.list, ~opls(select(., -group), plotL = FALSE))
+pca.data4.list <- map(sim.data4.list, ~safe.opls(select(., -group), plotL = FALSE)) %>% compact()
 # loadings.data4.list <- map(pca.data4.list, get_loadings)
 scores.data4.list <- map(pca.data4.list, ~get_plotdata(.) %>% .$plot_data)
 ```
@@ -661,7 +670,7 @@ data4.permanova <- map_dbl(sim.data4.list,
 
 Now do PLS-DA on all of them and get p-values (this will take a long time)
 ```{r include=FALSE}
-pls.data4.list <- map(sim.data4.list, ~opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE))
+pls.data4.list <- map(sim.data4.list, ~safe.opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE)) %>% compact()
 ```
 ```{r message=FALSE, warning=FALSE}
 data4.PLSresults <- pls.data4.list %>% map_df(~get_plotdata(.)$model_stats)
@@ -669,19 +678,27 @@ data4.PLSresults
 
 data4.comparison <- bind_cols(data4.PCAresults, data4.PLSresults, "permanova" = data4.permanova)
 
-p4 <- ggplot(data4.comparison) +
+p4.perm <- ggplot(data4.comparison) +
   geom_density(aes(PC1.p.value), fill = "blue", alpha = 0.33) +
   geom_density(aes(pQ2), fill = "red", alpha = 0.33) +
   geom_density(aes(permanova), fill = "green", alpha = 0.33) +
   labs(x = "p value") +
   geom_vline(xintercept = 0.05, linetype = 5) +
   ggtitle("4. + Covariance, + Discriminating variables")
-p4
+p4.perm
 ```
 
+# Plot example datasets
 ```{r}
-plots <- plot_grid(p1, p2, p3, p4, ncol = 2, nrow = 2)
-p.val_figure <- plot_grid(ggplot() + ggtitle("Distr. of p values from t-tests on PC1 (blue), PLS-DA (red), PERMANOVA (green)"), plots, ncol = 1, rel_heights = c(0.1, 1))
+plots <- plot_grid(p1,p2,p3,p4, ncol = 1, nrow = 4)
+save_plot("figs/fig1.png", plots, ncol = 2, nrow = 4, base_aspect_ratio = 1, base_height = 3.5)
+```
+
+
+# Plot permutation testing results
+```{r}
+plots.perm <- plot_grid(p1.perm, p2.perm, p3.perm, p4.perm, ncol = 2, nrow = 2)
+p.val_figure <- plot_grid(ggplot() + ggtitle("Distr. of p values from t-tests on PC1 (blue), PLS-DA (red), PERMANOVA (green)"), plots.perm, ncol = 1, rel_heights = c(0.1, 1))
 p.val_figure
 save_plot("figs/fig2.png", p.val_figure, ncol = 2, nrow = 2, base_aspect_ratio = 1.5)
 ```
