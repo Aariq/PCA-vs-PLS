@@ -9,8 +9,6 @@ output:
     toc: yes
     toc_float: yes
 ---
-# To-Do
-I made a safe version of opls() because I was getting errors randomly on some runs of this notebook.  That introduced the occasional `NULL` to lists of results (of PCA only, it seems).  That resulted in the PCA results and PLS results dataframes not having the same number of rows.  Buh..  Not sure how to fix, but basically if the PCA gives a NULL, I want to remove that dataframe from the list before doing PLS on it.
 
 # Overview
 After discussion with Elizabeth we decided to create the following combination of datasets:
@@ -149,7 +147,7 @@ sim.vcov <- function(p_noise,
   }
   # make noise data
   if(p_noise > 0){
-  S_noise <- matrix(rep(0.01, p_noise^2), ncol = p_noise)
+  S_noise <- matrix(rep(0.05, p_noise^2), ncol = p_noise)
   diag(S_noise) <- 1
   set.seed(seed)
   data_noise <- mvrnorm(n = N, Sigma = S_noise, mu = rep(0, p_noise)) %>%
@@ -209,7 +207,7 @@ I'll set a few global options here to make it easier to play around with the sim
 These options basically create a situation where when there are real differences between groups, it's only due to a small percentage of variables. Other variables can have mild covariation or none at all.
 ```{r global options}
 N = 20 #total number of observations
-P = 40 #total number of variables
+P = 30 #total number of variables
 signal.prop = 0.25 #when there is signal, what proportion of variables are signal
 cov_signal = 0.5 #covariance for signal variables
 disc.prop = 0.25 #when there are discriminating variables, what proportion
@@ -238,7 +236,7 @@ sim.data1 <- sim.vcov(p_noise = P,
 ## PCA & PLS-DA
 ### Run PCA
 ```{r}
-sim.pca1 <- safe.opls(select(sim.data1, -group), plotL = FALSE)
+sim.pca1 <- opls(select(sim.data1, -group), plotL = FALSE)
 ```
 ### Run PLS-DA
 ```{r}
@@ -281,12 +279,14 @@ sim.data1.list <- map(1:nperm,
               diff_disc = 0,
               N = N,
               seed = NA))
+names(sim.data1.list) <- 1:nperm
 ```
 
 Now, do PCA on all of them and get scores
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-pca.data1.list <- map(sim.data1.list, ~safe.opls(select(., -group), plotL = FALSE))
-#loadings.data1.list <- map(pca.data1.list, get_loadings)
+pca.data1.list <- map(sim.data1.list,
+                      ~safe.opls(select(., -group), plotL = FALSE)) %>% compact()
+
 scores.data1.list <- map(pca.data1.list, ~get_plotdata(.) %>% .$plot_data)
 ```
 
@@ -294,17 +294,20 @@ Now do t-tests on all of them along PCs 1 and 2 and get p-values
 ```{r}
 #The 'group' variable is the same in all datasets.
 grouping <- sim.data1.list[[1]]$group
+
 p1.testresults <- scores.data1.list %>%
   #maps t.test() function to all dataframes and converts output into dataframe with tidy()
-  map_df(~t.test(.$p1 ~ grouping) %>% tidy()) %>% 
+  map_dfr(~t.test(.$p1 ~ grouping) %>% tidy(), .id = "dataset") %>% 
   #selects just columns of interest
-  select(PC1.effect.size = "estimate",
+  select(dataset,
+         PC1.effect.size = "estimate",
          PC1.t = "statistic",
          PC1.p.value = "p.value")
 
 p2.testresults <- scores.data1.list %>%
-  map_df(~t.test(.$p2 ~ grouping) %>% tidy()) %>%
-  select(PC2.effect.size = "estimate",
+  map_dfr(~t.test(.$p2 ~ grouping) %>% tidy(), .id = "dataset") %>%
+  select(dataset,
+         PC2.effect.size = "estimate",
          PC2.t = "statistic",
          PC2.p.value = "p.value")
 
@@ -320,13 +323,15 @@ data1.permanova <- map_dbl(sim.data1.list,
 
 Now do PLS-DA on all of them and get p-values (this will take a long time)
 ```{r include=FALSE}
-pls.data1.list <- map(sim.data1.list, ~safe.opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE))
+pls.data1.list <- map(sim.data1.list,
+                      ~safe.opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE))
 ```
 ```{r message=FALSE, warning=FALSE}
-data1.PLSresults <- pls.data1.list %>% map_df(~get_plotdata(.)$model_stats)
-data1.PLSresults
+data1.PLSresults <- pls.data1.list %>%
+  map_dfr(~get_plotdata(.)$model_stats, .id = "dataset")
 
-data1.comparison <- bind_cols(data1.PCAresults, data1.PLSresults, "permanova" = data1.permanova)
+
+data1.comparison <- full_join(data1.PCAresults, data1.PLSresults) %>% add_column("permanova" = data1.permanova)
 
 p1.perm <- ggplot(data1.comparison) +
   geom_density(aes(PC1.p.value), fill = "blue", alpha = 0.33) +
@@ -398,12 +403,14 @@ sim.data2.list <- map(1:nperm,
                                 diff_disc = 0,
                                 N = N,
                                 seed = NA))
+names(sim.data2.list) <- 1:nperm
 ```
 
 Now, do PCA on all of them and get loadings.
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-pca.data2.list <- map(sim.data2.list, ~safe.opls(select(., -group), plotL = FALSE)) %>% compact()
-#loadings.data2.list <- map(pca.data2.list, get_loadings)
+pca.data2.list <- map(sim.data2.list,
+                      ~safe.opls(select(., -group), plotL = FALSE)) %>% compact()
+
 scores.data2.list <- map(pca.data2.list, ~get_plotdata(.) %>% .$plot_data)
 ```
 
@@ -414,15 +421,17 @@ grouping <- sim.data2.list[[1]]$group
 
 p1.testresults <- scores.data2.list %>%
   #maps t.test() function to all dataframes and converts output into dataframe with tidy()
-  map_df(~t.test(.$p1~grouping) %>% tidy()) %>% 
+  map_dfr(~t.test(.$p1~grouping) %>% tidy(), .id = "dataset") %>% 
   #selects just columns of interest
-  select(PC1.effect.size = "estimate",
+  select(dataset,
+         PC1.effect.size = "estimate",
          PC1.t = "statistic",
          PC1.p.value = "p.value")
 
 p2.testresults <- scores.data2.list %>%
-  map_df(~t.test(.$p2~grouping) %>% tidy()) %>%
-  select(PC2.effect.size = "estimate",
+  map_dfr(~t.test(.$p2~grouping) %>% tidy(), .id = "dataset") %>%
+  select(dataset,
+         PC2.effect.size = "estimate",
          PC2.t = "statistic",
          PC2.p.value = "p.value")
 
@@ -437,13 +446,15 @@ data2.permanova <- map_dbl(sim.data2.list,
 
 Now do PLS-DA on all of them and get p-values (this will take a long time)
 ```{r include=FALSE}
-pls.data2.list <- map(sim.data2.list, ~safe.opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE)) %>% compact()
+pls.data2.list <- map(sim.data2.list,
+                      ~safe.opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE)) %>% compact()
 ```
 ```{r message=FALSE, warning=FALSE}
-data2.PLSresults <- pls.data2.list %>% map_df(~get_plotdata(.)$model_stats)
+data2.PLSresults <- pls.data2.list %>% map_dfr(~get_plotdata(.)$model_stats, .id = "dataset")
 data2.PLSresults
 
-data2.comparison <- bind_cols(data2.PCAresults, data2.PLSresults, "permanova" = data2.permanova)
+data2.comparison <- full_join(data2.PCAresults, data2.PLSresults) %>%
+  add_column("permanova" = data2.permanova)
 
 p2.perm <- ggplot(data2.comparison) +
   geom_density(aes(PC1.p.value), fill = "blue", alpha = 0.33) +
@@ -519,8 +530,11 @@ sim.data3.list <- map(1:nperm,
 
 Now, do PCA on all of them and get loadings.
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-pca.data3.list <- map(sim.data3.list, ~safe.opls(select(., -group), plotL = FALSE)) %>% compact()
-# loadings.data3.list <- map(pca.data3.list, get_loadings)
+pca.data3.list <- map(sim.data3.list,
+                      ~safe.opls(select(., -group), plotL = FALSE)) %>%
+  compact() %>%
+  set_names(1:nperm)
+
 scores.data3.list <- map(pca.data3.list, ~get_plotdata(.) %>% .$plot_data)
 ```
 
@@ -531,15 +545,17 @@ grouping <- sim.data3.list[[1]]$group
 
 p1.testresults <- scores.data3.list %>%
   #maps t.test() function to all dataframes and converts output into dataframe with tidy()
-  map_df(~t.test(.$p1~grouping) %>% tidy()) %>% 
+  map_dfr(~t.test(.$p1~grouping) %>% tidy(), .id = "dataset") %>% 
   #selects just columns of interest
-  select(PC1.effect.size = "estimate",
+  select(dataset,
+         PC1.effect.size = "estimate",
          PC1.t = "statistic",
          PC1.p.value = "p.value")
 
 p2.testresults <- scores.data3.list %>%
-  map_df(~t.test(.$p2~grouping) %>% tidy()) %>%
-  select(PC2.effect.size = "estimate",
+  map_dfr(~t.test(.$p2~grouping) %>% tidy(), .id = "dataset") %>%
+  select(dataset,
+         PC2.effect.size = "estimate",
          PC2.t = "statistic",
          PC2.p.value = "p.value")
 
@@ -554,13 +570,14 @@ data3.permanova <- map_dbl(sim.data3.list,
 
 Now do PLS-DA on all of them and get p-values (this will take a long time)
 ```{r include=FALSE}
-pls.data3.list <- map(sim.data3.list, ~safe.opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE)) %>% compact()
+pls.data3.list <- map(sim.data3.list,
+                      ~safe.opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE)) %>% compact()
 ```
 ```{r message=FALSE, warning=FALSE}
-data3.PLSresults <- pls.data3.list %>% map_df(~get_plotdata(.)$model_stats)
+data3.PLSresults <- pls.data3.list %>% map_dfr(~get_plotdata(.)$model_stats, .id = "dataset")
 data3.PLSresults
 
-data3.comparison <- bind_cols(data3.PCAresults, data3.PLSresults, "permanova" = data3.permanova)
+data3.comparison <- full_join(data3.PCAresults, data3.PLSresults) %>% add_column("permanova" = data3.permanova)
 
 p3.perm <- ggplot(data3.comparison) +
   geom_density(aes(PC1.p.value), fill = "blue", alpha = 0.33) +
@@ -630,13 +647,15 @@ sim.data4.list <- map(1:nperm,
                                 cov_signal = cov_signal,
                                 diff_disc = diff_disc,
                                 N = N,
-                                seed = NA))
+                                seed = NA)) %>% 
+  set_names(1:nperm)
 ```
 
 Now, do PCA on all of them and get loadings.
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-pca.data4.list <- map(sim.data4.list, ~safe.opls(select(., -group), plotL = FALSE)) %>% compact()
-# loadings.data4.list <- map(pca.data4.list, get_loadings)
+pca.data4.list <- map(sim.data4.list,
+                      ~safe.opls(select(., -group), plotL = FALSE)) %>%
+  compact()
 scores.data4.list <- map(pca.data4.list, ~get_plotdata(.) %>% .$plot_data)
 ```
 
@@ -647,15 +666,17 @@ grouping <- sim.data4.list[[1]]$group
 
 p1.testresults <- scores.data4.list %>%
   #maps t.test() function to all dataframes and converts output into dataframe with tidy()
-  map_df(~t.test(.$p1~grouping) %>% tidy()) %>% 
+  map_dfr(~t.test(.$p1~grouping) %>% tidy(), .id = "dataset") %>% 
   #selects just columns of interest
-  select(PC1.effect.size = "estimate",
+  select(dataset,
+         PC1.effect.size = "estimate",
          PC1.t = "statistic",
          PC1.p.value = "p.value")
 
 p2.testresults <- scores.data4.list %>%
-  map_df(~t.test(.$p2~grouping) %>% tidy()) %>%
-  select(PC2.effect.size = "estimate",
+  map_dfr(~t.test(.$p2~grouping) %>% tidy(), .id = "dataset") %>%
+  select(dataset,
+         PC2.effect.size = "estimate",
          PC2.t = "statistic",
          PC2.p.value = "p.value")
 
@@ -670,13 +691,14 @@ data4.permanova <- map_dbl(sim.data4.list,
 
 Now do PLS-DA on all of them and get p-values (this will take a long time)
 ```{r include=FALSE}
-pls.data4.list <- map(sim.data4.list, ~safe.opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE)) %>% compact()
+pls.data4.list <- map(sim.data4.list,
+                      ~safe.opls(select(., -group), grouping, predI = 2, permI = 200, plotL = FALSE)) %>% compact()
 ```
 ```{r message=FALSE, warning=FALSE}
-data4.PLSresults <- pls.data4.list %>% map_df(~get_plotdata(.)$model_stats)
+data4.PLSresults <- pls.data4.list %>% map_dfr(~get_plotdata(.)$model_stats, .id = "dataset")
 data4.PLSresults
 
-data4.comparison <- bind_cols(data4.PCAresults, data4.PLSresults, "permanova" = data4.permanova)
+data4.comparison <- full_join(data4.PCAresults, data4.PLSresults) %>% add_column("permanova" = data4.permanova)
 
 p4.perm <- ggplot(data4.comparison) +
   geom_density(aes(PC1.p.value), fill = "blue", alpha = 0.33) +
