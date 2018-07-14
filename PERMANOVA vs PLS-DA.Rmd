@@ -53,7 +53,7 @@ sim.vcov <- function(p_noise,
                      cov_signal,
                      cov_disc,
                      diff_disc,
-                     group_vars,
+                     group_vars = c(1, 1),
                      N,
                      seed = NA){
   # Choose a random number for seed if none is supplied
@@ -128,13 +128,12 @@ nperm = 100 #how many perumutations
 #generate data
 sim.data.list <- map(1:nperm,
                       ~sim.vcov(p_noise = 0,
-                                p_signal = 15,
-                                p_disc = 5,
+                                p_signal = 35,
+                                p_disc = 25,
                                 cov_signal = 0.5,
                                 diff_disc = 1,
                                 cov_disc = 0.5,
-                                group_vars = c(1,1),
-                                N = 20,
+                                N = 10,
                                 seed = NA))
 ```
 
@@ -161,12 +160,11 @@ PLSresults
 ```{r}
 comparison <- bind_cols("permanova"= PERMANOVAresults, PLSresults)
 
-p2 <- ggplot(comparison) +
+p <- ggplot(comparison) +
   geom_density(aes(pQ2), fill = "red", alpha = 0.33) +
   geom_density(aes(permanova), fill = "green", alpha = 0.33) +
   labs(x = "p value") +
   geom_vline(xintercept = 0.05, linetype = 5) +
   ggtitle("Needle in a Haystack",subtitle="red = PLS-DA, green = PERMANOVA")
 p
-p2
 ```

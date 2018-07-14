@@ -1,0 +1,50 @@
+---
+title: "Regression simulated data"
+output: html_notebook
+---
+
+# How to do?
+Basically I can use the pre-existing function and set discriminating variables to zero, add a few signal variables, and ramp the covariance up. Then I can pick one of the signal variables to use as the Y variable.  PLS regression should identify the other signal variables in the VIP analysis.
+
+
+
+##Create separate set of variables all correlated with eachother
+
+```{r}
+p_cor = 5
+p_uncor = 10
+n = 50
+
+S_cor <- matrix(0.9, nrow = p_cor, ncol = p_cor)
+diag(S_cor) <- 1
+
+corvars <- mvrnorm(n = n, mu = rep(0, p_cor), Sigma = S_cor)
+corvars.df <- corvars %>% as.data.frame() %>% rename_all(funs(paste0(., ".cor"))) %>%
+  rename(Y = V1.cor)
+
+S_uncor <- matrix(0.1, nrow = p_uncor, ncol = p_uncor)
+diag(S_uncor) <- 1
+
+uncorvars <- mvrnorm(n = n, mu = rep(0, p_uncor), Sigma = S_uncor)
+uncorvars.df <- uncorvars %>%
+  as.data.frame() %>%
+  rename_all(funs(paste0(., ".uncor"))) 
+
+df <- bind_cols(corvars.df, uncorvars.df)
+df
+
+plotdata <- df %>% 
+  gather(-Y, key = variable, value = data)
+
+ggplot(plotdata, aes(x = Y, y = data, color = variable)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+```
+```{r}
+library(ropls)
+library(chemhelper)
+test.pca <- opls(select(df, -Y))
+test.plsr <- opls(select(df, -Y), df$Y)
+get_VIP(test.plsr) %>% arrange(desc(VIP))
+```
+
