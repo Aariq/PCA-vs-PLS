@@ -6,9 +6,14 @@ output: html_notebook
 It seems like PERMANOVA is pretty good at doing discriminant analyses.  When is PLS-DA better, if ever?
 
 #To-Do:
- - Try modifying function to allow for different variances between groups.  PERMANOVA is not robust to differences in variances between groups.  See how PLS-DA does.
+ - ~~Try modifying function to allow for different variances between groups.  PERMANOVA is not robust to differences in variances between groups.  See how PLS-DA does.~~
+ *Looks like both methods are sensitive to departures from homogeniety of variances.*
+
+ - Test PLS-DA vs. PERMANOVA with the discriminating variables co-varying and not co-varying. PERMANOVA shoudl be about the same, but PLS-DA should be different because it accounts for co-varyation, right?  Check R^2X values
  
-*Looks like both methods are sensitive to departures from homogeniety of variances.*
+ - Do the above test with a different method of generating discriminating variables.
+ 
+ 
 
 # Setup
 ## Load packages
@@ -112,59 +117,141 @@ sim.vcov <- function(p_noise,
   } else{data_disc <- list()}
   
   # column bind it all together
-  sim.data <- bind_cols(data_disc, data_signal, data_noise) %>%
+  data1 <- bind_cols(data_disc, data_signal, data_noise) %>%
     add_column(group = rep(c("a","b"), each = N/2), .before = 1)
   
-  return(sim.data)
+  return(data1)
 }
 ```
 
-# Permutation Testing
+# 1. Discriminating variables don't co-vary
 ## Generate data
 First, make a bunch of datasets with the same parameters
 ```{r}
 nperm = 100 #how many perumutations
 
 #generate data
-sim.data.list <- map(1:nperm,
-                      ~sim.vcov(p_noise = 0,
-                                p_signal = 35,
-                                p_disc = 25,
-                                cov_signal = 0.5,
+data1.list <- map(1:nperm,
+                      ~sim.vcov(p_noise = 10,
+                                p_signal = 10,
+                                p_disc = 10,
+                                cov_signal = 0.2,
                                 diff_disc = 1,
-                                cov_disc = 0.5,
-                                N = 10,
+                                cov_disc = 0.2,
+                                N = 30,
                                 seed = NA))
+# data1.list[[1]]
 ```
 
-# PERMANOVA
+## PERMANOVA
 Do PERMANOVA on all of them
 ```{r}
-PERMANOVAresults <- map_dbl(sim.data.list,
+PERMANOVAresults1 <- map_dbl(data1.list,
     ~ adonis(select(., -group) ~ .$group, method = "eu")$aov.tab$`Pr(>F)`[1])
 ```
 
-# PLS-DA
+## PLS-DA
 Now do PLS-DA on all of them and get p-values (this will take a long time)
 ```{r include=FALSE}
-plsda.list <- map(sim.data.list, ~opls(select(., -group), .$group, predI = 2, permI = 200, plotL = FALSE))
+plsda1.list <- map(data1.list, ~opls(select(., -group), .$group, predI = 2, permI = 200, plotL = FALSE))
 ```
 
 And extract p-values
 ```{r message=FALSE, warning=FALSE}
-PLSresults <- plsda.list %>% map_df(~get_plotdata(.)$model_stats)
-PLSresults
+PLSresults1 <- plsda1.list %>% map_df(~get_plotdata(.)$model_stats)
+# PLSresults1
 ```
 
-# Plot Results
+## Plot Results
 ```{r}
-comparison <- bind_cols("permanova"= PERMANOVAresults, PLSresults)
+comparison1 <- bind_cols("permanova"= PERMANOVAresults1, PLSresults1)
 
-p <- ggplot(comparison) +
-  geom_density(aes(pQ2), fill = "red", alpha = 0.33) +
+p1.permanova <- ggplot(comparison1) +
   geom_density(aes(permanova), fill = "green", alpha = 0.33) +
   labs(x = "p value") +
   geom_vline(xintercept = 0.05, linetype = 5) +
-  ggtitle("Needle in a Haystack",subtitle="red = PLS-DA, green = PERMANOVA")
-p
+  ggtitle("PERMANOVA")
+# p1.permanova
+
+p1.plsda <- ggplot(comparison1) +
+  geom_density(aes(pQ2), fill = "red", alpha = 0.33) +
+  labs(x = "p value") +
+  geom_vline(xintercept = 0.05, linetype = 5) +
+  ggtitle("PLS-DA")
+# p1.plsda
+
+p1 <- plot_grid(p1.permanova, p1.plsda)
 ```
+
+# 2. Discriminating variables co-vary
+## Generate data
+First, make a bunch of datasets with the same parameters
+```{r}
+nperm = 100 #how many perumutations
+
+#generate data
+data2.list <- map(1:nperm,
+                      ~sim.vcov(p_noise = 10,
+                                p_signal = 10,
+                                p_disc = 10,
+                                cov_signal = 0.2,
+                                diff_disc = 1,
+                                cov_disc = 0.7,
+                                N = 30,
+                                seed = NA))
+# data2.list[[1]]
+```
+
+## PERMANOVA
+Do PERMANOVA on all of them
+```{r}
+PERMANOVAresults2 <- map_dbl(data2.list,
+    ~ adonis(select(., -group) ~ .$group, method = "eu")$aov.tab$`Pr(>F)`[1])
+```
+
+## PLS-DA
+Now do PLS-DA on all of them and get p-values (this will take a long time)
+```{r include=FALSE}
+plsda2.list <- map(data2.list, ~opls(select(., -group), .$group, predI = 2, permI = 200, plotL = FALSE))
+```
+
+And extract p-values
+```{r message=FALSE, warning=FALSE}
+PLSresults2 <- plsda2.list %>% map_df(~get_plotdata(.)$model_stats)
+PLSresults2
+```
+
+## Plot Results
+```{r}
+comparison2 <- bind_cols("permanova"= PERMANOVAresults2, PLSresults2)
+
+p2.permanova <- ggplot(comparison2) +
+  geom_density(aes(permanova), fill = "green", alpha = 0.33) +
+  labs(x = "p value") +
+  geom_vline(xintercept = 0.05, linetype = 5) +
+  ggtitle("PERMANOVA")
+# p2.permanova
+
+p2.plsda <- ggplot(comparison2) +
+  geom_density(aes(pQ2), fill = "red", alpha = 0.33) +
+  labs(x = "p value") +
+  geom_vline(xintercept = 0.05, linetype = 5) +
+  ggtitle("PLS-DA")
+# p2.plsda
+
+p2 <- plot_grid(p2.permanova, p2.plsda)
+```
+
+```{r}
+plot_grid(p1, p2, ncol = 1, labels = c("cov = 0.2", "cov = 0.7"))
+```
+
+```{r}
+comparison1 %>% 
+  summarise_all(mean) %>% bind_rows(
+comparison2 %>% 
+  summarise_all(mean)
+) %>% 
+  add_column(cov = c("0.2", "0.7") , .before = 1)
+```
+
