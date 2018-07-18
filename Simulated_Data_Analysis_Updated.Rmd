@@ -9,12 +9,9 @@ output:
     toc: yes
     toc_float: yes
 ---
+# To Do:
+- dont' force 2 axes on simulated data? (sometimes models fail though.  Would need to use a "safe" version of `opls()`)
 
-Right now the way I'm simulating data might not be terribly realistic. There is one chunk of variables with no covariance (that's ok); another chunk covaries with eachother, but not with the grouping variable (also imaginable); the third chunk of variables also covary within each group, but not neccesariliy with the grouping variable.  Instead, I've just changed the means (intercepts?) of the variables for each group.
-
-Maybe this is why PLS-DA is doing a poor job relative to PERMANOVA, and this data might not be terribly realistic (plot discriminating variables vs. group membership? vs one discriminating variable, color = group membership?).
-
-Another possibility would be to create three chunks again±—--one that doesn't covary, one that covaries, and a third that covaries. Then take that third chunk, pick one of the variables and make it the Y variable. Then I could use that for regression PLS.  *Or* I could take that Y variable, `arrange(Y)`, and then assign groups such that rows with high values for Y are group A and those with low values of Y are group B.  Then all the other discriminating variables should co-vary with group membership and distinguish between groups becasue they were all set up to covary with Y.  This might be a more realistic dataset?  It might also be a situation where PLS-DA performs better than PERMANOVA.
 
 # Overview
 After discussion with Elizabeth we decided to create the following combination of datasets:
@@ -39,11 +36,12 @@ library(MASS)
 library(tidyverse)
 library(ropls)
 library(chemhelper)
-#chemhelper contains custom functions for interfacing with ropls package in a friendlier way (and other things).  
+#chemhelper contains the sim_multvar() function I wrote as well as custom functions for interfacing with ropls package in a friendlier way.  
 #Install with devtools::install_github("Aariq/chemhelper")
 library(cowplot) #for making and saving prettier plots
 library(broom) #for tidy(), which turns model output into dataframes
 library(vegan) #for PERMANOVA
+library(iheatmapr) #for correlation heatmaps
 ```
 
 ## Create Custom Plotting Functions
@@ -125,83 +123,6 @@ my_table <- function(data, pca, plsda){
 }
 ```
 
-
-## Create Function to Generate Data
-This code chunk creates the function `sim.vcov()` which generates a dataset where we can tune signal, noise, discriminating variables, strength of signal, and strength of discriminating variables. I'm using the notation `n` for number of observations and `p` for number of variables. `sim.vcov()` requires the following arguments:
-
-- `p_noise`: how many variables with covariance = 0.01?
-- `p_signal`: how many variables with some covariance (covariance = `cov_signal`)?
-- `p_disc`: how many discriminating variables?
-- `cov_signal`: the covariance for the variables with non-zero covariance.
-- `diff_disc`: the difference in means for the discriminating variables between the two groups.
-- `N`: how many observations?
-- `seed`: passed to `set.seed()`
-
-*Note: I took a slightly different approach.  Instead of creating one variance-covariance matrix for the whole dataset, I generate each type of variable (noise, signal, discriminating) separately and bind the columns together.*
-
-```{r}
-sim.vcov <- function(p_noise,
-                     p_signal,
-                     p_disc,
-                     cov_signal,
-                     cov_disc = 0,
-                     diff_disc,
-                     var = 0.5,
-                     N,
-                     seed = NA){
-  # Choose a random number for seed if none is supplied
-  if(is.na(seed)){
-    seed = as.integer(runif(1) * 10e6)
-  }
-  # make noise data
-  if(p_noise > 0){
-  S_noise <- matrix(rep(0.05, p_noise^2), ncol = p_noise)
-  diag(S_noise) <- var
-  set.seed(seed)
-  data_noise <- mvrnorm(n = N, Sigma = S_noise, mu = rep(0, p_noise)) %>%
-    as.data.frame()
-  colnames(data_noise) <- paste0("noise_", 1:p_noise)
-  } else {data_noise <- list()}
-  
-  # make signal data
-  if(p_signal > 0){
-    S_signal <- matrix(rep(cov_signal, p_signal^2), ncol = p_signal)
-    diag(S_signal) <- var
-    set.seed(seed)
-    data_signal <- mvrnorm(n = N, Sigma = S_signal, mu = rep(0, p_signal)) %>%
-      as.data.frame()
-    colnames(data_signal) <- paste0("signal_", 1:p_signal)
-  } else {data_signal <- list()}
-  
-  # make discriminating data
-  if(p_disc > 0){
-  S_disc <- matrix(rep(cov_disc, p_disc^2), ncol = p_disc)
-  diag(S_disc) <- var
-  
-  # make data for group A
-  set.seed(seed)
-  means_A <- rep((diff_disc/2), p_disc)
-  data_A <- mvrnorm(n = N/2, mu = means_A, Sigma = S_disc) %>%
-    as.data.frame()
-  
-  # make data for group B
-  set.seed(seed+1)
-  means_B <- rep(-1*(diff_disc/2), p_disc)
-  data_B <- mvrnorm(n = N/2, mu = means_B, Sigma = S_disc) %>%
-    as.data.frame()
-  
-  data_disc <- bind_rows(data_A, data_B)
-  colnames(data_disc) <- paste0("disc_", 1:p_disc)
-  } else{data_disc <- list()}
-  
-  # column bind it all together
-  sim.data <- bind_cols(data_disc, data_signal, data_noise) %>%
-    add_column(group = rep(c("a","b"), each = N/2), .before = 1)
-  
-  return(sim.data)
-}
-```
-
 # Create safe version of opls()
 Occasionally I was getting 'matrix is singular' type errors from `opls()`, which I think is just a chance occurrance with the random data.  This "safe" version will always return `NULL` when there is any kind of error.
 ```{r}
@@ -214,31 +135,32 @@ I'll set a few global options here to make it easier to play around with the sim
 
 These options basically create a situation where when there are real differences between groups, it's only due to a small percentage of variables. Other variables can have mild covariation or none at all.
 ```{r global options}
-N = 20 #total number of observations
-P = 30 #total number of variables
-signal.prop = 0.25 #when there is signal, what proportion of variables are signal
-cov_signal = 0.25 #covariance for signal variables
-disc.prop = 0.5 #when there are discriminating variables, what proportion
-diff_disc = 1 #mean difference between groups for discriminating variables
-nperm = 100 #how many perumutations
+N = 30 #total number of observations
+P = 40 #total number of variables
+signal.prop = 0.625 #when there are correlated variables, what proportion?
+cov_corvar = 0.8 #covariance for signal variables
+disc.prop = 0.125 #when there are discriminating variables, what proportion?
+diff_discr = 1.2 #mean difference between groups for discriminating variables
+nperm = 50 #how many perumutations
 seed = 100 #seed
 
 #calculated values
-p_signal = round(P*signal.prop)
-p_disc = round(P*disc.prop)
+(p_corvar = round(P*signal.prop))
+(p_discr = round(P*disc.prop))
 ```
 
 
 # 1. No Covariance, No Discrimination
 ## Generate data
 ```{r}
-sim.data1 <- sim.vcov(p_noise = P,
-                      p_signal = 0,
-                      p_disc = 0,
-                      cov_signal = 0,
-                      diff_disc = 0,
+sim.data1 <- sim_multvar(p_uncorvar = P,
+                      p_corvar = 0,
+                      p_discr = 0,
+                      cov_corvar = 0,
+                      diff_discr = 0,
                       N = N,
                       seed = seed)
+sim.data1 %>% select(-group) %>% as.matrix() %>% cor() %>% iheatmap(row_labels = TRUE, col_labels = TRUE)
 ```
 
 ## PCA & PLS-DA
@@ -280,11 +202,11 @@ my_table(sim.data1, sim.pca1, sim.plsda1) %>% arrange(desc(VIP))
 First, make a bunch of datasets with the same parameters
 ```{r}
 sim.data1.list <- map(1:nperm,
-    ~sim.vcov(p_noise = P,
-              p_signal = 0,
-              p_disc = 0,
-              cov_signal = 0,
-              diff_disc = 0,
+    ~sim_multvar(p_uncorvar = P,
+              p_corvar = 0,
+              p_discr = 0,
+              cov_corvar = 0,
+              diff_discr = 0,
               N = N,
               seed = NA))
 names(sim.data1.list) <- 1:nperm
@@ -355,14 +277,15 @@ p1.perm
 # 2. Yes Covariance, No Discrimination
 ## Generate Data:
 ```{r}
-set.seed(100)
-sim.data2 <- sim.vcov(p_noise = P - p_signal,
-                      p_signal = p_signal,
-                      p_disc = 0,
-                      cov_signal = cov_signal,
-                      diff_disc = 0,
+sim.data2 <- sim_multvar(p_uncorvar = P - p_corvar,
+                      p_corvar = p_corvar,
+                      p_discr = 0,
+                      cov_corvar = cov_corvar,
+                      diff_discr = 0,
                       N = N,
                       seed = seed)
+
+sim.data2 %>% select(-group) %>% as.matrix() %>% cor() %>% iheatmap(row_labels = TRUE, col_labels = TRUE)
 ```
 
 ## PCA & PLS-DA
@@ -404,13 +327,13 @@ my_table(sim.data2, sim.pca2, sim.plsda2) %>% arrange(desc(VIP))
 First, make a bunch of datasets with the same parameters
 ```{r}
 sim.data2.list <- map(1:nperm,
-                      ~sim.vcov(p_noise = P - p_signal,
-                                p_signal = p_signal,
-                                p_disc = 0,
-                                cov_signal = cov_signal,
-                                diff_disc = 0,
-                                N = N,
-                                seed = NA))
+                      ~sim_multvar(p_uncorvar = P - p_corvar,
+                                   p_corvar = p_corvar,
+                                   p_discr = 0,
+                                   cov_corvar = cov_corvar,
+                                   diff_discr = 0,
+                                   N = N,
+                                   seed = NA))
 names(sim.data2.list) <- 1:nperm
 ```
 
@@ -436,14 +359,15 @@ p1.testresults <- scores.data2.list %>%
          PC1.t = "statistic",
          PC1.p.value = "p.value")
 
-p2.testresults <- scores.data2.list %>%
-  map_dfr(~t.test(.$p2~grouping) %>% tidy(), .id = "dataset") %>%
-  select(dataset,
-         PC2.effect.size = "estimate",
-         PC2.t = "statistic",
-         PC2.p.value = "p.value")
+# p2.testresults <- scores.data2.list %>%
+#   map_dfr(~t.test(.$p2~grouping) %>% tidy(), .id = "dataset") %>%
+#   select(dataset,
+#          PC2.effect.size = "estimate",
+#          PC2.t = "statistic",
+#          PC2.p.value = "p.value")
 
-data2.PCAresults <- bind_cols(p1.testresults, p2.testresults)
+# data2.PCAresults <- bind_cols(p1.testresults, p2.testresults)
+data2.PCAresults <- p1.testresults
 ```
 
 And do PERMANOVA on all of them
@@ -477,14 +401,15 @@ p2.perm
 # 3. No Covariance, Yes Discrimination
 ## Generate Data:
 ```{r}
-set.seed(100)
-sim.data3 <- sim.vcov(p_noise = P - p_disc,
-                      p_signal = 0,
-                      p_disc = p_disc,
-                      cov_signal = cov_signal,
-                      diff_disc = diff_disc,
-                      N = N,
-                      seed = seed)
+sim.data3 <- sim_multvar(p_uncorvar = P - p_discr,
+                         p_corvar = 0,
+                         p_discr = p_discr,
+                         cov_corvar = cov_corvar,
+                         diff_discr = diff_discr,
+                         cov_discr = 0.6,
+                         N = N,
+                         seed = seed)
+sim.data3 %>% select(-group) %>% as.matrix() %>% cor() %>% iheatmap(row_labels = TRUE, col_labels = TRUE)
 ```
 
 ## PCA & PLS-DA
@@ -527,11 +452,12 @@ my_table(sim.data3, sim.pca3, sim.plsda3) %>% arrange(desc(VIP))
 First, make a bunch of datasets with the same parameters
 ```{r}
 sim.data3.list <- map(1:nperm,
-                      ~sim.vcov(p_noise = P - p_disc,
-                                p_signal = 0,
-                                p_disc = p_disc,
-                                cov_signal = 0,
-                                diff_disc = diff_disc,
+                      ~sim_multvar(p_uncorvar = P - p_discr,
+                                p_corvar = 0,
+                                p_discr = p_discr,
+                                cov_corvar = 0,
+                                diff_discr = diff_discr,
+                                cov_discr = 0.6,
                                 N = N,
                                 seed = NA))
 ```
@@ -600,13 +526,15 @@ p3.perm
 # 4. Yes Covariance, Yes Discrimination
 ## Generate Data:
 ```{r}
-sim.data4 <- sim.vcov(p_noise = P - p_signal - p_disc,
-                      p_signal = p_signal,
-                      p_disc = p_disc,
-                      cov_signal = cov_signal,
-                      diff_disc = diff_disc,
-                      N = N,
-                      seed = seed)
+sim.data4 <- sim_multvar(p_uncorvar = P - p_corvar - p_discr,
+                         p_corvar = p_corvar,
+                         p_discr = p_discr,
+                         cov_corvar = cov_corvar,
+                         diff_discr = diff_discr,
+                         cov_discr = 0.6,
+                         N = N,
+                         seed = seed)
+sim.data4 %>% select(-group) %>% as.matrix() %>% cor() %>% iheatmap(row_labels = TRUE, col_labels = TRUE)
 ```
 
 ## PCA & PLS-DA
@@ -649,13 +577,14 @@ my_table(sim.data4, sim.pca4, sim.plsda4) %>% arrange(desc(VIP))
 First, make a bunch of datasets with the same parameters
 ```{r}
 sim.data4.list <- map(1:nperm,
-                      ~sim.vcov(p_noise = P - p_signal - p_disc,
-                                p_signal = p_signal,
-                                p_disc = p_disc,
-                                cov_signal = cov_signal,
-                                diff_disc = diff_disc,
-                                N = N,
-                                seed = NA)) %>% 
+                      ~sim_multvar(p_uncorvar = P - p_corvar - p_discr,
+                                   p_corvar = p_corvar,
+                                   p_discr = p_discr,
+                                   cov_corvar = cov_corvar,
+                                   diff_discr = diff_discr,
+                                   cov_discr = 0.2,
+                                   N = N,
+                                   seed = NA)) %>% 
   set_names(1:nperm)
 ```
 
@@ -681,14 +610,15 @@ p1.testresults <- scores.data4.list %>%
          PC1.t = "statistic",
          PC1.p.value = "p.value")
 
-p2.testresults <- scores.data4.list %>%
-  map_dfr(~t.test(.$p2~grouping) %>% tidy(), .id = "dataset") %>%
-  select(dataset,
-         PC2.effect.size = "estimate",
-         PC2.t = "statistic",
-         PC2.p.value = "p.value")
+# p2.testresults <- scores.data4.list %>%
+#   map_dfr(~t.test(.$p2~grouping) %>% tidy(), .id = "dataset") %>%
+#   select(dataset,
+#          PC2.effect.size = "estimate",
+#          PC2.t = "statistic",
+#          PC2.p.value = "p.value")
 
-data4.PCAresults <- bind_cols(p1.testresults, p2.testresults)
+# data4.PCAresults <- bind_cols(p1.testresults, p2.testresults)
+data4.PCAresults <- p1.testresults
 ```
 
 And do PERMANOVA on all of them
