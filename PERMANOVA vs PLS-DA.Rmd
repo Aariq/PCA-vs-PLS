@@ -13,7 +13,7 @@ It seems like PERMANOVA is pretty good at doing discriminant analyses.  When is 
  
  - Do the above test with a different method of generating discriminating variables.
  
- 
+ - Look up DDA post-hoc test for permanova.
 
 # Setup
 ## Load packages
@@ -128,15 +128,15 @@ sim.vcov <- function(p_noise,
 ## Generate data
 First, make a bunch of datasets with the same parameters
 ```{r}
-nperm = 100 #how many perumutations
+nperm = 50 #how many perumutations
 
 #generate data
 data1.list <- map(1:nperm,
                       ~sim.vcov(p_noise = 10,
-                                p_signal = 10,
-                                p_disc = 10,
-                                cov_signal = 0.2,
-                                diff_disc = 1,
+                                p_signal = 25,
+                                p_disc = 5,
+                                cov_signal = 0.8,
+                                diff_disc = 1.2,
                                 cov_disc = 0.2,
                                 N = 30,
                                 seed = NA))
@@ -187,16 +187,16 @@ p1 <- plot_grid(p1.permanova, p1.plsda)
 ## Generate data
 First, make a bunch of datasets with the same parameters
 ```{r}
-nperm = 100 #how many perumutations
+# nperm = 100 #how many perumutations
 
 #generate data
 data2.list <- map(1:nperm,
                       ~sim.vcov(p_noise = 10,
-                                p_signal = 10,
-                                p_disc = 10,
-                                cov_signal = 0.2,
-                                diff_disc = 1,
-                                cov_disc = 0.7,
+                                p_signal = 25,
+                                p_disc = 5,
+                                cov_signal = 0.8,
+                                diff_disc = 1.2,
+                                cov_disc = 0.6,
                                 N = 30,
                                 seed = NA))
 # data2.list[[1]]
@@ -218,7 +218,7 @@ plsda2.list <- map(data2.list, ~opls(select(., -group), .$group, predI = 2, perm
 And extract p-values
 ```{r message=FALSE, warning=FALSE}
 PLSresults2 <- plsda2.list %>% map_df(~get_plotdata(.)$model_stats)
-PLSresults2
+# PLSresults2
 ```
 
 ## Plot Results
@@ -243,8 +243,25 @@ p2 <- plot_grid(p2.permanova, p2.plsda)
 ```
 
 ```{r}
-plot_grid(p1, p2, ncol = 1, labels = c("cov = 0.2", "cov = 0.7"))
+scenario1 <- plot_grid(p1, p2, ncol = 1, labels = c("cov = 0.2", "cov = 0.6"))
+
 ```
+
+PLS-DA performs better than PERMANOVA when:
+
+- many co-varying variables not related to response variable
+- especially when co-variance among discriminating variables is high
+```
+sim.vcov(p_noise = 10,
+  p_signal = 25,
+  p_disc = 5,
+  cov_signal = 0.8,
+  diff_disc = 1.2,
+  cov_disc = 0.6,
+  N = 30,
+  seed = NA))
+```
+
 
 ```{r}
 comparison1 %>% 
@@ -253,5 +270,20 @@ comparison2 %>%
   summarise_all(mean)
 ) %>% 
   add_column(cov = c("0.2", "0.7") , .before = 1)
+```
+```{r}
+test <- sim.vcov(p_noise = 20,
+         p_signal = 10,
+         p_disc = 10,
+         cov_signal = 0.8,
+         diff_disc = 1.2,
+         cov_disc = 0.5,
+         N = 30,
+         seed = 100)
+
+# ggplot(test, aes(x = disc_4, y = disc_5, color = group)) +
+#   geom_point() 
+library(iheatmapr)
+test %>% select(-group) %>% cor() %>% iheatmap(row_labels = TRUE, col_labels = TRUE)
 ```
 
