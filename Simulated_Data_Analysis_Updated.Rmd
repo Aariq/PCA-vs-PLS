@@ -10,6 +10,12 @@ output:
     toc_float: yes
 ---
 
+Right now the way I'm simulating data might not be terribly realistic. There is one chunk of variables with no covariance (that's ok); another chunk covaries with eachother, but not with the grouping variable (also imaginable); the third chunk of variables also covary within each group, but not neccesariliy with the grouping variable.  Instead, I've just changed the means (intercepts?) of the variables for each group.
+
+Maybe this is why PLS-DA is doing a poor job relative to PERMANOVA, and this data might not be terribly realistic (plot discriminating variables vs. group membership? vs one discriminating variable, color = group membership?).
+
+Another possibility would be to create three chunks again±—--one that doesn't covary, one that covaries, and a third that covaries. Then take that third chunk, pick one of the variables and make it the Y variable. Then I could use that for regression PLS.  *Or* I could take that Y variable, `arrange(Y)`, and then assign groups such that rows with high values for Y are group A and those with low values of Y are group B.  Then all the other discriminating variables should co-vary with group membership and distinguish between groups becasue they were all set up to covary with Y.  This might be a more realistic dataset?  It might also be a situation where PLS-DA performs better than PERMANOVA.
+
 # Overview
 After discussion with Elizabeth we decided to create the following combination of datasets:
 
@@ -138,7 +144,9 @@ sim.vcov <- function(p_noise,
                      p_signal,
                      p_disc,
                      cov_signal,
+                     cov_disc = 0,
                      diff_disc,
+                     var = 0.5,
                      N,
                      seed = NA){
   # Choose a random number for seed if none is supplied
@@ -148,7 +156,7 @@ sim.vcov <- function(p_noise,
   # make noise data
   if(p_noise > 0){
   S_noise <- matrix(rep(0.05, p_noise^2), ncol = p_noise)
-  diag(S_noise) <- 1
+  diag(S_noise) <- var
   set.seed(seed)
   data_noise <- mvrnorm(n = N, Sigma = S_noise, mu = rep(0, p_noise)) %>%
     as.data.frame()
@@ -158,7 +166,7 @@ sim.vcov <- function(p_noise,
   # make signal data
   if(p_signal > 0){
     S_signal <- matrix(rep(cov_signal, p_signal^2), ncol = p_signal)
-    diag(S_signal) <- 1
+    diag(S_signal) <- var
     set.seed(seed)
     data_signal <- mvrnorm(n = N, Sigma = S_signal, mu = rep(0, p_signal)) %>%
       as.data.frame()
@@ -167,8 +175,8 @@ sim.vcov <- function(p_noise,
   
   # make discriminating data
   if(p_disc > 0){
-  S_disc <- matrix(rep(0, p_disc^2), ncol = p_disc)
-  diag(S_disc) <- 1
+  S_disc <- matrix(rep(cov_disc, p_disc^2), ncol = p_disc)
+  diag(S_disc) <- var
   
   # make data for group A
   set.seed(seed)
@@ -209,8 +217,8 @@ These options basically create a situation where when there are real differences
 N = 20 #total number of observations
 P = 30 #total number of variables
 signal.prop = 0.25 #when there is signal, what proportion of variables are signal
-cov_signal = 0.5 #covariance for signal variables
-disc.prop = 0.25 #when there are discriminating variables, what proportion
+cov_signal = 0.25 #covariance for signal variables
+disc.prop = 0.5 #when there are discriminating variables, what proportion
 diff_disc = 1 #mean difference between groups for discriminating variables
 nperm = 100 #how many perumutations
 seed = 100 #seed
@@ -731,3 +739,62 @@ None of the methods give more false positives than they should---that is, no dif
 PERMANOVA seems to perform the best in these simulations, followed by PLS-DA.  PCA is shit at finding separation when discriminating variables are a small portion of the total variables measured (needle in a haystack scenario).
 
 When covariance is added to the "haystack", or to both the "haystack" and the "needle", the performance of PERMANOVA drops, while the performance of PLS-DA remains about the same. I should play around with this in a separate notebook.
+
+
+# Trying alternate method of making discriminating variables
+
+I can't even figure out how to make PLS-DA find a difference.
+```{r}
+sim.data5 <- sim.vcov(p_noise = 0,
+                      p_signal = 15,
+                      p_disc = 15,
+                      cov_signal = 0.8,
+                      cov_disc = 0.6,
+                      diff_disc = 0,
+                      var = 0.8,
+                      N = 20,
+                      seed = NA)
+
+sim.data5 <- sim.data5 %>%
+  rename(Y = disc_1) %>% 
+  arrange(Y) %>% 
+  mutate(group = c(rep("a", nrow(.)/2), rep("b", nrow(.)/2)))
+```
+
+```{r}
+pca5 <- opls(select(sim.data5, -Y, -group), predI = 2)
+pca_plot(pca5, sim.data5$group)
+```
+
+```{r}
+plsda5 <- opls(select(sim.data5, -group, -Y), sim.data5$group, permI = 200, predI = 2)
+```
+```{r}
+get_VIP(plsda5) %>% arrange(desc(VIP))
+```
+```{r}
+pls5 <- opls(select(sim.data5, -group, -Y), sim.data5$Y, permI = 200, predI = 2)
+```
+
+Huh, that doesn't work
+```{r}
+plotdata <- sim.data5 %>% 
+  gather(-group, -Y, key = variable, value = data) %>% 
+  mutate(vartype = case_when(str_detect(variable, "disc") ~ "discriminating",
+                             str_detect(variable, "noise") ~ "no covariance",
+                             str_detect(variable, "signal") ~ "covarying"))
+ggplot(plotdata, aes(x = Y, y = data, color = vartype)) +
+  geom_point() +
+  geom_smooth(method ="lm", se = FALSE)
+```
+*Ah ha! Is it because the discriminating data actually does NOT co-vary?*
+No, I upped the covariance and it doesn't help.
+
+Permanova
+```{r}
+permdata5 <- sim.data5 %>%
+  # select(-Y) %>% 
+  mutate_if(is.double, scale)
+adonis(select(permdata5, -group, -Y)~permdata5$group*permdata5$Y, method = "eu")
+```
+

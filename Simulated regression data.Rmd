@@ -7,6 +7,8 @@ output: html_notebook
 Basically I can use the pre-existing function and set discriminating variables to zero, add a few signal variables, and ramp the covariance up. Then I can pick one of the signal variables to use as the Y variable.  PLS regression should identify the other signal variables in the VIP analysis.
 
 
+# Why do?
+I'm not sure yet what I'm comparing to, if anything.  I guess the purpose would be to see under what circumstances PLS-R detects a multivariate relationship with an independent variable and how good it is at figuring out which variables are most responsible with VIP score.
 
 ##Create separate set of variables all correlated with eachother
 
