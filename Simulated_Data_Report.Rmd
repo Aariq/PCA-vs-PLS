@@ -1,0 +1,445 @@
+---
+title: "Simulated Data Report"
+author: "Eric Scott"
+subtitle: PCA, PLS-DA, and PERMANOVA
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+---
+```{r include=FALSE}
+library(knitr)
+opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+I think at this point I have a pretty solid understanding of when PLS-DA works well, and when other methods work as well or better.
+
+Here's what I can say so far (further explanation and plots follow):
+
+1. PCA is really terrible at finding a needle in a haystack. That is, if the variables that separate your groups are a small proportion of the total variables, PCA will not show separation between groups, especially if they don’t covary. The advice given by Worley and Powers to validate PLS-DA with PCA is not good advice.
+
+2. Even if a PLS-DA is terrible it will show some separation in a score plot.  Authors should NOT publish plots of bad PLS-DA models.  Maybe they shouldn’t even publish plots of good models, since they don’t look that different than plots of bad models.  Bi-plots or score plots side-by-side with loading plots could be good. Maybe if you have more than 2 groups, score plots could be informative.  Otherwise, they are misleading.
+
+3. PERMANOVA seems to always give lower p-values compared to PLS, with the exception of an extreme needle-in-a-haystack scenario---that is, many correlated variables that are **not** correlated to group membership and just a few variables that differ among groups.
+
+
+# Required packages
+```{r}
+library(chemhelper)
+#this is a package I wrote which contains a funciton to simulate multivariate datasets with different pieces.  Install with devtools::github_install("Aariq/chemhelper")
+library(tidyverse)
+library(ropls)
+library(vegan)
+library(cowplot)
+library(broom) #for tidy() which turns model output into data frames.
+library(purrr)
+library(iheatmapr) #you can also use heatmap(), but I like the iheatmap() colors better, plus its interactive
+```
+
+
+If you're interested in how I'm simulating multivariate datasets check the help file or code for `chemhelper::sim_multvar()`
+```{r eval=FALSE, include=TRUE}
+#not run
+?sim_multvar
+View(sim_multvar)
+```
+Briefly:
+
+ - `p_uncorvar`: How many uncorrelated variables?
+ - `p_corvar`: How many correlated variables
+ - `p_discr`: How many discriminating variables
+ - `cov_corvar`: What covarinace to use for the correlated variables?
+ - `cov_discr`: What covarinace to use for the discriminating variables?
+ - `diff_discr`: How different are the two groups for the discriminating variables?
+ - `N`: How many observations/rows?
+
+# 1: Don't use PCA to answer supervised analysis questions.
+
+When discriminating variables are minority of variables and there are many co-varying variables **not** correlated to group membership, PCA does a really bad job at finding separation.  This is *especially* true when there are fewer observations than variables.
+
+## Needle-in-haystack data
+```{r}
+data1 <- sim_multvar(p_uncorvar = 20,
+                     p_corvar = 15,
+                     p_discr = 5,
+                     cov_corvar = 0.5,
+                     cov_discr = 0.3,
+                     diff_discr = 2,
+                     N = 20,
+                     seed = 222)
+
+#new, tidy, modular way:
+data1 <- sim_df(30, 2) %>%
+  sim_covar(p = 20, var = 1, cov = 0.001, name = "uncor", seed = 222) %>% 
+  sim_covar(p = 15, var = 1, cov = 0.5, name = "cor", seed = 223) %>% 
+  sim_discr(p = 5, var = 1, cov = 0.3, group_means = c(-1, 1), name = "discr", seed = 224)
+```
+
+## Correlation heatmap
+```{r}
+data1 %>% 
+  select(-group) %>% 
+  cor() %>% 
+  iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
+```
+The discriminating variables are a tiny fraction in the lower left corner.
+
+## PCA vs. PLS-DA (needle-in-haystack)
+```{r}
+pca1 <- opls(select(data1, -group), plot = FALSE)
+pca1_plot <- plot_pca(pca1, data1$group)
+```
+
+```{r}
+plsda1 <- opls(select(data1, -group), data1$group, plot = FALSE, permI = 200)
+plsda1_plot <- plot_plsda(plsda1)
+```
+```{r}
+plot_grid(pca1_plot + theme(legend.position = "top"),
+          plsda1_plot + theme(legend.position = "top"), ncol = 2, nrow = 1)
+```
+
+PLS-DA clearly does better at finding separation, and we can extract the variables responsible with VIP scores.
+
+## Get VIP scores
+It correctly identifies the discriminating variables as the top VIPs.  Some of the "uncorrelated" and "correlated" variables have strong correlations with discriminating variables by chance.
+```{r}
+get_VIP(plsda1) %>% 
+  filter(VIP > 1) %>% 
+  arrange(desc(VIP))
+```
+
+
+# 2: Bad PLS-DA models still show separation.  What to report and not report
+
+## Generate data with no discrimination
+```{r}
+data2 <- sim_multvar(p_uncorvar = 20,
+                     p_corvar = 20,
+                     p_discr = 0,
+                     cov_corvar = 0.5,
+                     N = 20,
+                     seed = 222)
+data2 %>% 
+  select(-group) %>% 
+  cor() %>% 
+  iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
+```
+
+## PLS-DA
+```{r}
+plsda2 <- opls(select(data2, -group), data2$group,
+               permI = 200,
+               plot = FALSE,
+               predI = 2) 
+#this is a terrible model, so I have to force it to produce two axes with the predI arguement
+```
+
+Clearly this is a bad model.  The $Q^2$ value is negative, and both p-values are very high.
+
+But the plot still shows some separation.
+
+```{r}
+plot_plsda(plsda2)
+```
+
+In my opinion, it would be extremely misleading to publish this plot, *especially* if it did not have the $R^2$ and $Q^2$ values on it.
+
+I think in general it may be a bad idea to show PLS-DA score plots since good models don't look that different from bad models.  One situation where a score plot might be useful (if its a good model) is plotted next to the loadings.
+
+## Good model with loadings plot
+```{r}
+plsda_scores_plot <- plot_plsda(plsda1)
+loadingdata <- get_loadings(plsda1)
+
+plsda_loading_plot <- ggplot(loadingdata, aes(x = p1, y = p2)) +
+  geom_text(aes(label = Variable, alpha = abs(p1))) +
+  xlim(-0.5, 0.5) +
+  ylim(-0.5, 0.5) +
+  theme_bw() +
+  scale_alpha("P1 axis correlation") +
+  ggtitle("Axis Loadings") +
+  labs(caption = "")
+
+plot_grid(plsda_scores_plot + theme(legend.position = "top"),
+          plsda_loading_plot + theme(legend.position = "top"),
+          ncol = 2, nrow = 1, align = "h")
+```
+
+**Pros for score plots**:
+
+- Could show differences in variation between groups by spread of points.
+- With more than two groups could show some structure (e.g. two groups more similar than the third).
+- With loading plot next to it, easy to figure out which variables are higher in which group.
+
+**Cons for score plots**:
+
+- Misleading because visual separation overemphasizes differences (it's only 5 variables out of 40 that make them different!)
+- Reinforces incorrect idea that visual separation = good model and real differences between groups.
+
+
+# 3: When to use PCA, PERMANOVA, or PLS-DA?
+
+In playing around with simulated datasets, I tested out PERMANOVA, a non-parametric extention of MANOVA that can handle more variables than samples.  At first, PERMANOVA seemed to always outperform PLS-DA in finding real differences between groups.  But it doesn't do well if there are many correlated variables that are not related to group structure.  This make sense since MANOVA is analagous to ANOVA and uses ratios of within- and among-group covariances.  I also tested t-tests on PCA axes, which performs *terribly*.  I feel like I've seen this in the literature a couple of times, but I'm not sure how common it really is.
+
+## 3a: Obvious difference
+These data represent a situation where PCA might actually be fine.  Many discriminating variables with high covariance
+
+```{r}
+nperm = 50
+sim3a <- map(1:nperm,
+             ~sim_multvar(p_uncorvar = 5,
+                          p_corvar = 5,
+                          p_discr = 30,
+                          cov_corvar = 0.3,
+                          cov_discr = 0.5,
+                          N = 20,
+                          seed = NA))
+sim3a[[1]] %>% 
+  select(-group) %>% 
+  cor() %>% 
+  iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
+```
+
+### 3a t-tests on PC axis
+Runs a PCA on all simulated datasets and does a t-test using PC1 scores.  Extracts p-values
+
+```{r echo=TRUE, results="hide"}
+pca.ttests3a <-
+  map(sim3a,
+      ~opls(select(., -group),
+                 plotL = FALSE)) %>%
+  compact() %>% 
+  map(~get_plotdata(.) %>% .$plot_data) %>% 
+  #maps t.test() function to all dataframes and converts output into dataframe with tidy()
+  map_dfr(~t.test(.$p1 ~ sim3a[[1]]$group) %>% tidy(), .id = "dataset") %>% 
+  #selects just columns of interest
+  select(dataset,
+         #PC1.effect.size = "estimate",
+         #PC1.t = "statistic",
+         PC1.p.value = "p.value")
+```
+
+### 3a PERMANOVA
+Does PERMANOVA using euclidean distances and extracts p-value
+
+```{r}
+#ugly code that extracts p-values from PERMANOVA results tables
+permanova.p3a <- map_dbl(sim3a,
+                       ~ adonis(select(., -group) ~ .$group,
+                                method = "eu")$aov.tab$`Pr(>F)`[1]) %>%
+  tibble(permanova.p = .)
+```
+
+### 3a PLS-DA
+Run PLS-DA on all.  Force 2 axes because every once and a while, a random dataset will produce a bad model that breaks the code.  Extracts $p_{Q^2}$.
+
+```{r echo=TRUE, results="hide"}
+plsda3a.list <- map(sim3a,
+                   ~opls(select(., -group), .$group,
+                         predI = 2,
+                         permI = 100,
+                         plotL = FALSE))
+
+#Extract p-values and other model stats
+PLS.p3a <- map_df(plsda3a.list, ~get_plotdata(.)$model_stats) %>% 
+  select(pQ2)
+```
+
+### 3a Combine data and plot distribution of p-values
+
+```{r}
+summary3a <- bind_cols(pca.ttests3a, permanova.p3a, PLS.p3a)
+
+distrplot.df3a <- summary3a %>% 
+  gather(-dataset, key = "method", value = "p.value")
+
+ggplot(distrplot.df3a, aes(x = p.value, fill = method)) +
+  geom_density(alpha = 0.3) +
+  geom_vline(aes(xintercept = 0.05), linetype = 2) +
+  ggtitle("Lots of co-varying, discriminating variables")
+```
+
+In this situation, PLS-DA actually does a pretty awful job.  I don't really understand why.  PCA and PERMANOVA are about equivalent.
+
+
+## 3b Needle-in-hastack
+These are the same parameters as in #1
+
+```{r}
+nperm = 50
+sim3b <- map(1:nperm,
+             ~sim_multvar(p_uncorvar = 20,
+                          p_corvar = 15,
+                          p_discr = 5,
+                          cov_corvar = 0.5,
+                          cov_discr = 0.3,
+                          diff_discr = 2,
+                          N = 20,
+                          seed = NA))
+sim3b[[1]] %>% 
+  select(-group) %>% 
+  cor() %>% 
+  iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
+```
+
+### 3b (needle-in-haystack) t-tests on PC axis
+Runs a PCA on all simulated datasets and does a t-test using PC1 scores.  Extracts p-values
+
+```{r results="hide", echo=TRUE}
+pca.ttests3b <-
+  map(sim3b,
+      ~opls(select(., -group),
+                 plotL = FALSE)) %>%
+  compact() %>% 
+  map(~get_plotdata(.) %>% .$plot_data) %>% 
+  #maps t.test() function to all dataframes and converts output into dataframe with tidy()
+  map_dfr(~t.test(.$p1 ~ sim3b[[1]]$group) %>% tidy(), .id = "dataset") %>% 
+  #selects just columns of interest
+  select(dataset,
+         #PC1.effect.size = "estimate",
+         #PC1.t = "statistic",
+         PC1.p.value = "p.value")
+```
+
+### 3b (needle-in-haystack) PERMANOVA
+Does PERMANOVA using euclidean distances and extracts p-value
+
+```{r}
+#ugly code that extracts p-values from PERMANOVA results tables
+permanova.p3b <- map_dbl(sim3b,
+                       ~ adonis(select(., -group) ~ .$group,
+                                method = "eu")$aov.tab$`Pr(>F)`[1]) %>%
+  tibble(permanova.p = .)
+```
+
+### 3b (needle-in-haystack) PLS-DA
+Run PLS-DA on all.  Force 2 axes because every once and a while, a random dataset will produce a bad model that breaks the code.  Extracts $p_{Q^2}$.
+
+```{r results="hide", echo=TRUE}
+plsda3b.list <- map(sim3b,
+                   ~opls(select(., -group), .$group,
+                         predI = 2,
+                         permI = 100,
+                         plotL = FALSE))
+
+#Extract p-values and other model stats
+PLS.p3b <- map_df(plsda3b.list, ~get_plotdata(.)$model_stats) %>% 
+  select(pQ2)
+```
+
+### 3b Combine data and plot distribution of p-values
+
+```{r}
+summary3b <- bind_cols(pca.ttests3b, permanova.p3b, PLS.p3b)
+
+distrplot.df3b <- summary3b %>% 
+  gather(-dataset, key = "method", value = "p.value")
+
+ggplot(distrplot.df3b, aes(x = p.value, fill = method)) +
+  geom_density(alpha = 0.3) +
+  geom_vline(aes(xintercept = 0.05), linetype = 2) +
+  ggtitle("Needle-in-Haystack") +
+  coord_cartesian(xlim = c(0, 0.25), ylim = c(0, 80))
+```
+
+In this situation, PCA performs terrible, PLS-DA does alright, and PERMANOVA does freakishly well.
+
+
+## 3c: EXTREME needle in haystack.
+This is the situation where I found that PLS-DA actually outperforms PERMANOVA.  There are a lot of correlated variables with a stronger correlation compared to 3b, and the difference between the means of the two groups is smaller.
+
+```{r}
+nperm = 50
+sim3c <- map(1:nperm,
+             ~sim_multvar(p_uncorvar = 5,
+                          p_corvar = 30,
+                          p_discr = 5,
+                          cov_corvar = 0.7,
+                          cov_discr = 0,
+                          diff_discr = 1.2,
+                          N = 20,
+                          seed = NA))
+sim3c[[1]] %>% 
+  select(-group) %>% 
+  cor() %>% 
+  iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
+```
+
+I must admit, this is kind of ridiculous.
+
+
+### 3c (EXTREME needle-in-haystack) t-tests on PC axis
+Runs a PCA on all simulated datasets and does a t-test using PC1 scores.  Extracts p-values
+
+```{r results="hide", echo=TRUE}
+pca.ttests3c <-
+  map(sim3c,
+      ~opls(select(., -group),
+                 plotL = FALSE)) %>%
+  compact() %>% 
+  map(~get_plotdata(.) %>% .$plot_data) %>% 
+  #maps t.test() function to all dataframes and converts output into dataframe with tidy()
+  map_dfr(~t.test(.$p1 ~ sim3c[[1]]$group) %>% tidy(), .id = "dataset") %>% 
+  #selects just columns of interest
+  select(dataset,
+         #PC1.effect.size = "estimate",
+         #PC1.t = "statistic",
+         PC1.p.value = "p.value")
+```
+
+### 3c (EXTREME needle-in-haystack) PERMANOVA
+Does PERMANOVA using euclidean distances and extracts p-value
+
+```{r echo=TRUE}
+#ugly code that extracts p-values from PERMANOVA results tables
+permanova.p3c <- map_dbl(sim3c,
+                       ~ adonis(select(., -group) ~ .$group,
+                                method = "eu")$aov.tab$`Pr(>F)`[1]) %>% 
+  tibble(permanova.p = .)
+```
+
+### 3c (EXTREME needle-in-haystack) PLS-DA
+Run PLS-DA on all.  Force 2 axes because every once and a while, a random dataset will produce a bad model that breaks the code.  Extracts $p_{Q^2}$.
+
+```{r results="hide", echo=TRUE}
+plsda3c.list <- map(sim3c,
+                   ~opls(select(., -group), .$group,
+                         predI = 2,
+                         permI = 100,
+                         plotL = FALSE))
+
+#Extract p-values and other model stats
+PLS.p3c <- map_df(plsda3c.list, ~get_plotdata(.)$model_stats) %>% 
+  select(pQ2)
+```
+
+### 3c Combine data and plot distribution of p-values
+
+```{r}
+summary3c <- bind_cols(pca.ttests3c, permanova.p3c, PLS.p3c)
+
+distrplot.df3c <- summary3c %>% 
+  gather(-dataset, key = "method", value = "p.value")
+
+ggplot(distrplot.df3c, aes(x = p.value, fill = method)) +
+  geom_density(alpha = 0.3) +
+  geom_vline(aes(xintercept = 0.05), linetype = 2) +
+  ggtitle("EXTREME Needle-in-Haystack")
+```
+
+And now we see where PLS-DA outperforms PERMANOVA.  Again, I'm not entirely sure why, but I think its because the test statistic that PERMANOVA calculates is a ratio of between- to within-group covariances.  So if covariance is high within groups and and not between groups, F is small, and p is large.  But PLS-DA doesn't seem to care as much.
+
+And just to double confirm the PLS-DA, the $Q^2$ value is also generally acceptable in this circumstance.
+
+```{r message=FALSE, warning=FALSE}
+map_df(plsda3c.list, ~get_plotdata(.)$model_stats) %>% 
+  select(-pre, -ort) %>% #these are just the number of predictive and orthogonal axes
+  summarise_all(mean)
+
+map_df(plsda3c.list, ~get_plotdata(.)$model_stats) %>% 
+  ggplot(aes(x = `Q2(cum)`)) +
+  geom_density()
+```
+
