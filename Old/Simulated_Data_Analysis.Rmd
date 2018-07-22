@@ -1,0 +1,220 @@
+---
+title: "Simulated Data for PCA and PLS-DA"
+output: html_notebook
+---
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ropls)
+library(MASS)
+library(latex2exp)
+library(chemhelper) 
+#chemhelper contains custom functions for interfacing with ropls package in a friendlier way (and other things).  
+#Install with devtools::install_github("Aariq/chemhelper")
+library(cowplot)
+library(here)
+library(broom)
+options(scipen = 999)
+library(ztable)
+```
+
+
+# Idea 1
+Make some co-varying data.  Randomly assign data labels, so hopefully direction of separation by data label is not correlated with covarying data.  Then generate new data that have lower variance and strong correlation with data labels.  Analyse with PLS-DA
+
+# Set dataset parameters
+```{r}
+vars = 50 #how many variables?
+vars.diff = 5 #how many of the vars are going to contribute to differences between groups?
+N = 20 #how many samples?
+seed = 100
+```
+Seeds that produce datasets that illustrate differences between PCA and PLS-DA (bad separation by PCA, significant PLS-DA):
+
+ - 100
+ - 55
+
+# Generate data with random(??) covariance structure
+I wish I knew how to alter this, but I don't understand what it is doing really.
+```{r}
+set.seed(seed)
+# a totally random covariance matrix
+A <- matrix(runif(n = (vars)^2, min = -1, max = 1), ncol=vars)
+
+Sigma <- t(A) %*% A #matrix-multiplies self with transposed self. Makes symetric
+
+data3 <- mvrnorm(n = N, mu = rep(0, vars), Sigma = Sigma) %>% as.data.frame()
+
+```
+
+# Assign group membership
+Now randomly assign labels (so I get BAD separation by PCA)
+
+```{r}
+# data4 <- data3 %>%
+#   add_column(group = sample(c("a","b"), N, replace = TRUE)) %>%
+#   dplyr::select(group, everything())
+
+#Force equal sample sizes:
+data4 <- data3 %>%
+  mutate(group = c(rep("a", nrow(data3)/2), rep("b", nrow(data3)/2))) %>%
+  dplyr::select(group, everything())
+```
+
+# Add discriminating variables
+
+Now make a few new variables correlated with `group` somehow. One way I could do this is by taking existing variables and adding or subtracting random numbers depending on group membership.
+```{r}
+set.seed(seed)
+# add x variables that are based on existing ones but with differences between groups
+x = 5
+# strength of difference (passed to rnorm())
+mu = 5
+
+data5 <- data4 %>%
+  mutate_at(vars(num_range("V", 1:x)),
+            # if its in group a, add a random number, if group b, subtract a random number
+            funs(D = ifelse(group == "a", . + rnorm(1, mu, 1), . - rnorm(1, mu, 1))))
+data5
+```
+
+Do PCA and PLS-DA on both datasets.
+```{r}
+sim.pca <- opls(data4 %>% select_if(is.double), plotL = FALSE)
+#do PCA on new dataset
+sim.pca2 <- opls(data5 %>% select_if(is.double), plotL = FALSE)
+
+#do PLS-DA on new dataset
+sim.pls <- opls(data5 %>% select_if(is.double), data5$group, permI = 200, plotL = FALSE)
+
+#compare to PLS-DA on "null" dataset (without additional, group-correlated variables)
+sim.pls.null <- try(opls(data4 %>% select_if(is.double), data4$group, permI = 200, plotL = FALSE))
+#model fails, so force two axes for sake of plotting something
+sim.pls.null <- opls(data4 %>% select_if(is.double), data4$group, permI = 200, predI = 2, plotL = FALSE)
+```
+
+## Plot PCA with and without discriminating variables vs. PLS-DA
+```{r}
+pca1.plotdata <- get_plotdata(sim.pca)
+pca2.plotdata <- get_plotdata(sim.pca2)
+pls.plotdata <- get_plotdata(sim.pls)
+plsnull.plotdata <- get_plotdata(sim.pls.null)
+```
+
+```{r}
+pca1 <- ggplot(pca1.plotdata$plot_data, aes(x = p1, y = p2, color = data5$group)) +
+  geom_point() +
+  stat_ellipse() +
+  labs(x = paste0("PC1 (", pca1.plotdata$var_explained$R2X[1] * 100, "%)"),
+       y = paste0("PC2 (", pca1.plotdata$var_explained$R2X[2] * 100, "%)")) +
+  scale_colour_discrete("Group Membership") +
+  theme_bw() +
+  ggtitle("PCA without discriminating variables",
+          subtitle = TeX(
+            paste0(nrow(pca1.plotdata$var_explained), " principal components;",
+                   "$R^2(cumulative) = ", max(pca1.plotdata$var_explained$`R2X(cum)`, "$"))
+          ))
+
+pca2 <- ggplot(pca2.plotdata$plot_data, aes(x = p1, y = p2, color = data5$group)) +
+  geom_point() +
+  stat_ellipse() +
+  labs(x = paste0("PC1 (", pca2.plotdata$var_explained$R2X[1] * 100, "%)"),
+       y = paste0("PC2 (", pca2.plotdata$var_explained$R2X[2] * 100, "%)")) +
+  scale_colour_discrete("Group Membership") +
+  theme_bw() +
+  ggtitle("PCA with discriminating variables",
+          subtitle = TeX(
+            paste0(nrow(pca2.plotdata$var_explained), " principal components; ",
+                   "$R^2(cumulative) = ", max(pca2.plotdata$var_explained$`R2X(cum)`, "$"))
+          ))
+        
+```
+
+
+```{r}
+pls1 <- ggplot(plsnull.plotdata$plot_data, aes(x = p1, y = p2, color = data5$group)) +
+  geom_point() +
+  stat_ellipse() +
+  labs(x = paste0("P1 (", plsnull.plotdata$axis_stats$R2X[1] * 100, "%)"),
+       y = paste0("P2 (", plsnull.plotdata$axis_stats$R2X[2] * 100, "%)")) +
+  scale_color_discrete("Group Membership") +
+  theme_bw() +
+  ggtitle("PLS-DA without discriminating variables", subtitle = TeX(
+    paste0("$R^{2}_{Y}=", plsnull.plotdata$model_stats$`R2Y(cum)`, "$; ",
+           "$Q^{2}=", plsnull.plotdata$model_stats$`Q2(cum)`, "$; ",
+           "$p_{Q^{2}}=", plsnull.plotdata$model_stats$pQ2, "$"),
+    output = "expression"))
+```
+
+```{r}
+pls2 <- ggplot(pls.plotdata$plot_data, aes(x = p1, y = p2, color = data5$group)) +
+  geom_point() +
+  stat_ellipse() +
+  labs(x = paste0("P1 (", pls.plotdata$axis_stats$R2X[1] * 100, "%)"),
+       y = paste0("P2 (", pls.plotdata$axis_stats$R2X[2] * 100, "%)")) +
+  scale_color_discrete("Group Membership") +
+  theme_bw() +
+  ggtitle("PLS-DA with discriminating variables", subtitle = TeX(
+    paste0("$R^{2}_{Y}=", pls.plotdata$model_stats$`R2Y(cum)`, "$; ",
+           "$Q^{2}=", pls.plotdata$model_stats$`Q2(cum)`, "$; ",
+           "$p_{Q^{2}}=", pls.plotdata$model_stats$pQ2, "$"),
+    output = "expression"))
+```
+
+# Put all plots together
+```{r}
+sim.plots <- plot_grid(pca1 + theme(legend.position = "none"),
+          pls1 + theme(legend.position = "none"),
+          pca2 + theme(legend.position = "none"),
+          pls2 + theme(legend.position = "none"), ncol = 2, nrow = 2)
+sim.plots
+save_plot(here("figs", "PCA and PLS.png"), sim.plots, base_height = 7)
+```
+
+# Get VIP scores and correlations
+Confirm that the discriminating variables are the ones contributing to separation
+```{r}
+plsvips <- sim.pls %>% get_VIP() %>% arrange(desc(VIP)) #%>% filter(VIP>1)
+
+plsttests <- data5 %>%
+  select_if(is.double) %>%
+  map_dfr(~t.test(.~data5$group) %>% tidy(), .id = "Variable") %>% 
+  mutate(p.adj = p.adjust(p.value, "fdr")) %>% 
+  dplyr::select(Variable, group.a.mean = estimate1, group.b.mean = estimate2, p.value, p.adj)
+
+table1 <- left_join(plsvips, plsttests)
+```
+Interesting.  The 5 cooked discriminating variables come out on top, which is great.  VIP analysis also captures 5 random variables that shouldn't discriminate between groups.  In this case, it seems like VIP > 2 would have been a better criterion.  Need to think more about what VIP means.
+ 
+## Export table
+```{r}
+# library(ggpubr)
+table2 <- map2_df(.x = table1[2:6], .y = c(2, 2, 2, 5, 5), .f = ~round(.x, .y)) %>%
+   add_column(Variable = table1$Variable) %>%
+   dplyr::select(Variable, everything())
+# tablegrob1 <- ggtexttable(table2[1:(nrow(table2)/2), ],
+#                           cols = colnames(table2),
+#                           theme = ttheme(base_style = "classic"))
+# ztable(table1[(nrow(table1)/2):(nrow(table1)), ])
+write_csv(table2, here("figs", "table1"))
+```
+
+ 
+```{r eval=FALSE, include=FALSE}
+#Code for doing the model stats differently:
+model.labels <- c(R2 = TeX(paste0("$R^{2}_{Y}=", pls.plotdata$model_stats$`R2Y(cum)`), output = "character"),
+                  Q2 = TeX(paste0("$Q^{2}=", pls.plotdata$model_stats$`Q2(cum)`), output = "character"),
+                  p = TeX(paste0("$p_{Q^{2}}=", pls.plotdata$model_stats$pQ2), output = "character"))
+model.y <- c(3,2,1)
+model.x <- c(1,1,1)
+model.stats <- tibble(labels = model.labels, x = model.x, y = model.y)
+
+test <- ggplot(model.stats, aes(x = x, y = y, label = labels)) +
+  geom_text(parse = TRUE) +
+  ylim(0, 4) + xlim(0, 2) +
+  theme_nothing()
+```
+
+# Results/Discussion
+The addition of 5 discriminating variables has a negligible effect on the PCA.  There is still essentially no separation between the two groups along either PC1 or PC2.  However, the effect of these discriminating variables on the PLS-DA is apparent both in the visual separation between groups as well as the $Q^2$ and $p_{Q^2}$ values.  The PLS-DA on completely random data also demonstrates the tendency of PLS to overfit.  Without any cross-validation, one might conclude that the two groups were different, however the extremely low $Q^2$ and high p value from this model indicates that this separation is due to chance.  Without reporting these cross-validation measures, the PLS-DA plot alone would be extremely misleading.  We therefore recommend that plots of non-significant PLS models not be included in publications.  It's also worth noting that even though only 5 of 55 variables were created to distinguish the groups, the first predictive axis of the PLS-DA on the full data set describes 13.1% of the total variation in the data.  In addition, the VIP scores of 5 non-discriminating varibles were over 1.  Maybe VIP scores alone shouldn't be used to determine importance of variables. False-discovery-rate adjusted t-tests more accurately identify distinguishing variables in this case.
+ 
