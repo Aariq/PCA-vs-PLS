@@ -54,23 +54,27 @@ Briefly:
  - `diff_discr`: How different are the two groups for the discriminating variables?
  - `N`: How many observations/rows?
 
+I've actually deprecated this function in favor of a more flexible modular approach.
+
 # 1: Don't use PCA to answer supervised analysis questions.
 
 When discriminating variables are minority of variables and there are many co-varying variables **not** correlated to group membership, PCA does a really bad job at finding separation.  This is *especially* true when there are fewer observations than variables.
 
 ## Needle-in-haystack data
 ```{r}
-data1 <- sim_multvar(p_uncorvar = 20,
-                     p_corvar = 15,
-                     p_discr = 5,
-                     cov_corvar = 0.5,
-                     cov_discr = 0.3,
-                     diff_discr = 2,
-                     N = 20,
-                     seed = 222)
+# data1 <- sim_multvar(p_uncorvar = 20,
+#                      p_corvar = 15,
+#                      p_discr = 5,
+#                      cov_corvar = 0.5,
+#                      cov_discr = 0.3,
+#                      diff_discr = 2,
+#                      N = 20,
+#                      seed = 222)
 
 #new, tidy, modular way:
-data1 <- sim_df(30, 2) %>%
+base_df <- sim_df(30, 2)
+
+data1 <- base_df %>%
   sim_covar(p = 20, var = 1, cov = 0.001, name = "uncor", seed = 222) %>% 
   sim_covar(p = 15, var = 1, cov = 0.5, name = "cor", seed = 223) %>% 
   sim_discr(p = 5, var = 1, cov = 0.3, group_means = c(-1, 1), name = "discr", seed = 224)
@@ -115,12 +119,17 @@ get_VIP(plsda1) %>%
 
 ## Generate data with no discrimination
 ```{r}
-data2 <- sim_multvar(p_uncorvar = 20,
-                     p_corvar = 20,
-                     p_discr = 0,
-                     cov_corvar = 0.5,
-                     N = 20,
-                     seed = 222)
+# data2 <- sim_multvar(p_uncorvar = 20,
+#                      p_corvar = 20,
+#                      p_discr = 0,
+#                      cov_corvar = 0.5,
+#                      N = 20,
+#                      seed = 222)
+
+data2 <- base_df %>%
+  sim_covar(20, 1, 0, name = "uncorr", seed = 222) %>% 
+  sim_covar(20, 1, 0.5, seed = 223)
+
 data2 %>% 
   select(-group) %>% 
   cor() %>% 
@@ -183,19 +192,28 @@ plot_grid(plsda_scores_plot + theme(legend.position = "top"),
 
 In playing around with simulated datasets, I tested out PERMANOVA, a non-parametric extention of MANOVA that can handle more variables than samples.  At first, PERMANOVA seemed to always outperform PLS-DA in finding real differences between groups.  But it doesn't do well if there are many correlated variables that are not related to group structure.  This make sense since MANOVA is analagous to ANOVA and uses ratios of within- and among-group covariances.  I also tested t-tests on PCA axes, which performs *terribly*.  I feel like I've seen this in the literature a couple of times, but I'm not sure how common it really is.
 
+Additional info:  The underlying assumption of PLS is that differences are driven by a small set of latent variables.  PLS was designed to handle small sample sizes, missing values, and multicollinearity.
+
 ## 3a: Obvious difference
 These data represent a situation where PCA might actually be fine.  Many discriminating variables with high covariance
 
 ```{r}
 nperm = 50
+# sim3a <- map(1:nperm,
+#              ~sim_multvar(p_uncorvar = 5,
+#                           p_corvar = 5,
+#                           p_discr = 30,
+#                           cov_corvar = 0.3,
+#                           cov_discr = 0.5,
+#                           N = 20,
+#                           seed = NA))
+
 sim3a <- map(1:nperm,
-             ~sim_multvar(p_uncorvar = 5,
-                          p_corvar = 5,
-                          p_discr = 30,
-                          cov_corvar = 0.3,
-                          cov_discr = 0.5,
-                          N = 20,
-                          seed = NA))
+    ~base_df %>% 
+      sim_covar(5, var = 1, cov = 0, name = "uncorr") %>% 
+      sim_covar(5, var = 1, cov = 0.3, name = "corr") %>% 
+      sim_discr(30, var = 1, cov = 0.5, group_means = c(-0.5, 0.5), name = "discr")
+)
 sim3a[[1]] %>% 
   select(-group) %>% 
   cor() %>% 
@@ -269,15 +287,23 @@ These are the same parameters as in #1
 
 ```{r}
 nperm = 50
+# sim3b <- map(1:nperm,
+#              ~sim_multvar(p_uncorvar = 20,
+#                           p_corvar = 15,
+#                           p_discr = 5,
+#                           cov_corvar = 0.5,
+#                           cov_discr = 0.3,
+#                           diff_discr = 2,
+#                           N = 20,
+#                           seed = NA))
+
 sim3b <- map(1:nperm,
-             ~sim_multvar(p_uncorvar = 20,
-                          p_corvar = 15,
-                          p_discr = 5,
-                          cov_corvar = 0.5,
-                          cov_discr = 0.3,
-                          diff_discr = 2,
-                          N = 20,
-                          seed = NA))
+             ~base_df %>%
+               sim_covar(15, var = 1, cov = 0, name = "uncorr") %>% 
+               sim_covar(20, var = 1, cov = 0.5, name = "corr") %>% 
+               sim_discr(5, var = 1, cov = 0, group_means = c(-1, 1))
+)
+
 sim3b[[1]] %>% 
   select(-group) %>% 
   cor() %>% 
@@ -341,7 +367,7 @@ ggplot(distrplot.df3b, aes(x = p.value, fill = method)) +
   geom_density(alpha = 0.3) +
   geom_vline(aes(xintercept = 0.05), linetype = 2) +
   ggtitle("Needle-in-Haystack") +
-  coord_cartesian(xlim = c(0, 0.25), ylim = c(0, 80))
+  coord_cartesian(xlim = c(0, 0.25), ylim = c(0, 200))
 ```
 
 In this situation, PCA performs terrible, PLS-DA does alright, and PERMANOVA does freakishly well.
@@ -352,15 +378,23 @@ This is the situation where I found that PLS-DA actually outperforms PERMANOVA. 
 
 ```{r}
 nperm = 50
+# sim3c <- map(1:nperm,
+#              ~sim_multvar(p_uncorvar = 5,
+#                           p_corvar = 30,
+#                           p_discr = 5,
+#                           cov_corvar = 0.7,
+#                           cov_discr = 0,
+#                           diff_discr = 1.2,
+#                           N = 20,
+#                           seed = NA))
+
 sim3c <- map(1:nperm,
-             ~sim_multvar(p_uncorvar = 5,
-                          p_corvar = 30,
-                          p_discr = 5,
-                          cov_corvar = 0.7,
-                          cov_discr = 0,
-                          diff_discr = 1.2,
-                          N = 20,
-                          seed = NA))
+             ~base_df %>% 
+               sim_covar(5, 1, 0, name = "uncorr") %>% 
+               sim_covar(30, 1, 0.7, name = "corr") %>% 
+               sim_discr(5, 1, 0, group_means = c(1.2, 0))
+)
+
 sim3c[[1]] %>% 
   select(-group) %>% 
   cor() %>% 
@@ -441,5 +475,109 @@ map_df(plsda3c.list, ~get_plotdata(.)$model_stats) %>%
 map_df(plsda3c.list, ~get_plotdata(.)$model_stats) %>% 
   ggplot(aes(x = `Q2(cum)`)) +
   geom_density()
+```
+
+
+# 4 Missing values
+Can PERMANOVA even handle missing values?
+
+```{r}
+sim4 <- base_df %>% 
+  sim_covar(10, 1, 0, name = "uncorr") %>% 
+  sim_covar(10, 1, 0.5, name = "corr") %>% 
+  sim_discr(5, 1, 0, group_means = c(-1, 1), name = "discr") %>% 
+  sim_missing(prop = 0.09)
+```
+```{r}
+adonis(select(sim4, -group) ~ sim4$group, method = "eu")
+```
+Apparently it does.  Lets see how it compares to PLS with and without NAs
+
+```{r}
+nperm = 50
+NAprop = 0.2
+
+sim4a <- #no missing values
+  map(1:nperm,
+      ~base_df %>% 
+        sim_covar(10, 1, 0, name = "uncorr") %>% 
+        sim_covar(10, 1, 0.5, name = "corr") %>% 
+        sim_discr(5, 1, 0, group_means = c(-1, 1), name = "discr")
+  )
+```
+
+```{r}
+sim4b <- #same but with missing values
+  map(1:nperm,
+      ~base_df %>% 
+        sim_covar(15, 1, 0, name = "uncorr") %>% 
+        sim_covar(15, 1, 0.7, name = "corr") %>% 
+        sim_discr(5, 1, 0.3, group_means = c(-1, 1), name = "discr") %>% 
+        sim_missing(NAprop)
+  )
+```
+```{r}
+sim4a[[1]] %>% anyNA()
+sim4b[[1]] %>% anyNA()
+```
+## 4: PERMANOVA
+```{r include=FALSE}
+permanova.p4a <- map_dbl(sim4a,
+                       ~ adonis(select(., -group) ~ .$group,
+                                method = "eu")$aov.tab$`Pr(>F)`[1]) %>% 
+  tibble(permanova.p = .)
+
+permanova.p4b <- map_dbl(sim4b,
+                       ~ adonis(select(., -group) ~ .$group,
+                                method = "eu")$aov.tab$`Pr(>F)`[1]) %>% 
+  tibble(permanova.p = .)
+```
+
+## 4: PLS-DA
+```{r message=FALSE, warning=FALSE, include=FALSE}
+plsda4a.list <- map(sim4a,
+                   ~opls(select(., -group), .$group,
+                         predI = 2,
+                         permI = 100,
+                         plotL = FALSE))
+
+#Extract p-values and other model stats
+PLS.p4a <- map_df(plsda4a.list, ~get_plotdata(.)$model_stats) %>% 
+  select(pQ2)
+
+plsda4b.list <- map(sim4b,
+                   ~opls(select(., -group), .$group,
+                         predI = 2,
+                         permI = 100,
+                         plotL = FALSE))
+
+#Extract p-values and other model stats
+PLS.p4b <- map_df(plsda4b.list, ~get_plotdata(.)$model_stats) %>% 
+  select(pQ2)
+```
+
+```{r}
+summary4a <- bind_cols(permanova.p4a, PLS.p4a)
+summary4b <- bind_cols(permanova.p4b, PLS.p4b)
+
+distrplot.df4a <- summary4a %>% 
+  gather(key = "method", value = "p.value")
+
+distrplot.df4b <- summary4b %>% 
+  gather(key = "method", value = "p.value")
+
+plot4a <- ggplot(distrplot.df4a, aes(x = p.value, fill = method)) +
+  geom_density(alpha = 0.3) +
+  geom_vline(aes(xintercept = 0.05), linetype = 2) +
+  ggtitle("No missing values")
+
+plot4b <- ggplot(distrplot.df4b, aes(x = p.value, fill = method)) +
+  geom_density(alpha = 0.3) +
+  geom_vline(aes(xintercept = 0.05), linetype = 2) +
+  ggtitle(paste(NAprop*100,"% missing values"))
+```
+
+```{r}
+plot_grid(plot4a + theme(legend.position = "none"), plot4b + theme(legend.position = "none")+ coord_cartesian(ylim=c(0,100)), get_legend(plot4a), ncol = 3, nrow = 1, rel_widths = c(1.2, 1.2, 0.5))
 ```
 
