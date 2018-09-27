@@ -14,18 +14,22 @@ library(cowplot)
 ```
 
 # Load Data
+
 ```{r}
 recipes_wide <- read_rds("/Users/scottericr/Documents/Tufts/cupcakes-vs-muffins/recipes_wide.rds")
 ```
 
 # Check multivariate normality
+
 ```{r}
 mvn(select_if(recipes_wide, is.double), scale = TRUE, multivariatePlot = "qq")
 mvn(select_if(recipes_wide, is.double), scale = TRUE, transform = "sqrt", multivariatePlot = "qq")
 ```
+
 No, not multivariate normal and transformations do nothing because of all the zeroes probably.  
 
 # Do preliminary PCA
+
 ```{r}
 recipe_pca <- opls(select_if(recipes_wide, is.double), scaleC = "standard", plotL = FALSE)
 plot(recipe_pca,
@@ -37,6 +41,7 @@ plot(recipe_pca,
 # PLS-DA
 Try with unscaled data.  Elizabeth predicts taht in pls-da scaling is less important than in PCA.
 In this case, at least, scaling reduces R2X (from 0.75 to 0.098), increases R2Y (from 0.41 to 0.62), has only a slight effect on Q2 (from 0.39 to 0.47), and doesn't effect p-values.  It also changes VIP scores substantially.
+
 ```{r}
 recipe_plsda <- opls(select_if(recipes_wide, is.double), recipes_wide$Type,
                      scaleC = "none",
@@ -50,6 +55,7 @@ getLoadingMN(recipe_plsda) %>% as.data.frame()
 ```
 
 # Try with reduced dataset
+
 The sample size is unrealistic for an ecological experiment.  Try taking a subsample of muffins and cupcakes (n = 20?)
 
 ```{r}
@@ -72,10 +78,12 @@ recipes_small <- recipes_small %>% select_at(vars(keepers))
 ```
 
 ## Check multivariate normality
+
 ```{r}
 mvn(select_if(recipes_small, is.double), scale = TRUE, multivariatePlot = "qq")
 mvn(select_if(recipes_small, is.double), scale = TRUE, transform = "sqrt", multivariatePlot = "qq")
 ```
+
 seems to pass?
 
 ```{r}
@@ -153,6 +161,7 @@ table2 <- left_join(VIPs, opls_loadings) %>%
 
 
 Need to scale PC loadings to match axis of OPLS-DA? Is standard deviation helpful at all?
+
 ```{r}
 table2 %>%
   select(-`Standard Deviation`) %>%
