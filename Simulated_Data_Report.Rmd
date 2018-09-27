@@ -13,6 +13,19 @@ library(knitr)
 opts_chunk$set(warning = FALSE, message = FALSE)
 ```
 
+# To-Do:
+
+- try switching from `ropls` to `pls`.  Doesn't do oPLS, but shouldn't need that.
+- try RDA
+
+IDEA:
+- instead of comapring t-tests on PCA axes to PLS-DA, use euclidean distance between centroids as a measure of group separation--or something that can measure overlap of CIs.
+
+- Switch PERMANOVA to RDA. PERMANOVA isn't a good comparison since it uses distance matrices.  Can't get loadings out.
+
+
+
+
 I think at this point I have a pretty solid understanding of when PLS-DA works well, and when other methods work as well or better.
 
 Here's what I can say so far (further explanation and plots follow):
@@ -23,6 +36,7 @@ Here's what I can say so far (further explanation and plots follow):
 
 3. PERMANOVA seems to always give lower p-values compared to PLS, with the exception of an extreme needle-in-a-haystack scenario---that is, many correlated variables that are **not** correlated to group membership and just a few variables that differ among groups.
 
+4. PERMANOVA requires distance matrixes, so you can't get info about original variables from it.  It's not designed to work well with multicollinearity.
 
 # Required packages
 ```{r}
@@ -33,102 +47,120 @@ library(ropls)
 library(vegan)
 library(cowplot)
 library(broom) #for tidy() which turns model output into data frames.
-library(purrr)
 library(iheatmapr) #you can also use heatmap(), but I like the iheatmap() colors better, plus its interactive
+library(RVAideMemoire)
+library(here)
 ```
 
-
-If you're interested in how I'm simulating multivariate datasets check the help file or code for `chemhelper::sim_multvar()`
-```{r eval=FALSE, include=TRUE}
-#not run
-?sim_multvar
-View(sim_multvar)
-```
-Briefly:
-
- - `p_uncorvar`: How many uncorrelated variables?
- - `p_corvar`: How many correlated variables
- - `p_discr`: How many discriminating variables
- - `cov_corvar`: What covarinace to use for the correlated variables?
- - `cov_discr`: What covarinace to use for the discriminating variables?
- - `diff_discr`: How different are the two groups for the discriminating variables?
- - `N`: How many observations/rows?
-
-I've actually deprecated this function in favor of a more flexible modular approach.
 
 # 1: Don't use PCA to answer supervised analysis questions.
 
 When discriminating variables are minority of variables and there are many co-varying variables **not** correlated to group membership, PCA does a really bad job at finding separation.  This is *especially* true when there are fewer observations than variables.
 
 ## Needle-in-haystack data
-```{r}
-# data1 <- sim_multvar(p_uncorvar = 20,
-#                      p_corvar = 15,
-#                      p_discr = 5,
-#                      cov_corvar = 0.5,
-#                      cov_discr = 0.3,
-#                      diff_discr = 2,
-#                      N = 20,
-#                      seed = 222)
 
-#new, tidy, modular way:
-base_df <- sim_df(30, 2)
+```{r}
+base_df <- data_frame(group = rep(c("a","b"), each = 15))
 
 data1 <- base_df %>%
-  sim_covar(p = 20, var = 1, cov = 0.001, name = "uncor", seed = 222) %>% 
-  sim_covar(p = 15, var = 1, cov = 0.5, name = "cor", seed = 223) %>% 
-  sim_discr(p = 5, var = 1, cov = 0.3, group_means = c(-1, 1), name = "discr", seed = 224)
+  sim_covar(p = 20, var = 1, cov = 0, name = "uncor", seed = 222) %>% 
+  sim_covar(p = 10, var = 1, cov = 0.5, name = "cor1", seed = 223) %>% 
+  sim_covar(p = 5, var = 1, cov = 0.5, name = "cor2", seed = 111) %>% 
+  sim_discr(p = 3, var = 1, cov = 0.3, group_means = c(-1, 1), name = "discr1", seed = 224) %>% 
+  sim_discr(p = 3, var = 1, cov = 0.3, group_means = c(-1, 1), name = "discr2", seed = 225)
 ```
 
 ## Correlation heatmap
+
 ```{r}
 data1 %>% 
   select(-group) %>% 
   cor() %>% 
   iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
 ```
-The discriminating variables are a tiny fraction in the lower left corner.
+The discriminating variables are a tiny fraction in the upper right corner.
 
-## PCA vs. PLS-DA (needle-in-haystack)
+## Scenario 1: Needle in a Haystack
+
+### PCA
+
 ```{r}
 pca1 <- opls(select(data1, -group), plot = FALSE)
 pca1_plot <- plot_pca(pca1, data1$group)
 ```
 
+### PLS-DA
+
 ```{r}
 plsda1 <- opls(select(data1, -group), data1$group, plot = FALSE, permI = 200)
 plsda1_plot <- plot_plsda(plsda1)
 ```
+
+### RDA
+
 ```{r}
-plot_grid(pca1_plot + theme(legend.position = "top"),
-          plsda1_plot + theme(legend.position = "top"), ncol = 2, nrow = 1)
+RDA1 <- rda(select_if(data1, is.double) ~ data1$group, data = data1, scale = TRUE)
+```
+```{r}
+MVA.synt(RDA1)
 ```
 
-PLS-DA clearly does better at finding separation, and we can extract the variables responsible with VIP scores.
+```{r}
+# MVA.anova(RDA1) #same as above because only one factor
+# MVA.plot(RDA1, fac = data1$group) #1-D plot
+rda1_plot <- scores(RDA1)$sites %>% 
+  as.data.frame() %>% 
+  add_column(group = data1$group) %>% 
+  ggplot(aes(x = RDA1, y = PC1, color = group)) +
+  scale_color_discrete("Group Membership") +
+  geom_point() +
+  stat_ellipse() +
+  labs(x = "Constr. comp. 1 (9.71%)", y = "PC1 (18.83%)",
+       caption = paste0("p = ", anova(RDA1)$`Pr(>F)`)) +
+  ggtitle("RDA") +
+  theme_bw()
+```
+
+```{r fig.height=6, fig.width=6}
+plot_grid(pca1_plot + theme(legend.position = "none"),
+          plsda1_plot + theme(legend.position = "none"),
+          rda1_plot + theme(legend.position = "none"), ncol = 2, nrow = 2)
+```
+
+PLS-DA and RDA clearly do better at finding separation, and we can extract the variables responsible with VIP scores for PLS-DA and axis loadings for RDA.
 
 ## Get VIP scores
 It correctly identifies the discriminating variables as the top VIPs.  Some of the "uncorrelated" and "correlated" variables have strong correlations with discriminating variables by chance.
+
 ```{r}
 get_VIP(plsda1) %>% 
   filter(VIP > 1) %>% 
   arrange(desc(VIP))
 ```
 
+## Get RDA loadings
 
-# 2: Bad PLS-DA models still show separation.  What to report and not report
+```{r}
+scores(RDA1)$species %>%
+  as.data.frame() %>%
+  rownames_to_column(var = "Variable") %>% 
+  select(Variable, RDA1) %>% arrange(desc(abs(RDA1))) %>% 
+  slice(1:10)
+```
+
+
+
+# 2. Bad models result in misleading plots.
+
+Bad models from supervised methods still show separation in score plots.
 
 ## Generate data with no discrimination
-```{r}
-# data2 <- sim_multvar(p_uncorvar = 20,
-#                      p_corvar = 20,
-#                      p_discr = 0,
-#                      cov_corvar = 0.5,
-#                      N = 20,
-#                      seed = 222)
 
+```{r}
 data2 <- base_df %>%
   sim_covar(20, 1, 0, name = "uncorr", seed = 222) %>% 
-  sim_covar(20, 1, 0.5, seed = 223)
+  sim_covar(10, 1, 0.5, seed = 223) %>% 
+  sim_covar(10, 1, 0.5, seed = 112)
 
 data2 %>% 
   select(-group) %>% 
@@ -137,6 +169,7 @@ data2 %>%
 ```
 
 ## PLS-DA
+
 ```{r}
 plsda2 <- opls(select(data2, -group), data2$group,
                permI = 200,
@@ -157,7 +190,35 @@ In my opinion, it would be extremely misleading to publish this plot, *especiall
 
 I think in general it may be a bad idea to show PLS-DA score plots since good models don't look that different from bad models.  One situation where a score plot might be useful (if its a good model) is plotted next to the loadings.
 
+## RDA
+
+```{r}
+RDA2 <- rda(select_if(data2, is.double) ~ group, data = data2, scale = TRUE)
+MVA.synt(RDA2)[[1]]
+MVA.anova(RDA2)
+```
+
+The constrained PCA only explains 2.5% of total variation and this gives $p=0.818$
+
+```{r}
+# MVA.plot(RDA2, fac = data2$group)
+scores(RDA2)$sites %>% 
+  as.data.frame() %>% 
+  add_column(group = data1$group) %>% 
+  ggplot(aes(x = RDA1, y = PC1, color = group)) +
+  scale_color_discrete("Group Membership") +
+  geom_point() +
+  stat_ellipse() +
+   labs(x = "Constr. comp. 1 (2.5%)", y = "PC1 (18.4%)",
+       caption = paste0("p = ", anova(RDA2)$`Pr(>F)`)) +
+  ggtitle("RDA") +
+  theme_bw()
+```
+
+This is maybe not quite as misleading as the PLS-DA plot, but it still shows some separation.
+
 ## Good model with loadings plot
+
 ```{r}
 plsda_scores_plot <- plot_plsda(plsda1)
 loadingdata <- get_loadings(plsda1)
@@ -199,14 +260,6 @@ These data represent a situation where PCA might actually be fine.  Many discrim
 
 ```{r}
 nperm = 50
-# sim3a <- map(1:nperm,
-#              ~sim_multvar(p_uncorvar = 5,
-#                           p_corvar = 5,
-#                           p_discr = 30,
-#                           cov_corvar = 0.3,
-#                           cov_discr = 0.5,
-#                           N = 20,
-#                           seed = NA))
 
 sim3a <- map(1:nperm,
     ~base_df %>% 
@@ -239,15 +292,25 @@ pca.ttests3a <-
          PC1.p.value = "p.value")
 ```
 
-### 3a PERMANOVA
-Does PERMANOVA using euclidean distances and extracts p-value
-
+### 3a RDA
 ```{r}
-#ugly code that extracts p-values from PERMANOVA results tables
-permanova.p3a <- map_dbl(sim3a,
-                       ~ adonis(select(., -group) ~ .$group,
-                                method = "eu")$aov.tab$`Pr(>F)`[1]) %>%
-  tibble(permanova.p = .)
+test <- rda(sim3a[[1]] %>% select(-group) ~ group, data = sim3a[[1]])
+View(test)
+test2 <- MVA.synt(test)
+test2[[1]]$tab$Proportion[1]
+test3<-anova(test)
+test3$`Pr(>F)`[1]
+
+
+
+rda(select(sim3a[[1]], -group) ~ group, data = sim3a[[1]]) %>% 
+  anova() %>% 
+  .$`Pr(>F)` %>% .[1]
+
+RDA.p3a <- map_dbl(sim3a,
+    ~rda(select(., -group) ~ group, data = .) %>% 
+      anova() %>% 
+      .$`Pr(>F)` %>% .[1], .id = "dataset") %>% tibble(RDA = .)
 ```
 
 ### 3a PLS-DA
@@ -268,7 +331,7 @@ PLS.p3a <- map_df(plsda3a.list, ~get_plotdata(.)$model_stats) %>%
 ### 3a Combine data and plot distribution of p-values
 
 ```{r}
-summary3a <- bind_cols(pca.ttests3a, permanova.p3a, PLS.p3a)
+summary3a <- bind_cols(pca.ttests3a, PLS.p3a, RDA.p3a)
 
 distrplot.df3a <- summary3a %>% 
   gather(-dataset, key = "method", value = "p.value")
@@ -276,10 +339,11 @@ distrplot.df3a <- summary3a %>%
 ggplot(distrplot.df3a, aes(x = p.value, fill = method)) +
   geom_density(alpha = 0.3) +
   geom_vline(aes(xintercept = 0.05), linetype = 2) +
-  ggtitle("Lots of co-varying, discriminating variables")
+  ggtitle("Lots of co-varying, discriminating variables") +
+  ylim(0,10) + xlim(0, 0.7)
 ```
 
-In this situation, PLS-DA actually does a pretty awful job.  I don't really understand why.  PCA and PERMANOVA are about equivalent.
+In this situation, PLS-DA actually does a pretty awful job.  I don't really understand why.  PCA and RDA are about equivalent.
 
 
 ## 3b Needle-in-hastack
@@ -287,15 +351,6 @@ These are the same parameters as in #1
 
 ```{r}
 nperm = 50
-# sim3b <- map(1:nperm,
-#              ~sim_multvar(p_uncorvar = 20,
-#                           p_corvar = 15,
-#                           p_discr = 5,
-#                           cov_corvar = 0.5,
-#                           cov_discr = 0.3,
-#                           diff_discr = 2,
-#                           N = 20,
-#                           seed = NA))
 
 sim3b <- map(1:nperm,
              ~base_df %>%
@@ -329,6 +384,14 @@ pca.ttests3b <-
          PC1.p.value = "p.value")
 ```
 
+### 3b RDA
+
+```{r}
+RDA.p3b <- map_dbl(sim3b,
+    ~rda(select(., -group) ~ group, data = .) %>% 
+      anova() %>% 
+      .$`Pr(>F)` %>% .[1], .id = "dataset") %>% tibble(RDA = .)
+```
 ### 3b (needle-in-haystack) PERMANOVA
 Does PERMANOVA using euclidean distances and extracts p-value
 
@@ -358,7 +421,7 @@ PLS.p3b <- map_df(plsda3b.list, ~get_plotdata(.)$model_stats) %>%
 ### 3b Combine data and plot distribution of p-values
 
 ```{r}
-summary3b <- bind_cols(pca.ttests3b, permanova.p3b, PLS.p3b)
+summary3b <- bind_cols(pca.ttests3b, RDA.p3b, PLS.p3b)
 
 distrplot.df3b <- summary3b %>% 
   gather(-dataset, key = "method", value = "p.value")
@@ -367,10 +430,10 @@ ggplot(distrplot.df3b, aes(x = p.value, fill = method)) +
   geom_density(alpha = 0.3) +
   geom_vline(aes(xintercept = 0.05), linetype = 2) +
   ggtitle("Needle-in-Haystack") +
-  coord_cartesian(xlim = c(0, 0.25), ylim = c(0, 200))
+  coord_cartesian(xlim = c(0, 0.25), ylim = c(0, 100))
 ```
 
-In this situation, PCA performs terrible, PLS-DA does alright, and PERMANOVA does freakishly well.
+In this situation, PCA performs terrible, PLS-DA does alright, and RDA does freakishly well.
 
 
 ## 3c: EXTREME needle in haystack.
@@ -378,15 +441,6 @@ This is the situation where I found that PLS-DA actually outperforms PERMANOVA. 
 
 ```{r}
 nperm = 50
-# sim3c <- map(1:nperm,
-#              ~sim_multvar(p_uncorvar = 5,
-#                           p_corvar = 30,
-#                           p_discr = 5,
-#                           cov_corvar = 0.7,
-#                           cov_discr = 0,
-#                           diff_discr = 1.2,
-#                           N = 20,
-#                           seed = NA))
 
 sim3c <- map(1:nperm,
              ~base_df %>% 
@@ -423,15 +477,13 @@ pca.ttests3c <-
          PC1.p.value = "p.value")
 ```
 
-### 3c (EXTREME needle-in-haystack) PERMANOVA
-Does PERMANOVA using euclidean distances and extracts p-value
+### 3c RDA
 
-```{r echo=TRUE}
-#ugly code that extracts p-values from PERMANOVA results tables
-permanova.p3c <- map_dbl(sim3c,
-                       ~ adonis(select(., -group) ~ .$group,
-                                method = "eu")$aov.tab$`Pr(>F)`[1]) %>% 
-  tibble(permanova.p = .)
+```{r}
+RDA.p3c <- map_dbl(sim3c,
+    ~rda(select(., -group) ~ group, data = .) %>% 
+      anova() %>% 
+      .$`Pr(>F)` %>% .[1], .id = "dataset") %>% tibble(RDA = .)
 ```
 
 ### 3c (EXTREME needle-in-haystack) PLS-DA
@@ -452,7 +504,7 @@ PLS.p3c <- map_df(plsda3c.list, ~get_plotdata(.)$model_stats) %>%
 ### 3c Combine data and plot distribution of p-values
 
 ```{r}
-summary3c <- bind_cols(pca.ttests3c, permanova.p3c, PLS.p3c)
+summary3c <- bind_cols(pca.ttests3c, RDA.p3c, PLS.p3c)
 
 distrplot.df3c <- summary3c %>% 
   gather(-dataset, key = "method", value = "p.value")
@@ -463,7 +515,7 @@ ggplot(distrplot.df3c, aes(x = p.value, fill = method)) +
   ggtitle("EXTREME Needle-in-Haystack")
 ```
 
-And now we see where PLS-DA outperforms PERMANOVA.  Again, I'm not entirely sure why, but I think its because the test statistic that PERMANOVA calculates is a ratio of between- to within-group covariances.  So if covariance is high within groups and and not between groups, F is small, and p is large.  But PLS-DA doesn't seem to care as much.
+And now we see where PLS-DA outperforms RDA  Again, I'm not entirely sure why, but I think its because RDA does a multivariate regression then does two PCAs, one on fitted and one on residual values, then does an F test on the amount of total variation explained by each of these.  So if covariance is high within groups and and not between groups, then F is small and p is large.  But PLS-DA doesn't seem to care as much.
 
 And just to double confirm the PLS-DA, the $Q^2$ value is also generally acceptable in this circumstance.
 
@@ -479,61 +531,36 @@ map_df(plsda3c.list, ~get_plotdata(.)$model_stats) %>%
 
 
 # 4 Missing values
-Can PERMANOVA even handle missing values?
+RDA can't handle missing values, but PLS-DA can.
 
 ```{r}
-sim4 <- base_df %>% 
-  sim_covar(10, 1, 0, name = "uncorr") %>% 
-  sim_covar(10, 1, 0.5, name = "corr") %>% 
-  sim_discr(5, 1, 0, group_means = c(-1, 1), name = "discr") %>% 
-  sim_missing(prop = 0.09)
+# This throws an error
+# rda(select(sim4, -group) ~ group, data = sim4)
 ```
-```{r}
-adonis(select(sim4, -group) ~ sim4$group, method = "eu")
-```
-Apparently it does.  Lets see how it compares to PLS with and without NAs
+
+Simulate two identical lists of datasets, but one has 15% NAs.
 
 ```{r}
 nperm = 50
-NAprop = 0.2
 
 sim4a <- #no missing values
   map(1:nperm,
       ~base_df %>% 
         sim_covar(10, 1, 0, name = "uncorr") %>% 
         sim_covar(10, 1, 0.5, name = "corr") %>% 
-        sim_discr(5, 1, 0, group_means = c(-1, 1), name = "discr")
+        sim_discr(5, 1, 0, group_means = c(-0.5, 0.5), name = "discr")
   )
-```
 
-```{r}
-sim4b <- #same but with missing values
-  map(1:nperm,
-      ~base_df %>% 
-        sim_covar(15, 1, 0, name = "uncorr") %>% 
-        sim_covar(15, 1, 0.7, name = "corr") %>% 
-        sim_discr(5, 1, 0.3, group_means = c(-1, 1), name = "discr") %>% 
-        sim_missing(NAprop)
-  )
+sim4b <- map(sim4a, ~sim_missing(., 0.3))
 ```
 ```{r}
 sim4a[[1]] %>% anyNA()
 sim4b[[1]] %>% anyNA()
 ```
-## 4: PERMANOVA
-```{r include=FALSE}
-permanova.p4a <- map_dbl(sim4a,
-                       ~ adonis(select(., -group) ~ .$group,
-                                method = "eu")$aov.tab$`Pr(>F)`[1]) %>% 
-  tibble(permanova.p = .)
 
-permanova.p4b <- map_dbl(sim4b,
-                       ~ adonis(select(., -group) ~ .$group,
-                                method = "eu")$aov.tab$`Pr(>F)`[1]) %>% 
-  tibble(permanova.p = .)
-```
 
 ## 4: PLS-DA
+
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 plsda4a.list <- map(sim4a,
                    ~opls(select(., -group), .$group,
@@ -543,7 +570,7 @@ plsda4a.list <- map(sim4a,
 
 #Extract p-values and other model stats
 PLS.p4a <- map_df(plsda4a.list, ~get_plotdata(.)$model_stats) %>% 
-  select(pQ2)
+  select(`No NAs` = pQ2)
 
 plsda4b.list <- map(sim4b,
                    ~opls(select(., -group), .$group,
@@ -553,31 +580,18 @@ plsda4b.list <- map(sim4b,
 
 #Extract p-values and other model stats
 PLS.p4b <- map_df(plsda4b.list, ~get_plotdata(.)$model_stats) %>% 
-  select(pQ2)
+  select(NAs = pQ2)
+BRRR::skrrrahh("snoop")
 ```
 
 ```{r}
-summary4a <- bind_cols(permanova.p4a, PLS.p4a)
-summary4b <- bind_cols(permanova.p4b, PLS.p4b)
-
-distrplot.df4a <- summary4a %>% 
+both <- bind_cols(PLS.p4a, PLS.p4b) %>% 
   gather(key = "method", value = "p.value")
 
-distrplot.df4b <- summary4b %>% 
-  gather(key = "method", value = "p.value")
-
-plot4a <- ggplot(distrplot.df4a, aes(x = p.value, fill = method)) +
+ggplot(both, aes(x = p.value, fill = method)) +
   geom_density(alpha = 0.3) +
-  geom_vline(aes(xintercept = 0.05), linetype = 2) +
-  ggtitle("No missing values")
-
-plot4b <- ggplot(distrplot.df4b, aes(x = p.value, fill = method)) +
-  geom_density(alpha = 0.3) +
-  geom_vline(aes(xintercept = 0.05), linetype = 2) +
-  ggtitle(paste(NAprop*100,"% missing values"))
+  xlim(0, 0.15) +
+  geom_vline(aes(xintercept = 0.05), linetype = 2)
 ```
-
-```{r}
-plot_grid(plot4a + theme(legend.position = "none"), plot4b + theme(legend.position = "none")+ coord_cartesian(ylim=c(0,100)), get_legend(plot4a), ncol = 3, nrow = 1, rel_widths = c(1.2, 1.2, 0.5))
-```
+It generally performs pretty well even with 15% missing values.
 
