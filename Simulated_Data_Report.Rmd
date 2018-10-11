@@ -16,12 +16,9 @@ opts_chunk$set(warning = FALSE, message = FALSE)
 # To-Do:
 
 - try switching from `ropls` to `pls`.  Doesn't do oPLS, but shouldn't need that.
-- try RDA
 
 IDEA:
 - instead of comapring t-tests on PCA axes to PLS-DA, use euclidean distance between centroids as a measure of group separation--or something that can measure overlap of CIs.
-
-- Switch PERMANOVA to RDA. PERMANOVA isn't a good comparison since it uses distance matrices.  Can't get loadings out.
 
 
 
@@ -34,12 +31,11 @@ Here's what I can say so far (further explanation and plots follow):
 
 2. Even if a PLS-DA is terrible it will show some separation in a score plot.  Authors should NOT publish plots of bad PLS-DA models.  Maybe they shouldn’t even publish plots of good models, since they don’t look that different than plots of bad models.  Bi-plots or score plots side-by-side with loading plots could be good. Maybe if you have more than 2 groups, score plots could be informative.  Otherwise, they are misleading.
 
-3. PERMANOVA seems to always give lower p-values compared to PLS, with the exception of an extreme needle-in-a-haystack scenario---that is, many correlated variables that are **not** correlated to group membership and just a few variables that differ among groups.
-
-4. PERMANOVA requires distance matrixes, so you can't get info about original variables from it.  It's not designed to work well with multicollinearity.
+3. F-test based methods (RDA, PERMANOVA(not shown), PC-ANOVA(not attempted)) are unlikely to find differences between groups when there is a lot of co-variation in variables that don't explain differences between groups (more within-group variation than between-group variation), but PLS seems totally unphased by this.  Something to do with how NIPALS works?
 
 # Required packages
-```{r}
+
+```{r message=FALSE, warning=FALSE}
 library(chemhelper)
 #this is a package I wrote which contains a funciton to simulate multivariate datasets with different pieces.  Install with devtools::github_install("Aariq/chemhelper")
 library(tidyverse)
@@ -59,6 +55,8 @@ When discriminating variables are minority of variables and there are many co-va
 
 ## Needle-in-haystack data
 
+Code below creates a data frame with 20 variables that don't co-vary, two groups of co-varying variables (total of 15 variables), and two groups of co-varying variables that have different means by group membership.
+
 ```{r}
 base_df <- data_frame(group = rep(c("a","b"), each = 15))
 
@@ -67,7 +65,7 @@ data1 <- base_df %>%
   sim_covar(p = 10, var = 1, cov = 0.5, name = "cor1", seed = 223) %>% 
   sim_covar(p = 5, var = 1, cov = 0.5, name = "cor2", seed = 111) %>% 
   sim_discr(p = 3, var = 1, cov = 0.3, group_means = c(-1, 1), name = "discr1", seed = 224) %>% 
-  sim_discr(p = 3, var = 1, cov = 0.3, group_means = c(-1, 1), name = "discr2", seed = 225)
+  sim_discr(p = 3, var = 1, cov = 0.3, group_means = c(1, -1), name = "discr2", seed = 225)
 ```
 
 ## Correlation heatmap
@@ -89,10 +87,29 @@ pca1 <- opls(select(data1, -group), plot = FALSE)
 pca1_plot <- plot_pca(pca1, data1$group)
 ```
 
+find centroids
+
+```{r}
+test <- get_plotdata(pca1)$plot_data
+test <- bind_cols(test, group = data1$group)
+centroids <- test %>% group_by(group) %>% 
+  summarize(p1 = mean(p1),
+            p2 = mean(p2))
+
+pca1_plot +
+  geom_point(data = centroids, aes(x = p1, y = p2, color = group), shape = "plus", size = 4)
+```
+```{r}
+dist(centroids %>% select(-group)) %>% as.numeric()
+
+centroids
+```
+
+
 ### PLS-DA
 
 ```{r}
-plsda1 <- opls(select(data1, -group), data1$group, plot = FALSE, permI = 200)
+plsda1 <- opls(select(data1, -group), data1$group, plot = FALSE, permI = 200, predI = 2)
 plsda1_plot <- plot_plsda(plsda1)
 ```
 
@@ -146,6 +163,14 @@ scores(RDA1)$species %>%
   rownames_to_column(var = "Variable") %>% 
   select(Variable, RDA1) %>% arrange(desc(abs(RDA1))) %>% 
   slice(1:10)
+```
+
+## Get PCA loadings
+
+The best separation is along PC2, but this axis is not strongly correlated with the discriminating variables.
+
+```{r}
+pca1 %>% get_loadings() %>% select(Variable, p2) %>% arrange(desc(abs(p2)))
 ```
 
 
@@ -276,7 +301,7 @@ sim3a[[1]] %>%
 ### 3a t-tests on PC axis
 Runs a PCA on all simulated datasets and does a t-test using PC1 scores.  Extracts p-values
 
-```{r echo=TRUE, results="hide"}
+```{r echo=TRUE, include=FALSE}
 pca.ttests3a <-
   map(sim3a,
       ~opls(select(., -group),
@@ -293,16 +318,8 @@ pca.ttests3a <-
 ```
 
 ### 3a RDA
+
 ```{r}
-test <- rda(sim3a[[1]] %>% select(-group) ~ group, data = sim3a[[1]])
-View(test)
-test2 <- MVA.synt(test)
-test2[[1]]$tab$Proportion[1]
-test3<-anova(test)
-test3$`Pr(>F)`[1]
-
-
-
 rda(select(sim3a[[1]], -group) ~ group, data = sim3a[[1]]) %>% 
   anova() %>% 
   .$`Pr(>F)` %>% .[1]
@@ -314,6 +331,7 @@ RDA.p3a <- map_dbl(sim3a,
 ```
 
 ### 3a PLS-DA
+
 Run PLS-DA on all.  Force 2 axes because every once and a while, a random dataset will produce a bad model that breaks the code.  Extracts $p_{Q^2}$.
 
 ```{r echo=TRUE, results="hide"}
@@ -357,7 +375,7 @@ sim3b <- map(1:nperm,
                sim_covar(15, var = 1, cov = 0, name = "uncorr") %>% 
                sim_covar(20, var = 1, cov = 0.5, name = "corr") %>% 
                sim_discr(5, var = 1, cov = 0, group_means = c(-1, 1))
-)
+) 
 
 sim3b[[1]] %>% 
   select(-group) %>% 
@@ -446,7 +464,7 @@ sim3c <- map(1:nperm,
              ~base_df %>% 
                sim_covar(5, 1, 0, name = "uncorr") %>% 
                sim_covar(30, 1, 0.7, name = "corr") %>% 
-               sim_discr(5, 1, 0, group_means = c(1.2, 0))
+               sim_discr(5, 1, 0, name = "discr", group_means = c(1.2, 0))
 )
 
 sim3c[[1]] %>% 
@@ -526,7 +544,8 @@ map_df(plsda3c.list, ~get_plotdata(.)$model_stats) %>%
 
 map_df(plsda3c.list, ~get_plotdata(.)$model_stats) %>% 
   ggplot(aes(x = `Q2(cum)`)) +
-  geom_density()
+  # geom_density()
+  geom_histogram(bins = 15, color = "black")
 ```
 
 
