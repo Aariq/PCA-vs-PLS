@@ -8,6 +8,7 @@ output:
 ---
 
 # To-do
+
 - change kappa funciton to accept `true=`, and `predicted=` instead of `colA` and `colB`
 - change kappa function to not use `dplyr` and calculate more intermediates (improve readability)
 - Calculate kappa for all scenarios
