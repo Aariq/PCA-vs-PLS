@@ -8,8 +8,15 @@ output:
 ---
 
 # To-do
-Rather than focus on p-values, do something like a confusion matrix.  1) set up a cutoff of loadings and/or VIP scores that make a variable a significant contributor.  2) Quantify how often each method gets this right (was it a discriminating variable vs. was it detected as a discriminating variable) 3) summarize this as proportion of false positives or some other index (Ask Matt, or look at notes)
+
+- Calculate kappa for all scenarios
+- Adapt all scenarios to use new functions
+- Plot kappa distributions
+- Decide on appropriate cut-off criteria for detecting variable importance in PCA and RDA
+
+
 # Introduction
+
 The purpose of this notebook is to stress-test PCA, RDA, and PLS-DA to better understand their properties.  All the datasets in this notebook have 35 variables and 20 observations split into two groups ("a" and "b"). I randomly generate `nperm` number of data frames using the same parameters, then obtain p-values from each statistical method on all data sets to test if the groups differ.  I then visualize the distribution of p-values.
 
 # Packages needed
@@ -25,15 +32,55 @@ library(vegan) # for rda()
 
 # Define Functions
 
+## Kappa coefficient
+
+Cohen's kappa is defined as:
+
+$$
+\kappa = \frac{ p_o - p_e}{1-p_e}
+$$
+
+where $p_o$ is observed proportionate agreement and $p_e$ is probability of random agreement.
+
+$$
+p_o = \frac{agreements}{total}
+$$
+
+$$
+p_e = (p_{yesA}\times p_{yesB}) + (p_{noA} \times p_{noB})
+$$
+```{r}
+k.conf <- function(df, colA, colB){
+  
+  colA <- enexpr(colA)
+  colB <- enexpr(colB)
+  
+  stopifnot(is.logical(df[[colA]]) & is.logical(df[[colB]]))
+
+  conf.df <- df %>% 
+    mutate(a = !.data[[colA]] & !.data[[colB]], #both F
+           b = .data[[colA]] & !.data[[colB]], #one F one T
+           c = !.data[[colA]] & .data[[colB]], #one T one F
+           d = .data[[colA]] & .data[[colB]]) %>% #both T
+    select(a, b, c, d) %>% 
+      summarize(a = sum(a), b = sum(b), c = sum(c), d = sum(d), n = n())
+   
+  result <- conf.df %>%
+    mutate(po = (a+d)/n, #proportion agreement
+           pe = (((a + b)/n) * (a + c)/n) + (((c + d)/n) * ((b + d)/n)),
+           k = (po - pe) / (1 - pe))
+  return(result[["k"]])
+}
+```
+
 ## PCA t-test
 
-Does PCA, then does t-test on PC1 scores, returns p-value.
+Does t-test on PC1 scores, returns p-value.
 
 ```{r}
-PCA.t.test <- function(df){
-  pca.m <- opls(select(df, -group), plotL = FALSE, printL = FALSE)
+PCA.t.test <- function(pca.m, group){
   pca.d <- get_plotdata(pca.m)$plot_data
-  pca.t <- t.test(pca.d$p1 ~ df$group)
+  pca.t <- t.test(pca.d$p1 ~ group)
   return(pca.t$p.value)
 }
 ```
@@ -43,8 +90,7 @@ PCA.t.test <- function(df){
 Fits RDA model, runs ANOVA for global significance of model, returns p-value.
 
 ```{r}
-RDA.anova <- function(df){
-  rda.m <- rda(select(df, -group) ~ df$group)
+RDA.anova <- function(rda.m){
   return(anova(rda.m)$`Pr(>F)`[[1]])
 }
 ```
@@ -54,8 +100,7 @@ RDA.anova <- function(df){
 Fits PLS-DA model, calculates p-values with 100 permutations, returns $Q^2$, $p_{(R^2_Y)}$, and $p_{(Q^2)}$
 
 ```{r}
-PLS.test <- function(df){
-  pls.m <- opls(select(df, -group), df$group, permI = 100, predI = 2, printL = FALSE, plotL = FALSE)
+PLS.test <- function(pls.m){
   return(select(pls.m@summaryDF, `Q2(cum)`, pR2Y, pQ2))
 }
 ```
@@ -87,20 +132,58 @@ df1[[1]] %>%
 **PCA 1**
 
 ```{r}
-pvals.pca1 <- map_dbl(df1, PCA.t.test)
+pca1 <- map(df1, ~opls(select(., -group), plotL = FALSE, printL = FALSE))
+pvals.pca1 <- map_dbl(pca1, ~PCA.t.test(., group = df1[[1]]$group))
+```
+
+Try calculating kappa coeffiecients
+
+```{r}
+ks.pca1 <- pca1 %>% map(~get_loadings(.) %>%
+               mutate(is.discr = str_detect(Variable, "discr"),
+                      pred.discr = p1 > 0.15)) %>% 
+  map_dbl(~k.conf(., "is.discr", "pred.discr"))
+mean(ks.pca1)
 ```
 
 **RDA 1**
 
 ```{r}
-pvals.rda1 <- map_dbl(df1, RDA.anova)
+rda1 <- map(df1, ~rda(select(., -group) ~ .$group))
+pvals.rda1 <- map_dbl(rda1, RDA.anova)
 ```
+
+Kappa coefficient
+```{r}
+library(RVAideMemoire)
+ks.rda1 <- map(rda1, ~scores(.)$species %>%
+      as.data.frame() %>%
+      rownames_to_column(var = "Variable") %>% 
+      mutate(is.discr = str_detect(Variable, "discr"),
+             pred.discr = abs(RDA1) > 0.15)) %>%
+  map_dbl(~k.conf(., "is.discr", "pred.discr"))
+mean(ks.rda1)
+```
+
 
 **PLS 1**
 
 ```{r}
-output.pls1 <- map(df1, PLS.test) %>% bind_rows()
+pls1 <- df1 %>% 
+  map(~opls(select(., -group), .$group, permI = 100, predI = 2, printL = FALSE, plotL = FALSE))
+
+output.pls1 <- map(pls1, PLS.test) %>% bind_rows()
 ```
+
+Kappa coefficient
+
+```{r}
+ks.pls1 <- pls1 %>% map(~get_VIP(.) %>% 
+  mutate(is.discr = str_detect(Variable, "discr"), pred.discr = VIP > 1)) %>% 
+  map_dbl(~k.conf(., "is.discr", "pred.discr"))
+mean(ks.pls1)
+```
+
 
 ## Results 1
 
