@@ -9,8 +9,6 @@ output:
 
 # To-do
 
-- change kappa funciton to accept `true=`, and `predicted=` instead of `colA` and `colB`
-- change kappa function to not use `dplyr` and calculate more intermediates (improve readability)
 - Calculate kappa for all scenarios
 - Adapt all scenarios to use new functions
 - Plot kappa distributions
@@ -52,26 +50,26 @@ $$
 p_e = (p_{yesA}\times p_{yesB}) + (p_{noA} \times p_{noB})
 $$
 ```{r}
-k.conf <- function(df, colA, colB){
+k.conf <- function(df, real, pred){
   
-  colA <- enexpr(colA)
-  colB <- enexpr(colB)
+  real <- enexpr(real)
+  pred <- enexpr(pred)
   
-  stopifnot(is.logical(df[[colA]]) & is.logical(df[[colB]]))
+  colA <- df[[real]]
+  colB <- df[[pred]]
+  
+  stopifnot(is.logical(colA) & is.logical(colB))
 
-  conf.df <- df %>% 
-    mutate(a = !.data[[colA]] & !.data[[colB]], #both F
-           b = .data[[colA]] & !.data[[colB]], #one F one T
-           c = !.data[[colA]] & .data[[colB]], #one T one F
-           d = .data[[colA]] & .data[[colB]]) %>% #both T
-    select(a, b, c, d) %>% 
-      summarize(a = sum(a), b = sum(b), c = sum(c), d = sum(d), n = n())
-   
-  result <- conf.df %>%
-    mutate(po = (a+d)/n, #proportion agreement
-           pe = (((a + b)/n) * (a + c)/n) + (((c + d)/n) * ((b + d)/n)),
-           k = (po - pe) / (1 - pe))
-  return(result[["k"]])
+  a = sum(!colA & !colB) #both F
+  b = sum(colA & !colB) #one F one T
+  c = sum(!colA & colB) #one T one F
+  d = sum(colA & colB) #both T
+  n = ncol(df)
+  
+  po = (a+d)/n #proportion agreement
+  pe = (((a + b)/n) * (a + c)/n) + (((c + d)/n) * ((b + d)/n)) #prob agreement by chance
+  k = (po - pe) / (1 - pe)
+  return(k)
 }
 ```
 
@@ -157,7 +155,7 @@ pvals.rda1 <- map_dbl(rda1, RDA.anova)
 
 Kappa coefficient
 ```{r}
-library(RVAideMemoire)
+# library(RVAideMemoire)
 ks.rda1 <- map(rda1, ~scores(.)$species %>%
       as.data.frame() %>%
       rownames_to_column(var = "Variable") %>% 
