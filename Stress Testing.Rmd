@@ -87,7 +87,7 @@ PCA.t.test <- function(pca.m, group){
 
 ## RDA ANOVA
 
-Fits RDA model, runs ANOVA for global significance of model, returns p-value.
+ANOVA for global significance of RDA model, returns p-value.
 
 ```{r}
 RDA.anova <- function(rda.m){
@@ -97,7 +97,7 @@ RDA.anova <- function(rda.m){
 
 ## PLS-DA
 
-Fits PLS-DA model, calculates p-values with 100 permutations, returns $Q^2$, $p_{(R^2_Y)}$, and $p_{(Q^2)}$
+Extracts $Q^2$, $p_{(R^2_Y)}$, and $p_{(Q^2)}$ from pls models.
 
 ```{r}
 PLS.test <- function(pls.m){
