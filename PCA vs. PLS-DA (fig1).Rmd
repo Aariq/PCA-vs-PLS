@@ -23,8 +23,8 @@ myseed <- 401.6368
 df <- data_frame(group = rep(c("a", "b"), each = 10))
 no_discr <- df %>%
   sim_covar(5, var = 1, cov = 0, name = "uncorr", seed = myseed) %>% 
-  sim_covar(10, var = 1, cov = 0.55, name = "corrA", seed = myseed + 1) %>% 
-  sim_covar(10, var = 1, cov = 0.55, name = "corrB", seed = myseed + 2)
+  sim_covar(10, var = 1, cov = 0.5, name = "corrA", seed = myseed + 1) %>% 
+  sim_covar(10, var = 1, cov = 0.5, name = "corrB", seed = myseed + 2)
 ```
 
 This heatmap shows the correlation structure.
@@ -71,10 +71,14 @@ plot_grid(cor1,
 Keeping the total number of observations and variables the same, and using the same random seed, I create a second data set with 5 variables that do not covary within groups, but differ in their means between groups.
 
 ```{r}
+# discr <- df %>% 
+#   sim_covar(5, var = 1, cov = 0, name = "uncorr", seed = myseed) %>% 
+#   sim_covar(8, var = 1, cov = 0.55, name = "corrA", seed = myseed + 1) %>% 
+#   sim_covar(7, var = 1, cov = 0.55, name = "corrB", seed = myseed + 2) %>% 
+#   sim_discr(5, var = 1, cov = 0, group_means = c(-1, 1), name = "discr", seed = myseed + 3)
 discr <- df %>% 
-  sim_covar(5, var = 1, cov = 0, name = "uncorr", seed = myseed) %>% 
-  sim_covar(8, var = 1, cov = 0.55, name = "corrA", seed = myseed + 1) %>% 
-  sim_covar(7, var = 1, cov = 0.55, name = "corrB", seed = myseed + 2) %>% 
+  sim_covar(10, var = 1, cov = 0.55, name = "corrA", seed = myseed + 1) %>% 
+  sim_covar(10, var = 1, cov = 0.55, name = "corrB", seed = myseed + 2) %>% 
   sim_discr(5, var = 1, cov = 0, group_means = c(-1, 1), name = "discr", seed = myseed + 3)
 ```
 
@@ -148,5 +152,68 @@ table1 <- full_join(VIPs, pca.load) %>%
   mutate_if(is.double, ~round(.,4))
 table1
 write_excel_csv(table1, "figs/table1.csv")
+```
+
+# Red Herring
+Large variation with weak discrimination plus small variation with large discrimination
+
+```{r}
+herring <- df %>% 
+  sim_discr(p = 10, var = 1, cov = 0.5, group_means = c(-0.5, 0.5), name = "highvar") %>% 
+  sim_discr(p = 10, var = 1, cov = 0, group_means = c(-1, 1), name = "lowvar") %>% 
+  sim_covar(p = 5, var = 1, cov = 0, name = "noise")
+```
+
+```{r}
+herring %>% 
+  select(-group) %>% 
+  cor() %>% 
+  iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
+```
+```{r}
+herring.cor <- herring %>% 
+  select(-group) %>% 
+  cor() %>%
+  as.data.frame() %>% 
+  rownames_to_column(var = "row") %>% 
+  gather(-row, key = col, value = cor)
+
+cor3 <- ggplot(herring.cor, aes(x = col, y = row, fill = cor)) +
+  geom_tile() +
+  scale_fill_gradient2("Correlation Coeficient") +
+  labs(x = NULL, y = NULL) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90), legend.position = "top")
+```
+
+
+```{r}
+pca3 <- opls(select(herring, -group), plot = FALSE)
+pls3 <- opls(select(herring, -group), no_discr$group, plot = FALSE, predI = 2, permI = 500)
+```
+```{r}
+pca3.plot <- plot_pca(pca3, herring$group, annotate = "subtitle")
+pls3.plot <- plot_plsda(pls3, annotate = "subtitle")
+plot_grid(cor3,
+          pca3.plot + theme(legend.position = "NULL"),
+          pls3.plot + theme(legend.position = "NULL"), nrow = 1, ncol = 3)
+```
+
+```{r}
+VIPs3 <- get_VIP(pls3) %>%
+  arrange(desc(VIP))
+
+pca3.load <- get_loadings(pca3) %>%
+  select(Variable, p1, p2) %>%
+  arrange(desc(abs(p1)))
+
+table3 <- full_join(VIPs3, pca3.load) %>%
+  arrange(Variable) %>% 
+  rename(`PLS-DA VIP score` = VIP, `PC1 loading` = p1, `PC2 loading` = p2) %>% 
+  mutate_if(is.double, ~round(.,4))
+table3 %>% arrange(desc(`PLS-DA VIP score`))
+table3 %>% arrange(desc(`PC1 loading`))
+# write_excel_csv(table1, "figs/table1.csv")
+
 ```
 
