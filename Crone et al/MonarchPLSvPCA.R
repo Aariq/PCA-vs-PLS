@@ -38,6 +38,22 @@ p2 = plsr(ABUND ~ COAST_DEV + GLY + NN + COAST_T + COAST_P + BR_TEMP + BR_PDSI,
 p3 = lm(ABUND~ scores(p2)[,1] + scores(p2)[,2], data = mydat[2:36,]) #this works, but I'm not sure what it does.  Why do a regression on the PLS scores??
 summary(p3)
 
+
+# Repeat PLSR with ropls, just because that's what I'm familiar with
+library(ropls)
+mydat
+pls <- opls(mydat[4:10], mydat$ABUND, permI = 200)
+#produces single component model, good Q2 and p-value
+#make 2 component model for the sake of visualization
+pls.2 <- opls(mydat[4:10], mydat$ABUND, predI = 2, permI = 200)
+plot(pls.2)
+opls <- opls(mydat[4:10], mydat$ABUND, predI = 1, orthoI = NA, permI = 200)
+plot(opls)
+getVipVn(pls)
+getVipVn(opls)
+#COAS_DEV, GLY, and NN are important for monarch abundance
+#no real difference between OPLS and one-component PLS
+
 # Do Loadings and Scores Match?
 plot(loadings(p0)[,1], loadings(p2)[,1]) #almost exactly
 plot(loadings(p0)[,2], loadings(p2)[,2]) #not well
@@ -53,3 +69,4 @@ mtext("PLS comp. 2", side = 2, line = 2)
 plot(scores(p0)[,1], scores(p0)[,2], pch = 21, bg = "gray80", cex = mydat$ABUND/5, xlab = "", ylab = "", xlim = c(-4,4), ylim = c(-8,8)) # scale separation of points to be same on both axes
 mtext("PCA comp. 1", side = 1, line = 2)
 mtext("PCA comp. 2", side = 2, line = 2)
+
