@@ -1,0 +1,57 @@
+---
+title: "Re-analysis of Muir et al. data"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(here)
+library(ropls)
+library(chemhelper)
+library(glue)
+```
+
+# Read in Data
+
+Physiological data:
+```{r}
+tomato.raw <- read_csv(here("data", "Muir et al.", "data.csv"))
+tomato <-
+  tomato.raw %>%
+  select(-X1, -PC2, -PC1)
+tomato
+```
+
+Species abbreviations and lat long:
+
+```{r}
+location <- read_csv(here("data", "Muir et al.", "TableS1.csv"))
+```
+
+Join the two
+
+```{r}
+tomato.1 <- left_join(tomato, location %>% select(Spe, Latitude, Longitude, Taxon)) %>%
+  filter(!is.na(Latitude))
+tomato.1
+```
+
+# Fit PCA
+
+```{r}
+tom.pca <- opls(tomato.1 %>% select(lma.leaflet:Rdark), plotL = FALSE)
+tom.pca.data <- get_plotdata(tom.pca)
+
+ggplot(tom.pca.data$plot_data, aes(x = p1, y = p2)) +
+  geom_point(aes(color = tomato.1$Latitude)) +
+  scale_color_viridis_c(option = "A", direction = -1) +
+  labs(x = glue("P1 ({tom.pca.data$var_explained[1,1] * 100}%)"),
+       y = glue("P2 ({tom.pca.data$var_explained[2,1] * 100}%)"))
+```
+
+# Fit PLSR
+
+```{r}
+tom.plsr <- opls(tomato.1 %>% select(lma.leaflet:Rdark), tomato.1$Latitude, plotL = FALSE)
+```
+Not a great model!

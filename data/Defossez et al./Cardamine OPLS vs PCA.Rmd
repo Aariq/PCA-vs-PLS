@@ -1,0 +1,91 @@
+---
+title: "Defossez et al OPLS"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(here)
+library(ropls)
+```
+
+
+
+```{r}
+cardamine <- read_delim(here("data", "Defossez et al.", "all traits averages.csv"), delim = ";")
+cardamine
+```
+
+- spp: the *Cardamine* species
+- alt: 
+- light:
+- moisture:
+- ph:
+- nutrients:
+- avg alt: Altitude at center of distribution?
+- FD_Temperature
+- FD_Moisture
+- FD_Radiation
+- wight: weight
+- sla: specific leaf area. Ratio of 6mm diameter leaf disk area to its mass (mm^2^ mg^-1^)
+- dmage: % damage where 100% means all leaves were completely eaten
+- height: height
+- photosy: photosynthetic rate?? Chlorophyll contents???
+- toughness: leaf toughness
+- pieris:
+- spod:
+- C/N: carbon to nitrogen ratio
+- GLS C: constitutive plant glucosinolate concentration
+- GLS JA: Glucosinolate concentration in MeJA induced plants
+- GLS JA-C: Difference between control and MeJA induced plants
+- nb_peaks:
+- VOC C: constitutive plant volatiles
+- VOC JA: MeJA induced plant volatiles
+- VOCS JA-C: difference between control and MeJA induced plant volatiles
+
+```{r}
+Xs <- c("wight", "sla", "toughness", "height", "photosy", "C/N", "GLS C", "GLS JA-C", "VOC C", "VOCS JA-C")
+```
+
+# PCA
+
+```{r}
+card.pca <- opls(cardamine %>% select(Xs), plotL = FALSE)
+card.pca.data <- get_plotdata(card.pca)
+ggplot(card.pca.data$plot_data, aes(x = p1, y = p2)) +
+  geom_point(aes(color = cardamine$`avg alt`)) +
+  scale_color_viridis_c(option = "A") +
+  labs(x = glue("P1 ({card.pca.data$var_explained[1,1] * 100}%)"),
+       y = glue("P2 ({card.pca.data$var_explained[2,1] * 100}%)")) + theme_dark()
+```
+
+
+# PLSR
+```{r}
+opls(cardamine %>% select(Xs), cardamine$`avg alt`, plotL = FALSE)
+```
+Good model!  Only one component, so I'll use OPLS
+
+```{r}
+card.opls <- opls(cardamine %>% select(Xs), cardamine$`avg alt`, predI = 1, orthoI = NA)
+plot_opls(card.opls) + scale_color_viridis_c(option = "A") + theme_dark()
+```
+
+
+# Compare variables
+## PCA
+```{r}
+card.pca %>%
+  get_loadings() %>% 
+  arrange(desc(abs(p1)))
+```
+ so high altitude (negative on PC1) is associated with high constitutive glucosinolates, low SLA, high chlorophyll mostly
+ 
+## OPLS
+```{r}
+card.opls %>% 
+  get_VIP() %>% 
+  arrange(desc(VIP))
+```
+
+ehh, lame.  pretty much the same conclusion.

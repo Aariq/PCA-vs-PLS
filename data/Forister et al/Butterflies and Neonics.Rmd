@@ -1,0 +1,62 @@
+---
+title: "butterflies and neonics"
+output: html_notebook
+---
+```{r}
+library(tidyverse)
+library(here)
+library(ropls)
+library(chemhelper)
+```
+
+# Read in digitized data
+See `Digitizing plots.R` for script to do get these data.
+```{r}
+Fig2a_data <- read_rds(here("Forister et al", "Fig2a_data.rds"))
+Fig2b_data <- read_rds(here("Forister et al", "Fig2b_data.rds"))
+```
+
+# Spread data so each row is a year.
+## for the insecticide data
+```{r}
+insecticide_wide <- Fig2b_data %>% 
+  select(-x) %>% #get rid of un-rounded years
+  mutate(insecticide = exp(log_insecticide)) %>% #use un-transformed data
+  mutate(chemical_class = ifelse(group %in% c("Yolo", "Sacramento", "Solano"), "neonicotinoid", group)) %>%  #county data is for neonics
+  group_by(year, chemical_class) %>%  #get a mean for all neonics
+  summarise(insecticide = mean(insecticide)) %>% 
+  spread(key = chemical_class, value = insecticide) #spread to get columns for each type of pesticide
+```
+
+## for the species data
+```{r}
+species <- Fig2a_data %>% 
+  select(-x) %>% 
+  group_by(year) %>% 
+  summarise(species = mean(Effective_species))
+```
+
+## merge into one dataset and remove years with missing data
+```{r}
+butterfly_data <- left_join(insecticide_wide, species) %>%
+  filter(year >=1995) %>% ungroup()
+```
+
+# PLS regression
+Does pesticide use explain butterfly species numbers?
+```{r}
+test <- opls(butterfly_data %>% select(-year, -species), butterfly_data$species,
+     predI = NA,
+     permI = 200)
+VIPs <- get_VIP(test) %>% arrange(desc(VIP))
+left_join(VIPs, chemhelper::get_loadings(test))
+```
+Model is good. Organophosphates, carbamates, and organochlorines all positively related to species richness. Neonics are borderline important and negatively associated with species richness.
+
+## Force 2-component model for the sake of plotting something
+```{r}
+test2comp <- opls(butterfly_data %>% select(-year, -species), butterfly_data$species,
+     predI = 2,
+     permI = 200)
+```
+

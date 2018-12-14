@@ -1,0 +1,105 @@
+---
+title: "Veen et al. Leaflitter decomposition"
+output: html_notebook
+---
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(ropls)
+library(chemhelper)
+library(here)
+```
+
+```{r}
+veen.mass <- read_excel(here("Veen et al", "Veen et al FE-data.xlsx"))
+veen.env <-  read_excel(here("Veen et al", "Veen et al FE-data.xlsx"), sheet = 2)
+veen.mass
+veen.env <- veen.env %>% 
+  rename(soilpH = pH, litterlignin = lignin,
+         soilOM = SOM)
+# left_join(veen.mass, veen.env, by = "transectID")
+```
+# Data description
+from README.docx
+
+Column: Explanation
+
+- ID: identification number for each individual sample
+- transectID:	identification number for each transect
+- transecttype:	type of successional gradient
+    -	ex-arable: secondary successional gradient on ex-arable fields
+    -	dunes: primary successional gradient on coastal dunes
+    -	driftsands: primary successional gradients on drift sands
+- site:	name of the site where soil and litter were collected
+- soilsource:	successional stage from which the soil was sourced
+    1.	early-successional stage
+    2.	mid-successional stage
+    3.	late-successional stage
+- littersource:	successional stage from which the litter was sourced
+    1.	early-successional stage
+    2.	mid-successional stage
+    3.	late-successional stage
+- sterilization:	litter sterilization treatment
+		- no = litter was not sterilized
+		- yes = litter was sterilized
+- mass4: Mass loss after 4 months (%)
+- mass12: Mass loss after 12 months (%)
+
+Column: Explanation
+
+- transectID:	identification number for each transect
+- transecttype:	type of successional gradient
+    -	ex-arable: secondary successional gradient on ex-arable fields
+    -	dunes: primary successional gradient on coastal dunes
+    -	driftsands: primary successional gradients on drift sands
+- succstage:	successional stage from which litter and soil were sourced
+    1.	early-successional stage
+    2.	mid-successional stage
+    3.	late-successional stage
+- soilmoist:	soil moisture content (%)
+- SOM:	soil organic matter content (%)
+- soilNO3: soil nitrate concentration (µg g-1)
+- soilNH4: soil ammonium concentration (µg g-1)
+- soilC: soil carbon content (%)
+- soilN: soil nitrogen content (%)
+- soilP: soil phosphorous content (%)
+- litterC:	litter carbon content (%)
+- litterN:	litter nitrogen content (%)
+- litterP:	litter phosphorous content (%)
+- pH: soil pH
+- lignin	litter lignin content (%)
+
+**Note:** Above, I edited column names so everything soil related had a leading "soil" and everythign litter related has a leading "litter"
+
+```{r}
+soil <- veen.env %>%
+  select_at(vars(transectID, succstage, starts_with("soil"))) %>% 
+  rename(soilsource = succstage)
+litter <- veen.env %>%
+  select_at(vars(transectID, succstage, starts_with("litter"))) %>%
+  rename(littersource = succstage)
+veen <- left_join(left_join(veen.mass,soil), litter)
+```
+
+I really need to read the paper to get what's going on here I guess
+
+I could ask, for example, regardless of home field advantage (ignore soilsource and littersource), what soil and litter properties best predict decomposition (mass12)?  Probably would want to only use non-sterilized litter?? Could include it to see if it comes out as important variable.
+
+```{r}
+plsdata <- veen %>%
+  select(-ID, -transectID, -site, -mass4) %>%
+  select(mass12, everything()) %>%
+  mutate(mass12 = as.numeric(mass12),
+         litterlignin = as.numeric(litterlignin),
+         transecttype = as.factor(transecttype) %>% as.numeric(),
+         sterilization = as.factor(sterilization) %>% as.numeric()) %>% 
+  filter(complete.cases(.))
+
+pca <- opls(select(plsdata, -mass12))
+plsr <- opls(select(plsdata, -mass12), plsdata$mass12, permI = 200)
+
+get_VIP(plsr) %>% arrange(desc(VIP))
+```
+
+

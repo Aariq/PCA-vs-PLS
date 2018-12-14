@@ -1,0 +1,28 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(ropls)
+library(here)
+library(chemhelper)
+```
+
+```{r}
+traits <- read_csv(here("Gustafsson et al", "CWM_traits.csv"), na = "nd")
+traits <- traits[ , 1:13]
+#traits <- traits %>% filter(lnPrimprod > 1 & lnPrimprod < 5)
+traits <- traits %>% na.omit()
+traits.X <- traits[ , 3:11]
+traits.Y <- traits$lnPrimprod
+```
+```{r}
+plant.pca <- opls(traits.X)
+plant.pls <- try(opls(traits.X, traits.Y))
+plant.pls <- opls(traits.X, traits.Y, predI = 2)
+
+get_VIP(plant.pls) %>% arrange(desc(VIP))
+```
+
