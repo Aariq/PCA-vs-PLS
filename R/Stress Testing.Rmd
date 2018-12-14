@@ -9,7 +9,8 @@ output:
 
 # To-do
 
-- Make scenarios consistent between this file and *PCA vs. PLS-DA (fig1).Rmd*
+- Look at this again later.  For now, use scenarios defined in "Generating Datasets.Rmd" for the main aim of the paper.  But--you might learn somethign from the weird stuff going on in these extreme scenarios.
+
 - Calculate kappa for all scenarios
 - Adapt all scenarios to use new functions
 - Plot kappa distributions

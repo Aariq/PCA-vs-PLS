@@ -1,0 +1,115 @@
+---
+title: "Simulating Datasets"
+output: html_notebook
+---
+```{r message=FALSE, warning=FALSE}
+library(iheatmapr)
+# library(rlist)
+library(chemhelper)
+library(tidyverse)
+```
+
+To Do:
+
+- probs make more datasets than just 100.
+
+It makes sense to make randomly generated datasets under my three scenarios **once** and then save them as .RDS files.  Then, I can do comparisons of PCA and PLS-DA, pick individual datasets to make figures out of, etc. using these saved files.
+
+**For all datasets:**
+
+ - p (number of variables) = 25
+ - N (number of observations) = 20
+ - var (variation parameter, passed to mvrnorm) = 1
+ - Number of groups = 2
+ - Number of datasets generated = 100
+ 
+**Scenarios:**
+
+1. **NULL**
+    - no discriminating variables
+    - 5 variables with cov = 0
+    - two groups of 10 variables with cov = 0.5
+  
+2. **Needle in a haystack**
+    - 5 variables that discriminate between groups with a difference in means of 2, cov = 0
+    - two groups of 10 variables with cov = 0.5
+  
+3. **Red herring**
+    - one group of 10 variables with d = 1 and cov = 0.5 (high variation, low discrimination)
+    - one group of 10 variables with d = 2 and cov = 0 (low variation, high discrimination)
+    - 5 variables with cov = 0
+
+# 1. NULL
+
+```{r}
+null <-
+  map(1:100,
+      ~ sim_df(N = 20, n_groups = 2) %>% 
+        sim_covar(5, var = 1, cov = 0, name = "uncorr") %>% 
+        sim_covar(10, var = 1, cov = 0.5, name = "corrA") %>% 
+        sim_covar(10, var = 1, cov = 0.5, name = "corrB")
+  ) %>%
+  set_names(paste("null_df_", 1:100))
+```
+
+Inspect one:
+
+```{r}
+null[[sample(1:100, 1)]] %>%
+  dplyr::select(-group) %>% 
+  cor() %>% 
+  iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
+```
+
+# 2. Needle in a haystack
+
+```{r}
+needle_in_haystack <-
+  map(1:100,
+      ~ sim_df(N = 20, n_groups = 2) %>% 
+        sim_discr(5, var = 1, cov = 0, group_means = c(-1, 1), name = "discr") %>% 
+        sim_covar(10, var = 1, cov = 0.5, name = "corrA") %>% 
+        sim_covar(10, var = 1, cov = 0.5, name = "corrB")
+  ) %>%
+  set_names(paste("needle_in_haystack_", 1:100))
+```
+
+Inspect one:
+
+```{r}
+needle_in_haystack[[sample(1:100, 1)]] %>%
+  dplyr::select(-group) %>% 
+  cor() %>% 
+  iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
+```
+
+# 3. Red Herring
+
+```{r}
+red_herring <-
+  map(1:100,
+      ~ sim_df(N = 20, n_groups = 2) %>% 
+        sim_covar(5, var = 1, cov = 0, name = "noise") %>% 
+        sim_discr(10, var = 1, cov = 0.5, group_means = c(-0.5, 0.5), name = "highcov") %>% 
+        sim_discr(10, var = 1, cov = 0, group_means = c(-1, 1), name = "lowcov")
+  ) %>%
+  set_names(paste("red_herring_", 1:100))
+```
+
+Inspect one:
+
+```{r}
+red_herring[[sample(1:100, 1)]] %>%
+  dplyr::select(-group) %>% 
+  cor() %>% 
+  iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
+```
+
+# Save 'em
+```{r}
+library(here)
+write_rds(null, here("data", "null.rds"))
+write_rds(needle_in_haystack, here("data", "needle.rds"))
+write_rds(red_herring, here("data", "red herring.rds"))
+```
+

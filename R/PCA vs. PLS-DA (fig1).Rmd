@@ -12,7 +12,7 @@ theme_set(theme_gray())
 library(iheatmapr) #for correlation heatmaps
 ```
 
-# No discriminating variables
+# No discriminating variables (NULL)
 
 The code chunk below creates a data frame with a grouping variable with two groups (a and b) with n=10 per group, 5 variables that don't covary, and two groups of 10 variables that moderately covary.
 
@@ -66,7 +66,7 @@ plot_grid(cor1,
           pls1.plot + theme(legend.position = "NULL"), nrow = 1, ncol = 3)
 ```
 
-# Few discriminating variables
+# Few discriminating variables (Needle in a haystack)
 
 Keeping the total number of observations and variables the same, and using the same random seed, I create a second data set with 5 variables that do not covary within groups, but differ in their means between groups.
 
