@@ -1,0 +1,111 @@
+---
+title: "Simulated data analysis"
+output: html_notebook
+---
+For each dataset in each of the three scenarios I:
+
+- Do PCA
+- Do PLS-DA
+- Calculate Cohen's Kappa for each method as outlined in "Confusion Matrix.Rmd"
+- Plot distributions of Cohen's Kappa
+- Possibly do other stuff like:
+    + compare p-values from PCA score based t-tests and PLS-DA permutation tests
+    + calculate distance between centriods in score plots for PCA and PLS-DA for all datasets
+    
+    
+# Packages
+
+```{r}
+library(here)
+library(chemhelper)
+library(ropls)
+library(psych) #for cohen.kappa()
+library(tidyverse)
+```
+
+# Load Data
+
+```{r}
+null <- read_rds(here("data", "null.rds"))
+needle_in_haystack <- read_rds(here("data", "needle.rds"))
+red_herring <- read_rds(here("data", "red herring.rds"))
+```
+
+
+# PCAs
+
+## Fit models
+
+```{r}
+null.pcas.try <- map(null, ~try(opls(select(., -group), plotL = FALSE, printL = FALSE)))
+null.pcas <- null.pcas.try[!map_lgl(null.pcas.try, ~inherits(., "try-error"))]
+length(null.pcas)
+
+needle.pcas.try <- map(needle_in_haystack, ~try(opls(select(., -group), plotL = FALSE, printL = FALSE)))
+needle.pcas <- needle.pcas.try[!map_lgl(needle.pcas.try, ~inherits(., "try-error"))]
+
+herring.pcas <- map(red_herring, ~try(opls(select(., -group), plotL = FALSE, printL = FALSE)))
+```
+
+## Create confusion dataframes
+
+I'm actually not sure what this means for the null scenario, so I skip for now.
+
+I should write functions for all this shit and source it and then just map the functions.
+
+```{r}
+needle.scores <- 
+map(needle.pcas,
+    ~ get_plotdata(.) %>% 
+      .$plot_data)
+
+needle.cors <-
+  map2(.x = needle.scores,
+       #filter .y by getting rid of models that didn't run
+       .y = needle_in_haystack[!map_lgl(needle.pcas.try, ~inherits(., "try-error"))], 
+       ~ cor(.x[2:3], select(.y, -group)) %>% 
+         t() %>% 
+         as.data.frame() %>% 
+         rownames_to_column("Variable"))
+
+needle.dist <-
+  map(needle.cors,
+      ~ rowwise(.) %>% 
+        mutate(distance = sqrt(sum((c(p1, p2) - c(0, 0))^2))) %>% 
+        mutate(detect_discr = ifelse(distance > 0.5, TRUE, FALSE),
+               is_discr = ifelse(str_detect(Variable, "discr"), TRUE, FALSE))
+        )
+
+needle.pca.k <- 
+  map_dfr(needle.dist,
+      ~ select(., detect_discr, is_discr) %>%
+        as.matrix() %>%
+        cohen.kappa() %>%
+        .$kappa %>%
+        data_frame(pca.k = .),
+      .id = "dataset")
+```
+
+
+# PLS-DAs
+
+- Not increasing the number of permutation for now, because I'm not concerned about p-values yet.
+- Many models fail for the null, which makes sense.  What to do?
+    + Force 2 axes?
+    + Force 1 axis?
+    + Do OPLS-DA with one axis forced?
+    + Just look at the models that actually get built?
+
+Currently, this just picks the ones that worked (at least one component built)
+
+```{r}
+null.pls <- map(null, ~try(opls(select(., -group), .$group, plotL = FALSE, printL = FALSE)))
+
+null.pls <- null.pls[!map_lgl(null.pls, ~inherits(., "try-error"))]
+length(null.pls)
+
+needle.pls <- map(needle_in_haystack, ~opls(select(., -group), .$group, plotL = FALSE, printL = FALSE))
+
+herring.pls <- map(red_herring, ~opls(select(., -group), .$group, plotL = FALSE, printL = FALSE))
+```
+

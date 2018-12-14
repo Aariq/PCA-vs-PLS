@@ -3,6 +3,7 @@ title: "Confusion Matrix Calculations"
 output: html_notebook
 ---
 ```{r}
+library(psych) # for cohen.kappa
 library(tidyverse)
 library(ropls)
 library(here)
@@ -27,8 +28,6 @@ xtabs(freq ~ detected.as + actual, data = df) %>% addmargins()
 ```
 
 We have 15 true positives in the upper left, 10 true negatives in the lower right, and then 2 false positives in the upper right, and 3 false negatives in the lower left.
-
-
 
 ## Kappa coefficient
 
@@ -98,29 +97,15 @@ test.cors <-
          is_discr = ifelse(str_detect(Variable, "discr"), TRUE, FALSE))
 
 test.cors
-table(detected_discr = test.cors$detect_discr, is_discr =test.cors$is_discr) %>% addmargins()
+conf.pca <-
+  table(detected_discr = test.cors$detect_discr, is_discr =test.cors$is_discr)
+conf.pca %>% addmargins() # DON'T SAVE IT WITH MARGINS, IT FUCKS UP THE KAPPA COEFFICIENT
 ```
 Kappa:
-
 ```{r}
-library(psych)
-K.pca = cohen.kappa(table(detected = test.cors$detect_discr, actual =test.cors$is_discr))
-cohen.kappa(test.cors %>% select(detect_discr, is_discr) %>% as.matrix())
+K.pca = cohen.kappa(conf.pca)
+K.pca$kappa #I checked this by hand, it's correct.
 ```
-K = -0.17??
-
-Try by hand to check:
-
-```{r}
-table(detected = test.cors$detect_discr, actual =test.cors$is_discr) %>% addmargins()
-```
-```{r}
-po = (0 + 3) / 25
-pe = (20/25*2/25) + (5/25*23/25)
-K = (po - pe) / (1-pe)
-K
-```
-Cool, that's correct.
 
 Let's see how PLS-DA does on the same dataset
 
@@ -132,35 +117,20 @@ test.VIPs <-
   get_VIP() %>% 
   mutate(detect_discr = ifelse(VIP > 1, "discr", "uncorr"),
          is_discr = ifelse(str_detect(Variable, "discr"), "discr", "uncorr"))
-table(detected = test.VIPs$detect_discr, actual = test.VIPs$is_discr) %>% addmargins()
+conf.pls <- 
+  table(detected = test.VIPs$detect_discr, actual = test.VIPs$is_discr)
+conf.pls %>% addmargins()
 ```
 
-
-
-
-
-
+Kappa: 
 
 ```{r}
-k.conf <- function(df, real, pred){
-  
-  real <- enexpr(real)
-  pred <- enexpr(pred)
-  
-  colA <- df[[real]]
-  colB <- df[[pred]]
-  
-  stopifnot(is.logical(colA) & is.logical(colB))
-
-  a = sum(!colA & !colB) #both F
-  b = sum(colA & !colB) #one F one T
-  c = sum(!colA & colB) #one T one F
-  d = sum(colA & colB) #both T
-  n = ncol(df)
-  
-  po = (a+d)/n #proportion agreement
-  pe = (((a + b)/n) * (a + c)/n) + (((c + d)/n) * ((b + d)/n)) #prob agreement by chance
-  k = (po - pe) / (1 - pe)
-  return(k)
-}
+K.pls <- cohen.kappa(conf.pls)
+K.pls$kappa
 ```
+
+So PLS-DA obviously does a better job in this dataset.
+
+# Conclusion
+
+This stuff works.  I'm going to apply it to all the datasets in another, less wordy notebook.
