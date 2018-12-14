@@ -1,0 +1,166 @@
+---
+title: "Confusion Matrix Calculations"
+output: html_notebook
+---
+```{r}
+library(tidyverse)
+library(ropls)
+library(here)
+library(chemhelper)
+```
+
+The goal of this analysis is to determine which performs better, PCA or PLS-DA, at identifying variables that are supposed to discriminate between the two groups in the simulated data.
+
+# Confusion Matrixes
+
+To do this, I employ a confusion matrix/kappa coefficient method.  A confusion matrix is just a contingency table with the intended categories of variables on one side, and the actual classification of the variables by some model on the other side.
+
+E.g.:
+
+```{r echo=FALSE}
+df <- tribble(~detected.as, ~actual, ~freq,
+              "discriminating", "discriminating", 15,
+              "discriminating", "uncorrelated", 2,
+              "uncorrelated", "uncorrelated", 10,
+              "uncorrelated", "discriminating", 3)
+xtabs(freq ~ detected.as + actual, data = df) %>% addmargins()
+```
+
+We have 15 true positives in the upper left, 10 true negatives in the lower right, and then 2 false positives in the upper right, and 3 false negatives in the lower left.
+
+
+
+## Kappa coefficient
+
+Using the confusion matrix, we can calculate Cohen's kappa which summarizes the ability of a model to classify things correctly.
+
+Cohen's kappa is defined as:
+
+$$
+\kappa = \frac{ p_o - p_e}{1-p_e}
+$$
+
+where $p_o$ is observed proportionate agreement:
+
+$$
+p_o = \frac{\text{true positives} + \text{true negatives}}{\text{total}}
+$$
+In my above example, $p_o = (15+10)/30$ or 0.8333
+
+and $p_e$ is probability of random agreement:
+
+$$
+p_e = (p_{(\text{detected discr})}\times p_{(\text{actual discr})}) + (p_{(\text{detected uncorr})} \times p_{(\text{actual uncorr})})
+$$
+That is, it uses the row and column summs from the contingency table to calculate probabilities.  For example, 17/30 variables were detected as discriminating, so $p_{\text{(detected discr)}} = 0.5666$
+
+```{r}
+pe = (17/30 * 18/30) + (12/30 * 13/30)
+pe
+```
+
+So K = 
+
+```{r}
+K = (0.8333333 - pe)/(1-pe)
+K
+```
+
+# Applying to PLS-DA and PCA
+
+In order to apply this to PLS-DA, I'll use the common cuttoff of VIP > 1 to indicate whether a variable is discriminating or not.  The name of the variable contains information on whether it was meant to be discriminating or not, so I can then create a confusion matrix and calculate K
+
+It's more difficult to decide how to do this for PCA since there are several ways to go about it.  Often correlation plots are used which plot loadings of the first two PCs with a circle representing a correlation coefficient cutoff, usually of 0.5.  Variables with correlations greater than 0.5 are considered significantly correlated with either PC1, PC2 or both, depending on the location of the variable in loading space.
+
+
+```{r}
+needle_in_haystack <- read_rds(here("data", "needle.rds"))
+test <- needle_in_haystack[[sample(1:100, 1)]]
+
+#PCA
+test.pca <- opls(select(test, -group), plotL = FALSE, printL = FALSE)
+
+test.scores <-
+  test.pca %>% 
+  get_plotdata() %>% 
+  .$plot_data
+
+test.cors <-
+  cor(test.scores[2:3], select(test, -group)) %>%
+  t() %>% 
+  as.data.frame() %>%
+  rownames_to_column("Variable") %>% 
+  rowwise() %>% 
+  mutate(distance = sqrt(sum(
+    (c(p1, p2) - c(0, 0))^2
+    ))) %>% 
+  mutate(detect_discr = ifelse(distance > 0.5, TRUE, FALSE),
+         is_discr = ifelse(str_detect(Variable, "discr"), TRUE, FALSE))
+
+test.cors
+table(detected_discr = test.cors$detect_discr, is_discr =test.cors$is_discr) %>% addmargins()
+```
+Kappa:
+
+```{r}
+library(psych)
+K.pca = cohen.kappa(table(detected = test.cors$detect_discr, actual =test.cors$is_discr))
+cohen.kappa(test.cors %>% select(detect_discr, is_discr) %>% as.matrix())
+```
+K = -0.17??
+
+Try by hand to check:
+
+```{r}
+table(detected = test.cors$detect_discr, actual =test.cors$is_discr) %>% addmargins()
+```
+```{r}
+po = (0 + 3) / 25
+pe = (20/25*2/25) + (5/25*23/25)
+K = (po - pe) / (1-pe)
+K
+```
+Cool, that's correct.
+
+Let's see how PLS-DA does on the same dataset
+
+```{r}
+test.pls <- opls(select(test, -group), test$group, plotL = FALSE, printL = FALSE)
+
+test.VIPs <-
+  test.pls %>%
+  get_VIP() %>% 
+  mutate(detect_discr = ifelse(VIP > 1, "discr", "uncorr"),
+         is_discr = ifelse(str_detect(Variable, "discr"), "discr", "uncorr"))
+table(detected = test.VIPs$detect_discr, actual = test.VIPs$is_discr) %>% addmargins()
+```
+
+
+
+
+
+
+
+```{r}
+k.conf <- function(df, real, pred){
+  
+  real <- enexpr(real)
+  pred <- enexpr(pred)
+  
+  colA <- df[[real]]
+  colB <- df[[pred]]
+  
+  stopifnot(is.logical(colA) & is.logical(colB))
+
+  a = sum(!colA & !colB) #both F
+  b = sum(colA & !colB) #one F one T
+  c = sum(!colA & colB) #one T one F
+  d = sum(colA & colB) #both T
+  n = ncol(df)
+  
+  po = (a+d)/n #proportion agreement
+  pe = (((a + b)/n) * (a + c)/n) + (((c + d)/n) * ((b + d)/n)) #prob agreement by chance
+  k = (po - pe) / (1 - pe)
+  return(k)
+}
+```
