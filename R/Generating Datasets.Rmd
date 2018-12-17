@@ -42,8 +42,8 @@ It makes sense to make randomly generated datasets under my three scenarios **on
     
 4. **Control**
     - 5 variables that discriminate between groups with difference in means of 2, cov = 0.5
-    - two groups of 10 variables with cov = 0.5
-    - the discriminating variables will actually have a higher covariance beceause they covary within groups AND differ between groups in the same direction.
+    - 10 variables with cov = 0
+    - 10 variables with cov = 0.2 (weakly covarying, but not discriminating.  Something for axis2 to pick up on?)
 
 # 1. NULL
 
@@ -117,8 +117,8 @@ control <-
   map(1:100,
       ~ sim_df(N = 20, n_groups = 2) %>% 
         sim_discr(5, var = 1, cov = 0.5, group_means = c(-1, 1), name = "discr") %>% 
-        sim_covar(10, var = 1, cov = 0.5, name = "corrA") %>% 
-        sim_covar(10, var = 1, cov = 0.5, name = "corrB")
+        sim_covar(10, var = 1, cov = 0, name = "uncorr") %>% 
+        sim_covar(10, var = 1, cov = 0.2, name = "corr")
   ) %>%
   set_names(paste("control_", 1:100))
 ```
