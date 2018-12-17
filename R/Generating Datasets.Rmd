@@ -12,6 +12,7 @@ library(tidyverse)
 To Do:
 
 - probs make more datasets than just 100.
+- Consider making a control where discriminating variables contribute most to variation. (make cov equal for all)
 
 It makes sense to make randomly generated datasets under my three scenarios **once** and then save them as .RDS files.  Then, I can do comparisons of PCA and PLS-DA, pick individual datasets to make figures out of, etc. using these saved files.
 
@@ -38,6 +39,11 @@ It makes sense to make randomly generated datasets under my three scenarios **on
     - one group of 10 variables with d = 1 and cov = 0.5 (high variation, low discrimination)
     - one group of 10 variables with d = 2 and cov = 0 (low variation, high discrimination)
     - 5 variables with cov = 0
+    
+4. **Control**
+    - 5 variables that discriminate between groups with difference in means of 2, cov = 0.5
+    - two groups of 10 variables with cov = 0.5
+    - the discriminating variables will actually have a higher covariance beceause they covary within groups AND differ between groups in the same direction.
 
 # 1. NULL
 
@@ -105,11 +111,34 @@ red_herring[[sample(1:100, 1)]] %>%
   iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
 ```
 
+# 4. Control
+```{r}
+control <-
+  map(1:100,
+      ~ sim_df(N = 20, n_groups = 2) %>% 
+        sim_discr(5, var = 1, cov = 0.5, group_means = c(-1, 1), name = "discr") %>% 
+        sim_covar(10, var = 1, cov = 0.5, name = "corrA") %>% 
+        sim_covar(10, var = 1, cov = 0.5, name = "corrB")
+  ) %>%
+  set_names(paste("control_", 1:100))
+```
+
+inspect one:
+
+```{r}
+control[[sample(1:100, 1)]] %>%
+  dplyr::select(-group) %>% 
+  cor() %>% 
+  iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
+```
+
+
 # Save 'em
 ```{r}
 library(here)
 write_rds(null, here("data", "null.rds"))
 write_rds(needle_in_haystack, here("data", "needle.rds"))
 write_rds(red_herring, here("data", "red herring.rds"))
+write_rds(control, here("data", "control.rds"))
 ```
 
