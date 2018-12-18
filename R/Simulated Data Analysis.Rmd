@@ -45,7 +45,6 @@ control <- read_rds(here("data", "control.rds"))
 ## Fit PCA models
 
 ```{r}
-# map to all datasets in null scenario
 control.pcas.try <-
   map(control,
       ~safe_opls(select(., -group), plotL = FALSE, printL = FALSE))
