@@ -1,15 +1,14 @@
 ---
-title: "PCA vs. PLS with no and few discriminating variables"
+title: "PCA vs. PLS-DA"
 author: "Eric R. Scott"
 output: html_notebook
 ---
 ```{r message=FALSE, warning=FALSE}
-library(chemhelper) #for sim_*(), plot_pca(), plot_plsda(), get_VIP(), and get_loadings()
+library(chemhelper) #for plot_pca(), plot_plsda()
 library(tidyverse)
 library(ropls) #for opls(), which does pca and pls-da
 library(cowplot) #for plot_grid()
 theme_set(theme_gray())
-library(iheatmapr) #for correlation heatmaps
 library(here)
 ```
 
@@ -31,28 +30,8 @@ needle <- needle.list[[sample(1:100, 1)]]
 
 # Null
 
-The code chunk below creates a data frame with a grouping variable with two groups (a and b) with n=10 per group, 5 variables that don't covary, and two groups of 10 variables that moderately covary.
+## Correlation heatmap for Null
 
-```{r}
-# # myseed <- runif(1, 0, 1000)
-# myseed <- 401.6368
-# 
-# df <- data_frame(group = rep(c("a", "b"), each = 10))
-# no_discr <- df %>%
-#   sim_covar(5, var = 1, cov = 0, name = "uncorr", seed = myseed) %>% 
-#   sim_covar(10, var = 1, cov = 0.5, name = "corrA", seed = myseed + 1) %>% 
-#   sim_covar(10, var = 1, cov = 0.5, name = "corrB", seed = myseed + 2)
-```
-
-This heatmap shows the correlation structure.
-
-```{r}
-# no_discr %>% 
-null %>%   
-  select(-group) %>% 
-  cor() %>% 
-  iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
-```
 ```{r}
 null.cor <-
   # no_discr %>% 
@@ -72,12 +51,15 @@ null.cor.p <-
   theme(axis.text.x = element_text(angle = 90), legend.position = "top")
 ```
 
-Then I perform PCA and PLS-DA on this dataset, forcing both models to have two axes (for plotting).  The PCA score plot shows no separation and the first two axes explain more than half of the variation in the data.  The PLS-DA score plot shows slight separation of the groups (even though there is none).  It's a pretty terrible model with a negative Q^2^ value and a low R^2^ value.
+
+## PCA and PLS-DA for Null
 
 ```{r include=FALSE}
 null.pca <- opls(select(null, -group), plot = FALSE)
 null.pls <- opls(select(null, -group), null$group, plot = FALSE, predI = 2, permI = 500)
 ```
+
+## Create plots for Null
 
 ```{r message=FALSE, warning=FALSE}
 null.pca.p <- plot_pca(null.pca, null$group, annotate = "subtitle")
@@ -89,24 +71,8 @@ plot_grid(null.cor.p,
 
 # Needle in a haystack
 
-Keeping the total number of observations and variables the same, and using the same random seed, I create a second data set with 5 variables that do not covary within groups, but differ in their means between groups.
+## Correlation heatmap for needle-in-a-haystack
 
-```{r}
-# discr <- df %>% 
-#   sim_covar(10, var = 1, cov = 0.55, name = "corrA", seed = myseed + 1) %>% 
-#   sim_covar(10, var = 1, cov = 0.55, name = "corrB", seed = myseed + 2) %>% 
-#   sim_discr(5, var = 1, cov = 0, group_means = c(-1, 1), name = "discr", seed = myseed + 3)
-```
-
-This shows the correlation structure of the data.  Because the discriminating variables have different means in the two groups, they are correlated about as strongly as the covarying variables.
-
-```{r}
-needle %>% 
-# discr %>% 
-  select(-group) %>% 
-  cor() %>% 
-  iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
-```
 ```{r}
 needle.cor <-
   needle %>% 
@@ -125,12 +91,17 @@ needle.cor.p <-
   theme(axis.text.x = element_text(angle = 90), legend.position = "top")
 # needle.cor.p
 ```
+
+## PCA and PLS-DA for needle-in-a-haystack
+
 The PCA score plot still shows no real separation because the discriminating variables do not contribute much to the total covariation in the data.  The PLS-DA plot shows very strong separation, despite the differences between the groups being only due to 5 out of 25 variables.  The PLS-DA model performs well, with high R^2^ and Q^2^ values
 
 ```{r include=FALSE}
 needle.pca <- opls(select(needle, -group), plot = FALSE)
 needle.pls <- opls(select(needle, -group), needle$group, plot = FALSE, predI = 2, permI = 500)
 ```
+
+## Plots for needle-in-a-haystack
 
 ```{r message=FALSE, warning=FALSE}
 needle.pca.p <- plot_pca(needle.pca, needle$group, annotate = "subtitle")
@@ -142,6 +113,9 @@ plot_grid(needle.cor.p,
 ```
 
 # Control
+
+## Correlation heatmap for Control
+
 ```{r}
 control.cor <-
   control %>% 
@@ -159,11 +133,14 @@ control.cor.p <-
   theme(axis.text.x = element_text(angle = 90), legend.position = "top")
 ```
 
+## PCA and PLS-DA for Control
+
 ```{r include=FALSE}
 control.pca <- opls(select(control, -group), plot = FALSE)
 control.pls <- opls(select(control, -group), control$group, plot = FALSE, predI = 2, permI = 500)
 ```
 
+## Plots for Control
 
 ```{r message=FALSE, warning=FALSE}
 control.pca.p <- plot_pca(control.pca, control$group, annotate = "subtitle")
@@ -174,7 +151,9 @@ plot_grid(control.cor.p,
           nrow = 1, ncol = 3)
 ```
 
-# Save plots and tables
+# Make figure
+
+Put all the plots together to make a figure.
 
 ```{r}
 fig1_new <-
