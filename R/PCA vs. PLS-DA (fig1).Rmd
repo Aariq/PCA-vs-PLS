@@ -12,6 +12,12 @@ theme_set(theme_gray())
 library(here)
 ```
 
+# To-Do:
+
+- Come up with better, shorter abbreviations for variables (e.g. "uncorr")
+- Place a single copy of the correlation matrix legend in the top right or lower left of figure.
+- Get figures to align without making margins huge and wasting a lot of space
+
 # Read in datasets
 I'll read in the datasets from "Generating Datasets.Rmd" and pick individual datasets to make figures
 
@@ -157,16 +163,18 @@ Put all the plots together to make a figure.
 
 ```{r}
 fig1_new <-
-  plot_grid(null.cor.p,
-            null.pca.p + theme(legend.position = "none") + labs(title = ""),
-            null.pls.p + theme(legend.position = "none") + labs(title = ""),
-            control.cor.p,
-            control.pca.p + theme(legend.position = "none") + labs(title = ""),
-            control.pls.p + theme(legend.position = "none") + labs(title = ""),
-            needle.cor.p,
-            needle.pca.p + theme(legend.position = "none") + labs(title = ""),
-            needle.pls.p + theme(legend.position = "none") + labs(title = ""),
-            ncol = 3, nrow = 3, labels = "AUTO")
+  plot_grid(null.cor.p + theme(legend.position = "none"),
+            null.pca.p + theme(legend.position = "none") + labs(title = NULL),
+            null.pls.p + theme(legend.position = "none") + labs(title = NULL),
+            control.cor.p + theme(legend.position = "none"),
+            control.pca.p + theme(legend.position = "none") + labs(title = NULL),
+            control.pls.p + theme(legend.position = "none") + labs(title = NULL),
+            needle.cor.p + theme(legend.position = "none"),
+            needle.pca.p + theme(legend.position = "none") + labs(title = NULL),
+            needle.pls.p + theme(legend.position = "none") + labs(title = NULL),
+            ncol = 3, nrow = 3,
+            labels = "AUTO",
+            align = "hv", axis = "bl")
 
 save_plot(here("figs", "fig1_new.png"), fig1_new, ncol = 3, nrow = 3)
 ```
