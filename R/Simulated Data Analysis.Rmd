@@ -2,7 +2,10 @@
 title: "Simulated data analysis"
 output: html_notebook
 ---
-For each dataset in each of the three scenarios I:
+# Goal
+To show that PLS-DA performs better than PCA at figuring out which variables are most responsible for group separation.  I do this using VIP scores from PLS-DA and correlations with PC1 for PCA followed by a calculation of Cohen's Kappa.  For now, I'm only doing this with two of the data scenarios where the variables either contribute to group separation or don't: the positive control, and the needle-in-a-haystack.
+
+For each dataset:
 
 - Do PCA
 - Do PLS-DA
@@ -30,9 +33,9 @@ safe_opls <- possibly(opls, otherwise = NULL)
 # Load Data
 
 ```{r}
-null <- read_rds(here("data", "null.rds"))
-needle_in_haystack <- read_rds(here("data", "needle.rds"))
-red_herring <- read_rds(here("data", "red herring.rds"))
+# null <- read_rds(here("data", "null.rds"))
+needle <- read_rds(here("data", "needle.rds"))
+# red_herring <- read_rds(here("data", "red herring.rds"))
 control <- read_rds(here("data", "control.rds"))
 ```
 
@@ -108,6 +111,7 @@ control.pca.k <-
 
 
 ### PLS-DA kappas
+
 ```{r message=FALSE, warning=FALSE}
 # Get VIP scores
 control.vips <-
@@ -132,8 +136,139 @@ control.pls.k <-
 control.k <- full_join(control.pca.k, control.pls.k)
 ```
 ```{r}
-ggplot(control.k) +
-  geom_density(aes(x = pls.k), fill = "red", alpha = 0.5) +
-  geom_density(aes(x = pca.k), fill = "blue", alpha = 0.5)
+control.k.plotdata <-
+  control.k %>%
+  gather(-dataset, key = "Method", value = "Cohen's Kappa") %>% 
+  mutate(Method = as.factor(Method) %>% fct_recode(PCA = "pca.k", `PLS-DA` = "pls.k"))
+
+control.p <- ggplot(control.k.plotdata) +
+  geom_histogram(aes(x = `Cohen's Kappa`, fill = Method),
+                 position = "dodge", bins = 10) +
+  scale_fill_manual("Method", values = c("PCA" = "red", "PLS-DA" = "blue")) +
+  theme_bw() +
+  labs(x = "Cohen's Kappa", y = "Frequency")
+```
+
+# Needle-in-a-haystack
+
+## Fit PCA models
+
+```{r}
+# map to all datasets in null scenario
+needle.pcas.try <-
+  map(needle,
+      ~safe_opls(select(., -group), plotL = FALSE, printL = FALSE))
+needle.pcas.failed <- map_lgl(needle.pcas.try, is.null)
+needle.pcas <- needle.pcas.try[!needle.pcas.failed]
+```
+
+## Fit PLS models
+
+- Not increasing the number of permutation for now, because I'm not concerned about p-values yet.
+- Many models fail for the null, which makes sense.  What to do?
+    + Force 2 axes?
+    + Force 1 axis?
+    + Do OPLS-DA with one axis forced?
+    + Just look at the models that actually get built?
+
+Currently, this just picks the ones that worked (at least one component built)
+
+```{r}
+needle.pls.try <-
+  map(needle,
+      ~ safe_opls(select(., -group), .$group, plotL = FALSE, printL = FALSE))
+needle.pls.failed <- map_lgl(needle.pls.try, is.null)
+needle.pls <- needle.pls.try[!needle.pls.failed]
+```
+
+## Calculate Cohen's Kappa
+
+- For PCA, I'm defining an "important" variable as one with a correlation to PC1 > 0.5 or  < -0.5
+- For PLS, an "important" variable is one with a VIP score > 1
+
+### PCA kappas
+
+```{r message=FALSE, warning=FALSE}
+# Get correlations
+needle.cors <-
+  map2(.x = needle.pcas,
+       #filter .y by getting rid of models that didn't run
+       .y = needle[!needle.pcas.failed], 
+       #correlation between axis scores and data
+       ~ cor(get_scores(.x)[2:3], select(.y, -group)) %>% 
+         t() %>% 
+         as_data_frame(rownames = "Variable")) %>% 
+  # calculate distance from center in correlation units for each variable
+  map(~ rowwise(.) %>% 
+        mutate(distance = sqrt(sum((c(p1, p2) - c(0, 0))^2))) %>% 
+        # if corr distance > 0.5, then its "important" variable
+        mutate(#detect_discr = ifelse(distance > 0.5, TRUE, FALSE),
+               detect_discr = ifelse(abs(p1) > 0.5, TRUE, FALSE),
+               is_discr = ifelse(str_detect(Variable, "discr"), TRUE, FALSE))
+        )
+
+# calculate kappa
+needle.pca.k <- 
+  map_dfr(needle.cors,
+      ~ select(., detect_discr, is_discr) %>%
+        as.matrix() %>%
+        cohen.kappa() %>%
+        .$kappa %>%
+        data_frame(pca.k = .),
+      .id = "dataset")
+```
+
+
+### PLS-DA kappas
+
+```{r message=FALSE, warning=FALSE}
+# Get VIP scores
+needle.vips <-
+  map(needle.pls,
+      ~ get_VIP(.) %>% 
+        mutate(detect_discr = ifelse(VIP > 1, TRUE, FALSE),
+               is_discr = ifelse(str_detect(Variable, "discr"), TRUE, FALSE)))
+
+needle.pls.k <- 
+  map_dfr(needle.vips,
+      ~ select(., detect_discr, is_discr) %>%
+        as.matrix() %>%
+        cohen.kappa() %>%
+        .$kappa %>%
+        data_frame(pls.k = .),
+      .id = "dataset")
+```
+
+### Join all kappas
+
+```{r}
+needle.k <- full_join(needle.pca.k, needle.pls.k)
+```
+```{r}
+needle.k.plotdata <-
+  needle.k %>%
+  gather(-dataset, key = "Method", value = "Cohen's Kappa") %>% 
+  mutate(Method = as.factor(Method) %>% fct_recode(PCA = "pca.k", `PLS-DA` = "pls.k"))
+
+needle.p <- ggplot(needle.k.plotdata) +
+  geom_histogram(aes(x = `Cohen's Kappa`, fill = Method),
+                 position = "dodge", bins = 10) +
+  scale_fill_manual("Method", values = c("PCA" = "red", "PLS-DA" = "blue")) +
+  theme_bw() +
+  labs(x = "Cohen's Kappa", y = "Frequency")
+```
+
+# Plot
+
+```{r}
+library(cowplot)
+panels <- plot_grid(control.p + theme(legend.position = "none"),
+          needle.p + theme(legend.position = "none"),
+          nrow = 1,
+          ncol = 2,
+          labels = "auto")
+fig2 <- plot_grid(panels, get_legend(control.p),
+          rel_widths = c(1, 0.15))
+save_plot(here("figs", "fig2.png"), fig2, ncol = 2)
 ```
 

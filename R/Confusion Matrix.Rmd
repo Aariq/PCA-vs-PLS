@@ -10,7 +10,7 @@ library(here)
 library(chemhelper)
 ```
 
-The goal of this analysis is to determine which performs better, PCA or PLS-DA, at identifying variables that are supposed to discriminate between the two groups in the simulated data.
+This notebook is an exploratory look at confusion matrices and Cohen's Kappa coefficient with my simulated data scenarios in mind.  Analysis of the data happens in "Simulated Data Analysis.Rmd"
 
 # Confusion Matrixes
 
