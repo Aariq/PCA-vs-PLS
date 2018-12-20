@@ -50,7 +50,7 @@ null.cor <-
 null.cor.p <-
   ggplot(null.cor, aes(x = col, y = row, fill = cor)) +
   geom_tile() +
-  scale_fill_gradient2("Correlation Coeficient") +
+  scale_fill_gradient2("Correlation Coeficient", limits = c(-1,1)) +
   labs(x = NULL, y = NULL) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90), legend.position = "top")
@@ -90,7 +90,7 @@ needle.cor <-
 needle.cor.p <-
   ggplot(needle.cor, aes(x = col, y = row, fill = cor)) +
   geom_tile() +
-  scale_fill_gradient2("Correlation Coeficient") +
+  scale_fill_gradient2("Correlation Coeficient", limits = c(-1,1)) +
   labs(x = NULL, y = NULL) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90), legend.position = "top")
@@ -132,7 +132,7 @@ control.cor <-
 control.cor.p <-
   ggplot(control.cor, aes(x = col, y = row, fill = cor)) +
   geom_tile() +
-  scale_fill_gradient2("Correlation Coeficient") +
+  scale_fill_gradient2("Correlation Coeficient", limits = c(-1,1)) +
   labs(x = NULL, y = NULL) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90), legend.position = "top")
