@@ -7,6 +7,8 @@ library(iheatmapr)
 # library(rlist)
 library(chemhelper)
 library(tidyverse)
+# myseed <- runif(1, 1, 1000)
+myseed <- 258
 ```
 
 To Do:
@@ -48,12 +50,13 @@ It makes sense to make randomly generated datasets under my three scenarios **on
 # 1. NULL
 
 ```{r}
+set.seed(myseed)
 null <-
   map(1:100,
       ~ sim_df(N = 20, n_groups = 2) %>% 
-        sim_covar(5, var = 1, cov = 0, name = "uncorr") %>% 
-        sim_covar(10, var = 1, cov = 0.5, name = "corrA") %>% 
-        sim_covar(10, var = 1, cov = 0.5, name = "corrB")
+        sim_covar(5, var = 1, cov = 0, name = "N") %>% 
+        sim_covar(10, var = 1, cov = 0.5, name = "C1") %>% 
+        sim_covar(10, var = 1, cov = 0.5, name = "C2")
   ) %>%
   set_names(paste("null_df_", 1:100))
 ```
@@ -61,6 +64,7 @@ null <-
 Inspect one:
 
 ```{r}
+set.seed(myseed)
 null[[sample(1:100, 1)]] %>%
   dplyr::select(-group) %>% 
   cor() %>% 
@@ -70,12 +74,13 @@ null[[sample(1:100, 1)]] %>%
 # 2. Needle in a haystack
 
 ```{r}
+set.seed(myseed)
 needle_in_haystack <-
   map(1:100,
       ~ sim_df(N = 20, n_groups = 2) %>% 
-        sim_discr(5, var = 1, cov = 0, group_means = c(-1, 1), name = "discr") %>% 
-        sim_covar(10, var = 1, cov = 0.5, name = "corrA") %>% 
-        sim_covar(10, var = 1, cov = 0.5, name = "corrB")
+        sim_discr(5, var = 1, cov = 0, group_means = c(-1, 1), name = "D") %>% 
+        sim_covar(10, var = 1, cov = 0.5, name = "C1") %>% 
+        sim_covar(10, var = 1, cov = 0.5, name = "C2")
   ) %>%
   set_names(paste("needle_in_haystack_", 1:100))
 ```
@@ -92,10 +97,11 @@ needle_in_haystack[[sample(1:100, 1)]] %>%
 # 3. Red Herring
 
 ```{r}
+set.seed(myseed)
 red_herring <-
   map(1:100,
       ~ sim_df(N = 20, n_groups = 2) %>% 
-        sim_covar(5, var = 1, cov = 0, name = "noise") %>% 
+        sim_covar(5, var = 1, cov = 0, name = "N") %>% 
         sim_discr(10, var = 1, cov = 0.5, group_means = c(-0.5, 0.5), name = "highcov") %>% 
         sim_discr(10, var = 1, cov = 0, group_means = c(-1, 1), name = "lowcov")
   ) %>%
@@ -113,12 +119,14 @@ red_herring[[sample(1:100, 1)]] %>%
 
 # 4. Control
 ```{r}
+set.seed(myseed)
 control <-
   map(1:100,
       ~ sim_df(N = 20, n_groups = 2) %>% 
-        sim_discr(5, var = 1, cov = 0.5, group_means = c(-1, 1), name = "discr") %>% 
-        sim_covar(10, var = 1, cov = 0, name = "uncorr") %>% 
-        sim_covar(10, var = 1, cov = 0.2, name = "corr")
+        sim_discr(5, var = 1, cov = 0.5, group_means = c(-1, 1), name = "D1") %>% 
+        sim_discr(5, var = 1, cov = 0.5, group_means = c(-1, 1), name = "D2") %>% 
+        sim_covar(10, var = 1, cov = 0, name = "N") %>% 
+        sim_covar(5, var = 1, cov = 0.5, name = "C")
   ) %>%
   set_names(paste("control_", 1:100))
 ```

@@ -14,7 +14,6 @@ library(here)
 
 # To-Do:
 
-- Come up with better, shorter abbreviations for variables (e.g. "uncorr")
 - Place a single copy of the correlation matrix legend in the top right or lower left of figure.
 - Get figures to align without making margins huge and wasting a lot of space
 
