@@ -134,6 +134,12 @@ control.pls.k <-
 ```{r}
 control.k <- full_join(control.pca.k, control.pls.k)
 ```
+
+### Build Plot
+```{r colors}
+mycolors <- c("PCA" = "#C1383A", "PLS-DA" = "#1F46A3")
+```
+
 ```{r}
 control.k.plotdata <-
   control.k %>%
@@ -143,7 +149,7 @@ control.k.plotdata <-
 control.p <- ggplot(control.k.plotdata) +
   geom_histogram(aes(x = `Cohen's Kappa`, fill = Method),
                  position = "dodge", bins = 10) +
-  scale_fill_manual("Method", values = c("PCA" = "red", "PLS-DA" = "blue")) +
+  scale_fill_manual("Method", values = mycolors) +
   theme_bw() +
   labs(x = "Cohen's Kappa", y = "Frequency")
 ```
@@ -243,6 +249,9 @@ needle.pls.k <-
 ```{r}
 needle.k <- full_join(needle.pca.k, needle.pls.k)
 ```
+
+### Build plot
+
 ```{r}
 needle.k.plotdata <-
   needle.k %>%
@@ -252,7 +261,7 @@ needle.k.plotdata <-
 needle.p <- ggplot(needle.k.plotdata) +
   geom_histogram(aes(x = `Cohen's Kappa`, fill = Method),
                  position = "dodge", bins = 10) +
-  scale_fill_manual("Method", values = c("PCA" = "red", "PLS-DA" = "blue")) +
+  scale_fill_manual("Method", values = mycolors) +
   theme_bw() +
   labs(x = "Cohen's Kappa", y = "Frequency")
 ```

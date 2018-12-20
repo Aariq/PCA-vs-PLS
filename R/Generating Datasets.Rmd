@@ -12,7 +12,7 @@ library(tidyverse)
 To Do:
 
 - probs make more datasets than just 100.
-- Consider making a control where discriminating variables contribute most to variation. (make cov equal for all)
+
 
 It makes sense to make randomly generated datasets under my three scenarios **once** and then save them as .RDS files.  Then, I can do comparisons of PCA and PLS-DA, pick individual datasets to make figures out of, etc. using these saved files.
 
