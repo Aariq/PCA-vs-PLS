@@ -184,3 +184,4 @@ plot(pca_clr, parAsColFcVn = log(leafhopper_CLR$damage_T), parLabVc = leafhopper
 So that's the interesting comparison, I think...
 
 # Write data
+>>>>>>> 5cab172f8714ef94c129f81f2f6c156e5b014e2c
