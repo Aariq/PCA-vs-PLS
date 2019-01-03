@@ -1,0 +1,184 @@
+---
+title: "Leafhopper Data Wrangling"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(here)
+library(ropls)
+library(chemhelper)
+```
+
+```{r}
+gc <- read_rds(here("data", "Leafhopper DCSE", "GCMS_zeroes_tidy_2018-07-19.rds")) 
+leaf_damage <- read_rds(here("data", "Leafhopper DCSE", "leaf damage.rds"))
+```
+
+
+# Summarise leaf damage data
+
+I want to create two columns to merge with the GCMS data.  First, a mean percent damage for each plant, second, the percent damage from the leaf the twister was on.
+
+```{r}
+damage_summary <- leaf_damage %>% 
+  group_by(plant.num) %>% 
+  summarise(damage_mean.percent = mean(damage.percent))
+
+twisterleaf <- leaf_damage %>% 
+  filter(leaf.num == "T") %>% 
+  select(plant.num, "damage_T" = damage.percent)
+
+damage <- full_join(damage_summary, twisterleaf)
+```
+
+# Tidy GC data
+```{r}
+#find compounds only in 3 or fewer samples to remove
+remove <-
+  gc %>% 
+  group_by(Compound) %>% 
+  summarize(count = sum(RPA>0)) %>% 
+  filter(count < 4) %>% 
+  .$Compound
+
+gc_tidy <-
+  gc %>%
+  filter(!Compound %in% remove) %>% 
+  #make joining by plant number easier
+  separate(sample, into = c("plant.num", "when"), remove = FALSE)
+```
+
+
+
+# Join all data
+
+```{r}
+leafhopper_tidy <-
+  left_join(gc_tidy, damage) %>% 
+  select(sample, density_start, density_end, damage_mean.percent, damage_T, Compound, RPA)
+```
+# Transform
+
+```{r}
+leafhopper_tidy %>%
+  filter(RPA > 0) %>%
+  summarize(min = min(RPA))
+```
+
+I'll add an offset an order of magnitude smaller than the smallest non-zero value (1e-8) and log transform.  I also tried a centered log transform, but the values are too small and it produces NaN's
+
+```{r}
+leafhopper_tidy <-
+  leafhopper_tidy %>% 
+  mutate(offsetRPA = (RPA + 1e-8)*1000,
+         logRPA = log(offsetRPA))
+```
+
+# Spread
+
+```{r}
+leafhopper_logRPA <-
+  leafhopper_tidy %>% 
+  select(-RPA, -offsetRPA) %>% 
+  spread(key = Compound, value = logRPA)
+
+leafhopper_RPA <-
+  leafhopper_tidy %>% 
+  select(-logRPA, -offsetRPA) %>% 
+  spread(key = Compound, value = RPA)
+```
+
+
+# Analyze
+
+Store metadata variable names for easy filtering later
+
+```{r}
+meta <- c("sample",
+          "density_start",
+          "density_end",
+          "damage_mean.percent",
+          "damage_T")
+```
+
+## PCA
+
+On untransformed data:
+
+```{r}
+pca <- opls(select(leafhopper_RPA, -meta), scaleC = "standard", plotL = FALSE)
+plot(pca, parAsColFcVn = leafhopper_RPA$density_end, parLabVc = leafhopper_RPA$sample)
+```
+
+On log-transformed data:
+
+```{r}
+pca_log <- opls(select(leafhopper_logRPA, -meta), scaleC = "standard", plotL = FALSE)
+plot(pca_log, parAsColFcVn = leafhopper_logRPA$density_end, parLabVc = leafhopper_logRPA$sample)
+```
+
+I'm not really sure that one is better than the other.  The loadings certainly change a lot---log transformation fucks with variance, so that's not surprising.  It's probably better to use untransformed data???  I wish the CLR transformation worked, because it's apparently built for compositional data.  I could add a large offset or transform by multiplying by 1000 or something and try it.  Hrmm.
+
+```{r}
+library(Hotelling)
+leafhopper_CLR <-   
+  leafhopper_tidy %>% 
+  mutate(bigRPA = offsetRPA * 1000) %>% 
+  select(-logRPA, -offsetRPA, -RPA) %>% 
+  spread(key = Compound, value = bigRPA) %>% 
+  select(-meta) %>%
+  # do the CLR
+  clr() %>% 
+  # re-add metadata
+  bind_cols(leafhopper_RPA %>% select(meta), .)
+```
+
+```{r}
+pca_clr <- opls(leafhopper_CLR %>% select(-meta), scaleC = "standard", plotL = FALSE)
+plot(pca_clr, parAsColFcVn = leafhopper_CLR$density_end, parLabVc = leafhopper_CLR$sample)
+```
+
+Sure, let's go with CLR??
+
+# PLSR
+PLSR 'works' with only end leafhopper density and the log of the percent damage on the twister leaf (which are correlated, of course)
+
+```{r}
+ggplot(leafhopper_tidy, aes(x = density_end, y = log(damage_T))) + geom_point() + geom_smooth(method = 'lm')
+```
+
+## With end density
+
+```{r}
+plsr_end <- opls(select(leafhopper_CLR, -meta), leafhopper_CLR$density_end,
+             scaleC = "standard",
+             predI = 1,
+             orthoI = NA,
+             plotL = FALSE)
+plot(plsr_end, parLabVc = leafhopper_CLR$sample)
+```
+
+## With damage on the twister leaf
+
+```{r}
+plsr_dt <- opls(select(leafhopper_CLR, -meta), log(leafhopper_CLR$damage_T),
+             scaleC = "standard",
+             predI = 1,
+             orthoI = NA,
+             plotL = FALSE)
+plot(plsr_dt, parLabVc = leafhopper_CLR$sample)
+```
+
+
+**HOWEVER**
+
+When you label the PCA with twister leaf damage, it looks terrible
+```{r}
+plot(pca_clr, parAsColFcVn = leafhopper_CLR$density_end, parLabVc = leafhopper_CLR$sample)
+```
+```{r}
+plot(pca_clr, parAsColFcVn = log(leafhopper_CLR$damage_T), parLabVc = leafhopper_CLR$sample)
+```
+
+So that's the interesting comparison, I think...
