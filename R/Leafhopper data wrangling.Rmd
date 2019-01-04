@@ -58,7 +58,22 @@ leafhopper_tidy <-
   left_join(gc_tidy, damage) %>% 
   select(sample, density_start, density_end, damage_mean.percent, damage_T, Compound, RPA)
 ```
-# Transform
+
+Store metadata variable names for easy filtering later
+
+```{r}
+meta <- c("sample",
+          "density_start",
+          "density_end",
+          "damage_mean.percent",
+          "damage_T")
+```
+
+# Transform and spread
+
+## Log transformation
+
+Why?
 
 ```{r}
 leafhopper_tidy %>%
@@ -75,7 +90,7 @@ leafhopper_tidy <-
          logRPA = log(offsetRPA))
 ```
 
-# Spread
+Spread these
 
 ```{r}
 leafhopper_logRPA <-
@@ -89,18 +104,28 @@ leafhopper_RPA <-
   spread(key = Compound, value = RPA)
 ```
 
+## Centered log ratio transformation
+
+This is for *compositional data* only, where only the relative amounts of metabolites matter, not differences in sums between samples (e.g. more leafhoppers = more volatiles).  I should probably not use this.  If I do end up treating this as compositional data, I should use a newer Isometric Log Ratio transformation that is better for interpretation.
+
+```{r}
+library(Hotelling)
+leafhopper_CLR <-   
+  leafhopper_tidy %>% 
+  mutate(bigRPA = offsetRPA * 1000) %>% 
+  select(-logRPA, -offsetRPA, -RPA) %>% 
+  spread(key = Compound, value = bigRPA) %>% 
+  select(-meta) %>%
+  # do the CLR
+  clr() %>% 
+  # re-add metadata
+  bind_cols(leafhopper_RPA %>% select(meta), .)
+```
+
 
 # Analyze
 
-Store metadata variable names for easy filtering later
 
-```{r}
-meta <- c("sample",
-          "density_start",
-          "density_end",
-          "damage_mean.percent",
-          "damage_T")
-```
 
 ## PCA
 
@@ -118,45 +143,85 @@ pca_log <- opls(select(leafhopper_logRPA, -meta), scaleC = "standard", plotL = F
 plot(pca_log, parAsColFcVn = leafhopper_logRPA$density_end, parLabVc = leafhopper_logRPA$sample)
 ```
 
-I'm not really sure that one is better than the other.  The loadings certainly change a lot---log transformation fucks with variance, so that's not surprising.  It's probably better to use untransformed data???  I wish the CLR transformation worked, because it's apparently built for compositional data.  I could add a large offset or transform by multiplying by 1000 or something and try it.  Hrmm.
-
-```{r}
-library(Hotelling)
-leafhopper_CLR <-   
-  leafhopper_tidy %>% 
-  mutate(bigRPA = offsetRPA * 1000) %>% 
-  select(-logRPA, -offsetRPA, -RPA) %>% 
-  spread(key = Compound, value = bigRPA) %>% 
-  select(-meta) %>%
-  # do the CLR
-  clr() %>% 
-  # re-add metadata
-  bind_cols(leafhopper_RPA %>% select(meta), .)
-```
+On CLR transformed data:
 
 ```{r}
 pca_clr <- opls(leafhopper_CLR %>% select(-meta), scaleC = "standard", plotL = FALSE)
 plot(pca_clr, parAsColFcVn = leafhopper_CLR$density_end, parLabVc = leafhopper_CLR$sample)
 ```
 
-Sure, let's go with CLR??
+I'm not really sure that one is better than the other.  The loadings certainly change a lot---log transformation fucks with variance, so that's not surprising. CLR seems to help things look more normal, but I think that will cause problems with interpretability.  It's probably best to use untransformed data, but it could be useful to show results of both untransformed and isometric log ratio transformed data.
 
 # PLSR
+
 PLSR 'works' with only end leafhopper density and the log of the percent damage on the twister leaf (which are correlated, of course)
 
+## On leafhopper density at the end
+
+This one seems like the best one
+
 ```{r}
-ggplot(leafhopper_tidy, aes(x = density_end, y = log(damage_T))) + geom_point() + geom_smooth(method = 'lm')
+plsr_end <- opls(select(leafhopper_RPA, -meta), leafhopper_RPA$density_end,
+             scaleC = "standard",
+             permI = 500,
+             predI = 1,
+             orthoI = NA,
+             plotL = FALSE)
+plot(plsr_end, parLabVc = leafhopper_RPA$sample)
 ```
+
+## On Twister leaf damage
+
+- Good model (high Q2 and R2)
+- Higher p-value than above model
+- Using mean plant damage as Y yields insignificant model
+- The VIPs for this are really different from above model, despite density and damage being correlated.
+- Probably spurrious??
+
+```{r}
+plsr_damage <- opls(select(leafhopper_RPA, -meta), log(leafhopper_RPA$damage_T),
+             scaleC = "standard",
+             permI = 500,
+             predI = 1,
+             orthoI = NA,
+             plotL = FALSE)
+plot(plsr_end, parLabVc = leafhopper_RPA$sample)
+```
+
+## Compare to PCA
+
+No real pattern found in PCA on raw RPAs (in contrast to CLR transformed data, shown below)
+
+```{r}
+plot(pca, parAsColFcVn = leafhopper_RPA$density_end, parLabVc = leafhopper_RPA$sample)
+```
+
+```{r}
+plot(pca, parAsColFcVn = log(leafhopper_RPA$damage_T), parLabVc = leafhopper_RPA$sample)
+```
+
+# Compositional PLSR
+
+This uses CLR transformed data, which is appropriate for compositional data.  That is, the relative amounts of metabolites are important and the differences in sums of RPAs between samples are not.  I'm not sure that's totally appropriate since I expect changes in composition and ammount.  Might be worthwile to explore.
 
 ## With end density
 
 ```{r}
+#scales both X and Y
 plsr_end <- opls(select(leafhopper_CLR, -meta), leafhopper_CLR$density_end,
              scaleC = "standard",
              predI = 1,
              orthoI = NA,
              plotL = FALSE)
+
+#Just scales Y, X is maybe already scaled by CLR??
+plsr_end2 <- opls(select(leafhopper_CLR, -meta), scale(leafhopper_CLR$density_end),
+             scaleC = "none",
+             predI = 1,
+             orthoI = NA,
+             plotL = FALSE)
 plot(plsr_end, parLabVc = leafhopper_CLR$sample)
+plot(plsr_end2, parLabVc = leafhopper_CLR$sample)
 ```
 
 ## With damage on the twister leaf
@@ -174,6 +239,7 @@ plot(plsr_dt, parLabVc = leafhopper_CLR$sample)
 **HOWEVER**
 
 When you label the PCA with twister leaf damage, it looks terrible
+
 ```{r}
 plot(pca_clr, parAsColFcVn = leafhopper_CLR$density_end, parLabVc = leafhopper_CLR$sample)
 ```
@@ -184,4 +250,3 @@ plot(pca_clr, parAsColFcVn = log(leafhopper_CLR$damage_T), parLabVc = leafhopper
 So that's the interesting comparison, I think...
 
 # Write data
->>>>>>> 5cab172f8714ef94c129f81f2f6c156e5b014e2c
