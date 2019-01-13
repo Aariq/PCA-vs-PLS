@@ -1,0 +1,451 @@
+TRY Data Explorer Output	2019-1-7
+Trait List for Species
+AccSpeciesID: 42541, .Plantago lanceolata.
+TraitID	Trait	Measurements	
+836	Bark sieve tubes grouping	1	
+153	Buds: budbank height distribution	3	
+153	Buds: budbank height distribution	153	
+865	Buds: budbank seasonality	84	
+324	Crown (canopy) length: diameter along the longest axis	1	
+325	Crown (canopy) width	1	
+890	Dispersal frequenzy	1	
+28	Dispersal syndrome	10	
+28	Dispersal syndrome	1905	
+28	Dispersal syndrome	25	
+28	Dispersal syndrome	1	
+892	Dispersal unit appendages	5	
+892	Dispersal unit appendages	1	
+233	Dispersal unit dry mass	1	
+893	Dispersal unit exposure 	1	
+1263	Dispersal unit floating capacity	1043	
+237	Dispersal unit length	1	
+237	Dispersal unit length	11	
+232	Dispersal unit shape	3	
+894	Dispersal unit surface structure	1	
+235	Dispersal unit thickness 	9	
+231	Dispersal unit type	3	
+231	Dispersal unit type	1079	
+231	Dispersal unit type	1	
+236	Dispersal unit width	9	
+236	Dispersal unit width	1	
+896	Fine root diameter	1	
+207	Flower color	2	
+204	Flower insemination autogamous or xenogamous	1	
+210	Flower number of pollen per ovule	6	
+205	Flower pollinator and type of reward	3	
+213	Flower sex	4	
+212	Flower sex timing	3	
+211	Flower sexual self-incompatibility mechanism	3	
+915	Flower sexual syndrome (dichogamy, cleistogamy, dioecious, monoecious)	4	
+206	Flower type	1	
+99	Fruit type	1	
+130	Inflorescence dry mass per plant	6	
+684	Inflorescence nitrogen (N) content per inflorscence dry mass	1	
+3	Leaf angle (inclination, orientation)	6	
+1	Leaf area 	(not yet refined if leaf or leaflet)	4	
+1	Leaf area 	(not yet refined if leaf or leaflet)	5	
+3114	Leaf area (in case of compound leaves undefined: leaf or leaflet; petiole and rachis in- excluded)	4	
+3114	Leaf area (in case of compound leaves undefined: leaf or leaflet; petiole and rachis in- excluded)	22	
+3108	Leaf area (in case of compound leaves: leaf, petiole excluded)	5	
+3108	Leaf area (in case of compound leaves: leaf, petiole excluded)	3	
+3110	Leaf area (in case of compound leaves: leaf, petiole included)	71	
+3110	Leaf area (in case of compound leaves: leaf, petiole included)	13	
+3110	Leaf area (in case of compound leaves: leaf, petiole included)	10	
+3112	Leaf area (in case of compound leaves: leaf, undefined if petiole in- or excluded)	6	
+3109	Leaf area (in case of compound leaves: leaflet, petiole and rachis excluded)	4	
+3113	Leaf area (in case of compound leaves: leaflet, undefined if petiole and rachis are in- or excluded)	3	
+3113	Leaf area (in case of compound leaves: leaflet, undefined if petiole and rachis are in- or excluded)	9	
+11	Leaf area per leaf dry mass (SLA or 1/LMA): not yet refined if petiole is included	8	
+11	Leaf area per leaf dry mass (SLA or 1/LMA): not yet refined if petiole is included	7	
+3115	Leaf area per leaf dry mass (SLA or 1/LMA): petiole and rachis excluded	6	
+3115	Leaf area per leaf dry mass (SLA or 1/LMA): petiole and rachis excluded	57	
+3116	Leaf area per leaf dry mass (SLA or 1/LMA): petiole and rachis included	19	
+3116	Leaf area per leaf dry mass (SLA or 1/LMA): petiole and rachis included	101	
+3116	Leaf area per leaf dry mass (SLA or 1/LMA): petiole and rachis included	34	
+3117	Leaf area per leaf dry mass (SLA or 1/LMA): undefined if petiole and rachis are in- or excluded	16	
+3117	Leaf area per leaf dry mass (SLA or 1/LMA): undefined if petiole and rachis are in- or excluded	44	
+125	Leaf area per leaf fresh mass (specific leaf area (SLA) based on leaf fresh mass)	3	
+3037	Leaf area per leaf perimeter	5	
+410	Leaf area per plant	5	
+410	Leaf area per plant	6	
+109	Leaf area per plant dry mass (leaf area ratio; LAR)	9	
+570	Leaf carbon (C) content per leaf area	3	
+570	Leaf carbon (C) content per leaf area	6	
+13	Leaf carbon (C) content per leaf dry mass	6	
+13	Leaf carbon (C) content per leaf dry mass	21	
+13	Leaf carbon (C) content per leaf dry mass	11	
+146	Leaf carbon/nitrogen (C/N) ratio	9	
+146	Leaf carbon/nitrogen (C/N) ratio	6	
+146	Leaf carbon/nitrogen (C/N) ratio	3	
+92	Leaf cellulose content per leaf dry mass	1	
+416	Leaf chlorophyll a/b ratio	1	
+413	Leaf chlorophyll content per leaf area	1	
+17	Leaf compoundness	25	
+17	Leaf compoundness	1	
+48	Leaf density	3	
+48	Leaf density	41	
+16	Leaf distribution along the shoot axis (arrangement type)	3	
+16	Leaf distribution along the shoot axis (arrangement type)	26	
+55	Leaf dry mass	89	
+55	Leaf dry mass	14	
+55	Leaf dry mass	18	
+47	Leaf dry mass per leaf fresh mass (leaf dry matter content, LDMC)	81	
+47	Leaf dry mass per leaf fresh mass (leaf dry matter content, LDMC)	34	
+129	Leaf dry mass per plant	5	
+129	Leaf dry mass per plant	6	
+110	Leaf dry mass per plant dry mass (leaf weight ratio, LWR)	18	
+3040	Leaf dry mass production rate per plant	5	
+677	Leaf emergences (pubescence, hairs, spines, thorns)	1	
+101	Leaf epidermis thickness	8	
+163	Leaf fresh mass	10	
+163	Leaf fresh mass	12	
+94	Leaf hemi-cellulose content per leaf dry mass	1	
+935	Leaf herbivore species	28	
+2955	Leaf hydrogen (H) content per leaf dry mass	3	
+62	Leaf inrolling of lamina	3	
+49	Leaf intercellular CO2 concentration	11	
+144	Leaf length	25	
+144	Leaf length	4	
+12	Leaf lifespan (longevity)	1	
+12	Leaf lifespan (longevity)	6	
+87	Leaf lignin content per leaf dry mass	1	
+69	Leaf litter area per leaf litter dry mass (specific leaf area (SLA) of leaf litter)	5	
+103	Leaf mesophyll thickness	4	
+105	Leaf mid vein support tissue thickness	4	
+104	Leaf mid vein thickness	4	
+57	Leaf nitrogen (N) content per leaf	1	
+50	Leaf nitrogen (N) content per leaf area	18	
+50	Leaf nitrogen (N) content per leaf area	24	
+50	Leaf nitrogen (N) content per leaf area	9	
+14	Leaf nitrogen (N) content per leaf dry mass	28	
+14	Leaf nitrogen (N) content per leaf dry mass	22	
+14	Leaf nitrogen (N) content per leaf dry mass	9	
+3046	Leaf nitrogen (N) uptake rate	5	
+56	Leaf nitrogen/phosphorus (N/P) ratio	1	
+759	Leaf number of leaflets per leaf	6	
+3036	Leaf number production rate per plant	5	
+3089	Leaf osmotic potential: soil volumetric water content at leaf turgor loss point	1	
+3088	Leaf osmotic potential: soil water potential at turgor loss point	1	
+152	Leaf palatability	2	
+152	Leaf palatability	8	
+142	Leaf perimeter	5	
+779	Leaf petiole diameter	20	
+143	Leaf petiole length	20	
+615	Leaf pH	3	
+37	Leaf phenology type	9	
+37	Leaf phenology type	3	
+51	Leaf phosphorus (P) content per leaf area	14	
+51	Leaf phosphorus (P) content per leaf area	7	
+15	Leaf phosphorus (P) content per leaf dry mass	11	
+15	Leaf phosphorus (P) content per leaf dry mass	15	
+3026	Leaf phosphorus (P) retranslocation prior to leaf senescence	2	
+186	Leaf photosynthesis carboxylation capacity (Vcmax) per leaf area (Farquhar model)	3	
+185	Leaf photosynthesis carboxylation capacity (Vcmax) per leaf dry mass (Farquhar model)	3	
+479	Leaf photosynthesis CO2 compensation point	3	
+269	Leaf photosynthesis electron transport capacity (Jmax) per leaf area (Farquhar model)	4	
+270	Leaf photosynthesis electron transport capacity (Jmax) per leaf dry mass (Farquhar model)	3	
+784	Leaf photosynthesis net assimilation rate per leaf area (NAR)	14	
+666	Leaf photosynthesis oxygenation capacity (Farquhar model)	3	
+53	Leaf photosynthesis rate per leaf area	19	
+53	Leaf photosynthesis rate per leaf area	3	
+40	Leaf photosynthesis rate per leaf dry mass	12	
+40	Leaf photosynthesis rate per leaf dry mass	3	
+2818	Leaf presence	1	
+665	Leaf respiration rate in dark minus respiration in the light, mass based	3	
+663	Leaf respiration rate in light per dry mass	3	
+512	Leaf respiration rate in light per leaf area	3	
+664	Leaf respiration rate in light per leaf respiration rate in the dark	3	
+54	Leaf respiration rate per leaf area	8	
+41	Leaf respiration rate per leaf dry mass	8	
+976	Leaf secondary compound types	22	
+154	Leaf shape	7	
+85	Leaf soluble components content per leaf dry mass	1	
+506	Leaf sugar content per leaf dry mass	3	
+2	Leaf texture (sclerophylly, physical strength)	6	
+2	Leaf texture (sclerophylly, physical strength)	11	
+46	Leaf thickness	6	
+46	Leaf thickness	65	
+111	Leaf transpiration rate per leaf area	8	
+43	Leaf type	20	
+43	Leaf type	3	
+43	Leaf type	2	
+145	Leaf width	3	
+145	Leaf width	30	
+3038	Leaf width per leaf length	5	
+39	Litter decomposition rate	3	
+39	Litter decomposition rate	4	
+22	Photosynthesis pathway	8	
+22	Photosynthesis pathway	31	
+3128	Photosynthesis per stomatal conductance	2	
+1013	Photosynthesis photoperiodism: type	1	
+221	Plant chromosome base number	2	
+224	Plant chromosome cDNA content	4	
+223	Plant chromosome number	5	
+222	Plant chromosome ploidy	1	
+222	Plant chromosome ploidy	8	
+341	Plant clonal growth form	1	
+341	Plant clonal growth form	19	
+1023	Plant containing salt glands	1	
+346	Plant defence mechanisms: chemical	4	
+345	Plant defence mechanisms: physical	4	
+1026	Plant dry mass height distribution	1	
+700	Plant dry mass per plant	1	
+700	Plant dry mass per plant	10	
+1255	Plant emergences (pubescence, hairs, spines, thorns)	3	
+197	Plant functional type (PFT)	46	
+197	Plant functional type (PFT)	3	
+42	Plant growth form	100	
+42	Plant growth form	21	
+42	Plant growth form	9	
+587	Plant growth rate	1	
+3107	Plant height generative	12	
+3107	Plant height generative	10	
+3107	Plant height generative	18	
+3010	Plant height to plant dry mass ratio	27	
+3106	Plant height vegetative	11	
+3106	Plant height vegetative	142	
+3106	Plant height vegetative	55	
+1016	Plant height versus plant width relationship	1	
+343	Plant life form (Raunkiaer life form)	10	
+343	Plant life form (Raunkiaer life form)	6	
+343	Plant life form (Raunkiaer life form)	2	
+59	Plant lifespan (longevity)	45	
+59	Plant lifespan (longevity)	10	
+59	Plant lifespan (longevity)	2	
+788	Plant light requirement	1	
+788	Plant light requirement	4	
+347	Plant mating system	7	
+347	Plant mating system	1	
+1029	Plant mono/poly carpic	1	
+814	Plant morphological adaptations: root metamorphoses	1	
+813	Plant morphological adaptations: seed or dispersal unit metamorphoses	4	
+813	Plant morphological adaptations: seed or dispersal unit metamorphoses	1	
+817	Plant morphological adaptations: shoot metamorphoses	5	
+816	Plant morphological adaptations: storage metamorphoses	13	
+1030	Plant mycorrhizal infection intensity	7	
+7	Plant mycorrhizal type	19	
+7	Plant mycorrhizal type	16	
+8	Plant nitrogen(N) fixation capacity	6	
+8	Plant nitrogen(N) fixation capacity	14	
+361	Plant number of offspring shoots per parent shoot per year	18	
+201	Plant nutrition mode (heterotrophy)	2	
+155	Plant ontogeny: age of maturity (first flowering)	28	
+155	Plant ontogeny: age of maturity (first flowering)	6	
+609	Plant propagation type	1	
+77	Plant relative growth rate (RGR)	1	
+77	Plant relative growth rate (RGR)	25	
+335	Plant reproductive phenology timing	48	
+335	Plant reproductive phenology timing	21	
+335	Plant reproductive phenology timing	19	
+819	Plant resprouting capacity	1	
+819	Plant resprouting capacity	2	
+140	Plant shoot branching	3	
+140	Plant shoot branching	18	
+776	Plant surface area per plant dry mass of all green parts	5	
+30	Plant tolerance to drought	1	
+318	Plant tolerance to fire	7	
+31	Plant tolerance to frost	2	
+228	Plant tolerance to grazing	2	
+1038	Plant tolerance to heavy metals	1	
+199	Plant tolerance to human impact	5	
+227	Plant tolerance to mowing	1	
+1254	Plant tolerance to salt	1	
+603	Plant tolerance to shade	5	
+229	Plant tolerance to trampling	1	
+1251	Plant vegetative phenology (leaf phenology)	1	
+344	Plant vegetative regeneration capacity	2	
+344	Plant vegetative regeneration capacity	4	
+1008	Plant vegetative regeneration species offspring size relative to parent	18	
+356	Plant vegetative reproduction: clonal growth organ	6	
+329	Plant vegetative reproduction: clonality of ramets	1	
+149	Plant vegetative reproduction: distance between ramets	3	
+334	Plant vegetative reproduction: lateral spread	1	
+334	Plant vegetative reproduction: lateral spread	19	
+358	Plant vegetative reproduction: persistence of connection between clonal growth organs	18	
+357	Plant vegetative reproduction: role of clonal growth organ in plant growth	18	
+320	Plant vital attributes of persistence and establishment	1	
+2952	Plant water loss on drying	1	
+38	Plant woodiness	2	
+38	Plant woodiness	29	
+38	Plant woodiness	8	
+1042	Pollen diameter	2	
+1044	Pollen viability	2	
+29	Pollination syndrome	15	
+29	Pollination syndrome	7	
+29	Pollination syndrome	2	
+84	Root carbon (C) content per root dry mass	13	
+1055	Root carbon/nitrogen (C/N) ratio	9	
+83	Root diameter	5	
+363	Root dry mass per plant	13	
+785	Root dry mass per root fresh mass (root dry matter content; RDMC)	8	
+3029	Root dry mass per soil layer	20	
+3033	Root evenness of dry mass vertical distribution	5	
+3035	Root evenness of length vertical distribution	5	
+3034	Root evenness of surface area vertical distribution	5	
+1076	Root hair presence	2	
+1079	Root length	6	
+1080	Root length per root dry mass (specific root length, SRL)	17	
+3030	Root length per soil layer	20	
+1504	Root length ratio (RLR): root length per plant dry mass	4	
+470	Root mass fraction (fraction of root dry mass per whole plant dry mass)	10	
+815	Root morphological adaptations: aerenchym	1	
+80	Root nitrogen (N) content per root dry mass	18	
+80	Root nitrogen (N) content per root dry mass	2	
+462	Root nitrogen (N) uptake rate	4	
+1316	Root organic nitrogen (N) content per root dry mass	4	
+246	Root porosity (volume of root air space)	1	
+1093	Root position along clonal growth organ	19	
+1357	Root ratio of organic nitrogen (N) to total N	4	
+514	Root respiration rate per root dry mass	6	
+514	Root respiration rate per root dry mass	9	
+6	Root rooting depth	4	
+662	Root sugar content per root dry mass	3	
+3032	Root surface area per plant	5	
+1089	Root surface area per root dry mass (specific root area)	10	
+3031	Root surface area per soil layer	20	
+82	Root tissue density (root dry mass per root volume)	10	
+65	Root type, root architecture	1	
+65	Root type, root architecture	13	
+1091	Root volume per root dry mass 	5	
+9	Root/shoot ratio	10	
+9	Root/shoot ratio	1	
+33	Seed (seedbank) longevity	343	
+33	Seed (seedbank) longevity	88	
+1099	Seed area	5	
+3041	Seed curvature	5	
+26	Seed dry mass	63	
+26	Seed dry mass	27	
+26	Seed dry mass	22	
+95	Seed germination rate (germination efficiency)	5	
+596	Seed germination requirement	4	
+353	Seed germination temperature	3	
+1102	Seed germination type	1	
+234	Seed heteromorphy	4	
+27	Seed length	9	
+27	Seed length	16	
+350	Seed morphology type	6	
+350	Seed morphology type	5	
+351	Seed number per dispersal unit	4	
+351	Seed number per dispersal unit	1	
+1103	Seed number per flower	2	
+1104	Seed number per inflorescence (total, fertile, infertile)	5	
+131	Seed number per plant	7	
+336	Seed number per ramet	18	
+138	Seed number per reproducton unit	42	
+1105	Seed number per square meter	5	
+2810	Seed number per unknown unit	2	
+96	Seed oil content per seed mass	7	
+1110	Seed or fruit biomass per ground area	1	
+3045	Seed projected perimeter	5	
+97	Seed protein content per seed mass	7	
+1107	Seed releasing height	1	
+349	Seed shape	3	
+98	Seed storage behaviour	1	
+1108	Seed structure type	2	
+3043	Seed surface area	25	
+66	Seed terminal velocity	4	
+66	Seed terminal velocity	108	
+66	Seed terminal velocity	1	
+238	Seed thickness	6	
+3042	Seed volume	20	
+239	Seed width	16	
+239	Seed width	9	
+3044	Seed width to length ratio	5	
+1111	Seedbank density	367	
+2809	Seedbank duration	346	
+2807	Seedbank number of layers	349	
+2808	Seedbank thickness of top layer	296	
+159	Seedbank type	746	
+359	Seeding frequency	1	
+704	Shoot calcium (Ca) content per shoot dry mass	1	
+704	Shoot calcium (Ca) content per shoot dry mass	6	
+775	Shoot carbon (C) content per shoot dry mass	8	
+409	Shoot carbon/nitrogen (C/N) ratio	8	
+409	Shoot carbon/nitrogen (C/N) ratio	6	
+1117	Shoot copper (Cu) content per shoot dry mass	6	
+1118	Shoot cyclicity	20	
+403	Shoot dry mass per plant (plant aboveground dry mass)	12	
+403	Shoot dry mass per plant (plant aboveground dry mass)	41	
+705	Shoot iron (Fe) content per shoot dry mass	1	
+705	Shoot iron (Fe) content per shoot dry mass	6	
+702	Shoot magnesium (Mg) content per shoot dry mass	1	
+702	Shoot magnesium (Mg) content per shoot dry mass	6	
+703	Shoot manganese (Mn) content per shoot dry mass	6	
+703	Shoot manganese (Mn) content per shoot dry mass	1	
+404	Shoot necromass	6	
+1124	Shoot nickel (Ni) content per shoot dry mass	6	
+408	Shoot nitrogen (N) content per plant 	6	
+339	Shoot nitrogen (N) content per shoot dry mass	1	
+339	Shoot nitrogen (N) content per shoot dry mass	8	
+340	Shoot phosphorus (P) content per shoot dry mass	11	
+340	Shoot phosphorus (P) content per shoot dry mass	1	
+701	Shoot potassium (K) content per shoot dry mass	6	
+701	Shoot potassium (K) content per shoot dry mass	1	
+1127	Shoot sodium (Na) content per shoot dry mass	6	
+1128	Shoot sulfur (S) content per shoot dry mass	6	
+1129	Shoot zinc (Zn) content per shoot dry mass	6	
+1130	Species environmental indicator value according to Ellenberg: continentality	1	
+1131	Species environmental indicator value according to Ellenberg: light	1	
+1132	Species environmental indicator value according to Ellenberg: moisture	3	
+1133	Species environmental indicator value according to Ellenberg: nitrogen	1	
+1134	Species environmental indicator value according to Ellenberg: pH 	1	
+1134	Species environmental indicator value according to Ellenberg: pH 	2	
+1135	Species environmental indicator value according to Ellenberg: salt tolerance	1	
+1136	Species environmental indicator value according to Ellenberg: temperature	1	
+1137	Species generation overlap	18	
+3094	Species habitat characterization: aridity index	1	
+3095	Species habitat characterization: general description	4	
+3093	Species habitat characterization: potential evapotranspiration	1	
+3092	Species habitat characterization: precipitation	1	
+3091	Species habitat characterization: soil hydrology	1	
+3096	Species habitat characterization: vegetation type	8	
+3063	Species invasion introduction year	1	
+1138	Species nutrient requirements	4	
+1139	Species occurrence rang: typical abundance where naturally occurring	1	
+1140	Species occurrence range characteristics	28	
+1141	Species occurrence range: elevation range	1	
+822	Species ocurrence range: characteristical ecological ocurrence range	1	
+825	Species ocurrence range: climate type	3	
+825	Species ocurrence range: climate type	12	
+823	Species ocurrence range: continentality	5	
+244	Species ocurrence range: endemism	2	
+824	Species ocurrence range: invasiveness	1	
+242	Species ocurrence range: mode of introduction	1	
+218	Species ocurrence range: native vs invasive	1	
+218	Species ocurrence range: native vs invasive	13	
+200	Species ocurrence range: number of floristic zones	1	
+827	Species ocurrence range: origin zonal	1	
+230	Species phyto-sociological group	5	
+2816	Species range: Highland or lowland vicariant of a genus	5	
+208	Species reproduction type	1	
+1146	Species start of CGO formation versus reproduction	19	
+1145	Species status (nativity at growth location)	1	
+196	Species strategy type according to Grime	2	
+407	Stem (wood) carbon (C) content per stem dry mass	6	
+407	Stem (wood) carbon (C) content per stem dry mass	3	
+165	Stem (wood) carbon/nitrogen (C/N) ratio	6	
+21	Stem diameter	5	
+128	Stem dry mass per plant	6	
+136	Stem dry mass per plant dry mass	3	
+1181	Stem dry mass per stem fresh mass (stem dry matter content, StDMC)	4	
+4	Stem dry mass per stem fresh volume (stem specific density, SSD, wood density)	8	
+406	Stem nitrogen (N) content per stem dry mass	6	
+406	Stem nitrogen (N) content per stem dry mass	4	
+1188	Stem self-supporting	1	
+45	Stomata conductance per leaf area	22	
+3087	Stomata conductance per leaf area at turgor loss point	1	
+63	Stomata density	4	
+781	Stomata distribution to ab- and adaxial leaf surfaces	1	
+1194	Tillering type	19	
+1203	Twig(branch smaller 2cm) number of leaves per twig	5	
+3090	Whole plant time until death	1	
+1211	Wood axial parenchyma types	1	
+1216	Wood fiber cell wall thickness	1	
+1220	Wood fiber-pits types	1	
+273	Wood growth ring distinction	3	
+1234	Wood ray types	1	
+1237	Wood vessel density	1	
+1238	Wood vessel diameter	2	
+1239	Wood vessel distribution	3	
+1240	Wood vessel intervessel pits	1	
+278	Wood vessel perforation plates	1	
