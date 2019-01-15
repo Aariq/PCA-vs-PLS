@@ -15,7 +15,10 @@ For each dataset:
     + compare p-values from PCA score based t-tests and PLS-DA permutation tests
     + calculate distance between centriods in score plots for PCA and PLS-DA for all datasets
     
-    
+
+# To ask Elizabeth:
+Currently if the model fails (e.g. because the first component isn't significant) I'm just ignoring it.  Is it better to force 2 axes for all models instead of allowing the function to choose the best number of axes (which might be zero)?
+
 # Packages and Functions
 
 ```{r}
@@ -24,6 +27,7 @@ library(chemhelper)
 library(ropls)
 library(psych) #for cohen.kappa()
 library(tidyverse)
+library(colorspace)
 ```
 ```{r}
 #create "safe" "partial" version of opls() which returns NULL if it errors and never plots or prints results
@@ -35,8 +39,10 @@ safe_opls <- possibly(partial(opls, printL = FALSE, plotL = FALSE), otherwise = 
 ```{r}
 # null <- read_rds(here("data", "null.rds"))
 needle <- read_rds(here("data", "needle.rds"))
+# sample(needle, 1)
 # red_herring <- read_rds(here("data", "red herring.rds"))
 control <- read_rds(here("data", "control.rds"))
+# sample(control, 1)
 ```
 
 
@@ -45,11 +51,18 @@ control <- read_rds(here("data", "control.rds"))
 ## Fit PCA models
 
 ```{r}
+# map the pca function to all datasets
 control.pcas.try <-
   map(control,
       ~safe_opls(select(., -group)))
+# sample(control.pcas.try, 1)
+
+# figure out which ones failed and returned NULL
 control.pcas.failed <- map_lgl(control.pcas.try, is.null)
+
+# Index by which ones failed to get only the successful models
 control.pcas <- control.pcas.try[!control.pcas.failed]
+# sample(control.pcas, 1)
 ```
 
 ## Fit PLS models
@@ -94,9 +107,9 @@ control.cors <-
         # if corr distance > 0.5, then its "important" variable
         mutate(#detect_discr = ifelse(distance > 0.5, TRUE, FALSE),
                detect_discr = ifelse(abs(p1) > 0.5, TRUE, FALSE),
-               is_discr = ifelse(str_detect(Variable, "discr"), TRUE, FALSE))
+               is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE))
         )
-
+sample(control.cors, 2)
 # calculate kappa
 control.pca.k <- 
   map_dfr(control.cors,
@@ -117,7 +130,7 @@ control.vips <-
   map(control.pls,
       ~ get_VIP(.) %>% 
         mutate(detect_discr = ifelse(VIP > 1, TRUE, FALSE),
-               is_discr = ifelse(str_detect(Variable, "discr"), TRUE, FALSE)))
+               is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE)))
 
 control.pls.k <- 
   map_dfr(control.vips,
@@ -136,8 +149,13 @@ control.k <- full_join(control.pca.k, control.pls.k)
 ```
 
 ### Build Plot
+
 ```{r colors}
 mycolors <- c("PCA" = "#C1383A", "PLS-DA" = "#1F46A3")
+
+mypal <- qualitative_hcl(2, "Harmonic")
+demoplot(mypal, "bar")
+protan(mypal) %>% demoplot("bar")
 ```
 
 ```{r}
@@ -146,10 +164,12 @@ control.k.plotdata <-
   gather(-dataset, key = "Method", value = "Cohen's Kappa") %>% 
   mutate(Method = as.factor(Method) %>% fct_recode(PCA = "pca.k", `PLS-DA` = "pls.k"))
 
-control.p <- ggplot(control.k.plotdata) +
+control.p <-
+  ggplot(control.k.plotdata) +
   geom_histogram(aes(x = `Cohen's Kappa`, fill = Method),
-                 position = "dodge", bins = 10) +
-  scale_fill_manual("Method", values = mycolors) +
+                 position = "dodge", bins = 15) +
+  # scale_fill_manual("Method", values = mycolors) +
+  scale_fill_discrete_qualitative(palette = "Dark 3") +
   theme_bw() +
   labs(x = "Cohen's Kappa", y = "Frequency")
 ```
@@ -209,7 +229,7 @@ needle.cors <-
         # if corr distance > 0.5, then its "important" variable
         mutate(#detect_discr = ifelse(distance > 0.5, TRUE, FALSE),
                detect_discr = ifelse(abs(p1) > 0.5, TRUE, FALSE),
-               is_discr = ifelse(str_detect(Variable, "discr"), TRUE, FALSE))
+               is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE))
         )
 
 # calculate kappa
@@ -232,7 +252,7 @@ needle.vips <-
   map(needle.pls,
       ~ get_VIP(.) %>% 
         mutate(detect_discr = ifelse(VIP > 1, TRUE, FALSE),
-               is_discr = ifelse(str_detect(Variable, "discr"), TRUE, FALSE)))
+               is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE)))
 
 needle.pls.k <- 
   map_dfr(needle.vips,
@@ -258,25 +278,31 @@ needle.k.plotdata <-
   gather(-dataset, key = "Method", value = "Cohen's Kappa") %>% 
   mutate(Method = as.factor(Method) %>% fct_recode(PCA = "pca.k", `PLS-DA` = "pls.k"))
 
-needle.p <- ggplot(needle.k.plotdata) +
+needle.p <-
+  ggplot(needle.k.plotdata) +
   geom_histogram(aes(x = `Cohen's Kappa`, fill = Method),
-                 position = "dodge", bins = 10) +
-  scale_fill_manual("Method", values = mycolors) +
+                 position = "dodge", bins = 15) +
+  # scale_fill_manual("Method", values = mycolors) +
+  scale_fill_discrete_qualitative(palette = "Dark 3") +
   theme_bw() +
   labs(x = "Cohen's Kappa", y = "Frequency")
+# needle.p
 ```
 
 # Plot
 
 ```{r}
 library(cowplot)
-panels <- plot_grid(control.p + theme(legend.position = "none"),
-          needle.p + theme(legend.position = "none"),
-          nrow = 1,
-          ncol = 2,
-          labels = "auto")
-fig2 <- plot_grid(panels, get_legend(control.p),
-          rel_widths = c(1, 0.15))
+panels <-
+  plot_grid(control.p + theme(legend.position = "none"),
+            needle.p + theme(legend.position = "none"),
+            nrow = 1,
+            ncol = 2,
+            labels = "auto")
+fig2 <-
+  plot_grid(panels, get_legend(control.p),
+            rel_widths = c(1, 0.15))
+
 save_plot(here("figs", "fig2.png"), fig2, ncol = 2)
 ```
 
