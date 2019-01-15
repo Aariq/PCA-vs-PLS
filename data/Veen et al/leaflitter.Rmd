@@ -12,8 +12,8 @@ library(here)
 ```
 
 ```{r}
-veen.mass <- read_excel(here("Veen et al", "Veen et al FE-data.xlsx"))
-veen.env <-  read_excel(here("Veen et al", "Veen et al FE-data.xlsx"), sheet = 2)
+veen.mass <- read_excel(here("data", "Veen et al", "Veen et al FE-data.xlsx"))
+veen.env <-  read_excel(here("data", "Veen et al", "Veen et al FE-data.xlsx"), sheet = 2)
 veen.mass
 veen.env <- veen.env %>% 
   rename(soilpH = pH, litterlignin = lignin,
@@ -87,17 +87,19 @@ I really need to read the paper to get what's going on here I guess
 I could ask, for example, regardless of home field advantage (ignore soilsource and littersource), what soil and litter properties best predict decomposition (mass12)?  Probably would want to only use non-sterilized litter?? Could include it to see if it comes out as important variable.
 
 ```{r}
-plsdata <- veen %>%
-  select(-ID, -transectID, -site, -mass4) %>%
+plsdata <-
+  veen %>%
+  # filter(sterilization == "no") %>%
+  select(-ID, -transectID, -site, -mass4, -transecttype, -sterilization, -soilsource, -littersource) %>%
   select(mass12, everything()) %>%
   mutate(mass12 = as.numeric(mass12),
-         litterlignin = as.numeric(litterlignin),
-         transecttype = as.factor(transecttype) %>% as.numeric(),
-         sterilization = as.factor(sterilization) %>% as.numeric()) %>% 
+         litterlignin = as.numeric(litterlignin)) %>% 
+         # transecttype = as.factor(transecttype) %>% as.numeric(),
+         # sterilization = as.factor(sterilization) %>% as.numeric()) %>% 
   filter(complete.cases(.))
 
 pca <- opls(select(plsdata, -mass12))
-plsr <- opls(select(plsdata, -mass12), plsdata$mass12, permI = 200)
+plsr <- opls(select(plsdata, -mass12), plsdata$mass12)
 
 get_VIP(plsr) %>% arrange(desc(VIP))
 ```

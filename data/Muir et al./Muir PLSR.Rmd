@@ -42,7 +42,7 @@ tomato.1
 tom.pca <- opls(tomato.1 %>% select(lma.leaflet:Rdark), plotL = FALSE)
 tom.pca.data <- get_plotdata(tom.pca)
 
-ggplot(tom.pca.data$plot_data, aes(x = p1, y = p2)) +
+ggplot(tom.pca.data$scores, aes(x = p1, y = p2)) +
   geom_point(aes(color = tomato.1$Latitude)) +
   scale_color_viridis_c(option = "A", direction = -1) +
   labs(x = glue("P1 ({tom.pca.data$var_explained[1,1] * 100}%)"),

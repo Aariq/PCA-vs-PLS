@@ -1,0 +1,27 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(tidyverse)
+library(here)
+library(ropls)
+library(chemhelper)
+```
+
+```{r}
+leaves <- read_delim(here("data", "Firmat et al", "Table_Figure1.txt"), " ")
+```
+PCA
+```{r}
+pca <- opls(leaves %>% select(-Elevation), predI = 2)
+pca_pd <- get_plotdata(pca)
+ggplot(pca_pd$scores, aes(x = p1, y = p2, color = leaves$Elevation)) +geom_point()
+```
+
+
+PLSR
+```{r}
+opls(leaves %>% select(-Elevation), leaves$Elevation)
+```
+
