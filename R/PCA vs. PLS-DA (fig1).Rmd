@@ -10,6 +10,7 @@ library(ropls) #for opls(), which does pca and pls-da
 library(cowplot) #for plot_grid()
 theme_set(theme_gray())
 library(here)
+library(colorspace)
 ```
 
 # To-Do:
@@ -43,14 +44,15 @@ null.cor <-
   null %>% 
   select(-group) %>% 
   cor() %>%
-  as_data_frame(rownames = "row") %>% 
+  as_tibble(rownames = "row") %>% 
   gather(-row, key = col, value = cor)
 
 # cor1 <-
 null.cor.p <-
   ggplot(null.cor, aes(x = col, y = row, fill = cor)) +
   geom_tile() +
-  scale_fill_gradient2("Correlation Coeficient", limits = c(-1,1)) +
+  # scale_fill_gradient2("Correlation Coeficient", limits = c(-1,1)) +
+  scale_fill_continuous_diverging(palette = "Blue-Red 3") +
   labs(x = NULL, y = NULL) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90), legend.position = "top")
@@ -67,8 +69,8 @@ null.pls <- opls(select(null, -group), null$group, plot = FALSE, predI = 2, perm
 ## Create plots for Null
 
 ```{r message=FALSE, warning=FALSE}
-null.pca.p <- plot_pca(null.pca, null$group, annotate = "subtitle")
-null.pls.p <- plot_plsda(null.pls, annotate = "subtitle")
+null.pca.p <- plot_pca(null.pca, null$group, annotate = "subtitle") + scale_color_discrete_qualitative(palette = "Dark 3")
+null.pls.p <- plot_plsda(null.pls, annotate = "subtitle") + scale_color_discrete_qualitative(palette = "Dark 3")
 plot_grid(null.cor.p,
           null.pca.p + theme(legend.position = "NULL"),
           null.pls.p + theme(legend.position = "NULL"), nrow = 1, ncol = 3)
@@ -90,7 +92,8 @@ needle.cor <-
 needle.cor.p <-
   ggplot(needle.cor, aes(x = col, y = row, fill = cor)) +
   geom_tile() +
-  scale_fill_gradient2("Correlation Coeficient", limits = c(-1,1)) +
+  # scale_fill_gradient2("Correlation Coeficient", limits = c(-1,1)) +
+  scale_fill_continuous_diverging(palette = "Blue-Red 3") +
   labs(x = NULL, y = NULL) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90), legend.position = "top")
@@ -109,8 +112,14 @@ needle.pls <- opls(select(needle, -group), needle$group, plot = FALSE, predI = 2
 ## Plots for needle-in-a-haystack
 
 ```{r message=FALSE, warning=FALSE}
-needle.pca.p <- plot_pca(needle.pca, needle$group, annotate = "subtitle")
-needle.pls.p <- plot_plsda(needle.pls, annotate = "subtitle")
+needle.pca.p <-
+  plot_pca(needle.pca, needle$group, annotate = "subtitle") +
+  scale_color_discrete_qualitative(palette = "Dark 3")
+
+needle.pls.p <-
+  plot_plsda(needle.pls, annotate = "subtitle") +
+  scale_color_discrete_qualitative(palette = "Dark 3")
+
 plot_grid(needle.cor.p,
           needle.pca.p + theme(legend.position = "NULL"),
           needle.pls.p + theme(legend.position = "NULL"),
@@ -132,7 +141,8 @@ control.cor <-
 control.cor.p <-
   ggplot(control.cor, aes(x = col, y = row, fill = cor)) +
   geom_tile() +
-  scale_fill_gradient2("Correlation Coeficient", limits = c(-1,1)) +
+  # scale_fill_gradient2("Correlation Coeficient", limits = c(-1,1)) +
+  scale_fill_continuous_diverging(palette = "Blue-Red 3") +
   labs(x = NULL, y = NULL) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90), legend.position = "top")
@@ -148,8 +158,14 @@ control.pls <- opls(select(control, -group), control$group, plot = FALSE, predI 
 ## Plots for Control
 
 ```{r message=FALSE, warning=FALSE}
-control.pca.p <- plot_pca(control.pca, control$group, annotate = "subtitle")
-control.pls.p <- plot_plsda(control.pls, annotate = "subtitle")
+control.pca.p <-
+  plot_pca(control.pca, control$group, annotate = "subtitle") +
+  scale_color_discrete_qualitative(palette = "Dark 3")
+
+control.pls.p <-
+  plot_plsda(control.pls, annotate = "subtitle") +
+  scale_color_discrete_qualitative(palette = "Dark 3")
+
 plot_grid(control.cor.p,
           control.pca.p + theme(legend.position = "NULL"),
           control.pls.p + theme(legend.position = "NULL"),

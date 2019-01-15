@@ -26,8 +26,8 @@ library(psych) #for cohen.kappa()
 library(tidyverse)
 ```
 ```{r}
-#create "safe" version of opls() which returns NULL if it errors
-safe_opls <- possibly(opls, otherwise = NULL)
+#create "safe" "partial" version of opls() which returns NULL if it errors and never plots or prints results
+safe_opls <- possibly(partial(opls, printL = FALSE, plotL = FALSE), otherwise = NULL)
 ```
 
 # Load Data
@@ -47,7 +47,7 @@ control <- read_rds(here("data", "control.rds"))
 ```{r}
 control.pcas.try <-
   map(control,
-      ~safe_opls(select(., -group), plotL = FALSE, printL = FALSE))
+      ~safe_opls(select(., -group)))
 control.pcas.failed <- map_lgl(control.pcas.try, is.null)
 control.pcas <- control.pcas.try[!control.pcas.failed]
 ```
@@ -66,7 +66,7 @@ Currently, this just picks the ones that worked (at least one component built)
 ```{r}
 control.pls.try <-
   map(control,
-      ~ safe_opls(select(., -group), .$group, plotL = FALSE, printL = FALSE))
+      ~ safe_opls(select(., -group), .$group))
 control.pls.failed <- map_lgl(control.pls.try, is.null)
 control.pls <- control.pls.try[!control.pls.failed]
 ```
@@ -162,7 +162,7 @@ control.p <- ggplot(control.k.plotdata) +
 # map to all datasets in null scenario
 needle.pcas.try <-
   map(needle,
-      ~safe_opls(select(., -group), plotL = FALSE, printL = FALSE))
+      ~safe_opls(select(., -group)))
 needle.pcas.failed <- map_lgl(needle.pcas.try, is.null)
 needle.pcas <- needle.pcas.try[!needle.pcas.failed]
 ```
@@ -181,7 +181,7 @@ Currently, this just picks the ones that worked (at least one component built)
 ```{r}
 needle.pls.try <-
   map(needle,
-      ~ safe_opls(select(., -group), .$group, plotL = FALSE, printL = FALSE))
+      ~ safe_opls(select(., -group), .$group))
 needle.pls.failed <- map_lgl(needle.pls.try, is.null)
 needle.pls <- needle.pls.try[!needle.pls.failed]
 ```
