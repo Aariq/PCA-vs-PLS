@@ -1,0 +1,144 @@
+table,fieldName,description,dataType,units,downloadPkg
+div_10m2Data100m2Data,uid,"Unique ID within NEON database; an identifier for the record",string,NA,basic
+div_10m2Data100m2Data,namedLocation,"Name of the measurement location in the NEON database",string,NA,basic
+div_10m2Data100m2Data,domainID,"Unique identifier of the NEON domain",string,NA,basic
+div_10m2Data100m2Data,siteID,"NEON site code",string,NA,basic
+div_10m2Data100m2Data,decimalLatitude,"The geographic latitude (in decimal degrees, WGS84) of the geographic center of the reference area",real,decimalDegree,basic
+div_10m2Data100m2Data,decimalLongitude,"The geographic longitude (in decimal degrees, WGS84) of the geographic center of the reference area",real,decimalDegree,basic
+div_10m2Data100m2Data,geodeticDatum,"Model used to measure horizontal position on the earth",string,NA,basic
+div_10m2Data100m2Data,coordinateUncertainty,"The horizontal distance (in meters) from the given decimalLatitude and decimalLongitude describing the smallest circle containing the whole of the Location. Zero is not a valid value for this term",real,meter,basic
+div_10m2Data100m2Data,elevation,"Elevation (in meters) above sea level",real,meter,basic
+div_10m2Data100m2Data,elevationUncertainty,"Uncertainty in elevation values (in meters)",real,meter,basic
+div_10m2Data100m2Data,plotID,"Plot identifier (NEON site code_XXX)",string,NA,basic
+div_10m2Data100m2Data,subplotID,"Identifier for the NEON subplot",string,NA,basic
+div_10m2Data100m2Data,endDate,"The end date-time or interval during which an event occurred",dateTime,NA,basic
+div_10m2Data100m2Data,boutNumber,"Number of the sampling bout within a calendar year, beginning with 1",unsigned integer,number,basic
+div_10m2Data100m2Data,samplingProtocolVersion,"The NEON document number and version where detailed information regarding the sampling method used is available; format NEON.DOC.######vX",string,NA,basic
+div_10m2Data100m2Data,targetTaxaPresent,"Indicator of whether the sample contained individuals of the target taxa",string,NA,basic
+div_10m2Data100m2Data,taxonID,"Species code, based on one or more sources",string,NA,basic
+div_10m2Data100m2Data,scientificName,"Scientific name, associated with the taxonID. This is the name of the lowest level taxonomic rank that can be determined",string,NA,basic
+div_10m2Data100m2Data,taxonRank,"The lowest level taxonomic rank that can be determined for the individual or specimen",string,NA,basic
+div_10m2Data100m2Data,family,"The scientific name of the family in which the taxon is classified",string,NA,basic
+div_10m2Data100m2Data,nativeStatusCode,"The process by which the taxon became established in the location",string,NA,basic
+div_10m2Data100m2Data,identificationQualifier,"A standard term to express the determiner's doubts about the Identification",string,NA,basic
+div_10m2Data100m2Data,taxonIDRemarks,"Technician notes about the specific taxon; free text comments accompanying the record",string,NA,basic
+div_10m2Data100m2Data,morphospeciesID,"Identifier for morphospecies",string,NA,basic
+div_10m2Data100m2Data,morphospeciesIDRemarks,"Technician notes about the morphospecies; free text comments accompanying the record",string,NA,basic
+div_10m2Data100m2Data,identificationReferences,"A list of sources (concatenated and semicolon separated) used to derive the specific taxon concept; including field guide editions, books, or versions of NEON keys used",string,NA,basic
+div_10m2Data100m2Data,additionalSpecies,"Indicator of whether additional species are detected on the larger subplot relative to the smaller subplot",string,NA,basic
+div_10m2Data100m2Data,remarks,"Technician notes; free text comments accompanying the record",string,NA,basic
+div_10m2Data100m2Data,measuredBy,"An identifier for the technician who measured or collected the data",string,NA,basic
+div_10m2Data100m2Data,recordedBy,"An identifier for the technician who recorded the data",string,NA,basic
+div_1m2Data,uid,"Unique ID within NEON database; an identifier for the record",string,NA,basic
+div_1m2Data,namedLocation,"Name of the measurement location in the NEON database",string,NA,basic
+div_1m2Data,domainID,"Unique identifier of the NEON domain",string,NA,basic
+div_1m2Data,siteID,"NEON site code",string,NA,basic
+div_1m2Data,decimalLatitude,"The geographic latitude (in decimal degrees, WGS84) of the geographic center of the reference area",real,decimalDegree,basic
+div_1m2Data,decimalLongitude,"The geographic longitude (in decimal degrees, WGS84) of the geographic center of the reference area",real,decimalDegree,basic
+div_1m2Data,geodeticDatum,"Model used to measure horizontal position on the earth",string,NA,basic
+div_1m2Data,coordinateUncertainty,"The horizontal distance (in meters) from the given decimalLatitude and decimalLongitude describing the smallest circle containing the whole of the Location. Zero is not a valid value for this term",real,meter,basic
+div_1m2Data,elevation,"Elevation (in meters) above sea level",real,meter,basic
+div_1m2Data,elevationUncertainty,"Uncertainty in elevation values (in meters)",real,meter,basic
+div_1m2Data,plotID,"Plot identifier (NEON site code_XXX)",string,NA,basic
+div_1m2Data,subplotID,"Identifier for the NEON subplot",string,NA,basic
+div_1m2Data,endDate,"The end date-time or interval during which an event occurred",dateTime,NA,basic
+div_1m2Data,boutNumber,"Number of the sampling bout within a calendar year, beginning with 1",unsigned integer,number,basic
+div_1m2Data,samplingProtocolVersion,"The NEON document number and version where detailed information regarding the sampling method used is available; format NEON.DOC.######vX",string,NA,basic
+div_1m2Data,divDataType,"Identifier for the type of data recorded: plantSpecies or otherVariables",string,NA,basic
+div_1m2Data,targetTaxaPresent,"Indicator of whether the sample contained individuals of the target taxa",string,NA,basic
+div_1m2Data,otherVariablesPresent,"Indicator of whether the sample contained other variables, such as abiotic, biotic, and non-vascular plant cover",string,NA,basic
+div_1m2Data,taxonID,"Species code, based on one or more sources",string,NA,basic
+div_1m2Data,scientificName,"Scientific name, associated with the taxonID. This is the name of the lowest level taxonomic rank that can be determined",string,NA,basic
+div_1m2Data,taxonRank,"The lowest level taxonomic rank that can be determined for the individual or specimen",string,NA,basic
+div_1m2Data,family,"The scientific name of the family in which the taxon is classified",string,NA,basic
+div_1m2Data,nativeStatusCode,"The process by which the taxon became established in the location",string,NA,basic
+div_1m2Data,identificationQualifier,"A standard term to express the determiner's doubts about the Identification",string,NA,basic
+div_1m2Data,taxonIDRemarks,"Technician notes about the specific taxon; free text comments accompanying the record",string,NA,basic
+div_1m2Data,morphospeciesID,"Identifier for morphospecies",string,NA,basic
+div_1m2Data,morphospeciesIDRemarks,"Technician notes about the morphospecies; free text comments accompanying the record",string,NA,basic
+div_1m2Data,identificationReferences,"A list of sources (concatenated and semicolon separated) used to derive the specific taxon concept; including field guide editions, books, or versions of NEON keys used",string,NA,basic
+div_1m2Data,otherVariables,"Descriptor of other variables present in the sample, including abiotic, biotic, and non-vascular plant cover",string,NA,basic
+div_1m2Data,percentCover,"Ocular estimate of cover of the index (e.g., species) as a percent",real,percent,basic
+div_1m2Data,heightPlantOver300cm,"Indicator of whether individuals of the species in the sample are taller than 300 cm",string,NA,basic
+div_1m2Data,heightPlantSpecies,"Ocular estimate of the height of the plant species",unsigned integer,centimeter,basic
+div_1m2Data,remarks,"Technician notes; free text comments accompanying the record",string,NA,basic
+div_1m2Data,measuredBy,"An identifier for the technician who measured or collected the data",string,NA,basic
+div_1m2Data,recordedBy,"An identifier for the technician who recorded the data",string,NA,basic
+div_geneticarchive,uid,"Unique ID within NEON database; an identifier for the record",string,NA,expanded
+div_geneticarchive,namedLocation,"Name of the measurement location in the NEON database",string,NA,expanded
+div_geneticarchive,domainID,"Unique identifier of the NEON domain",string,NA,expanded
+div_geneticarchive,siteID,"NEON site code",string,NA,expanded
+div_geneticarchive,decimalLatitude,"The geographic latitude (in decimal degrees, WGS84) of the geographic center of the reference area",real,decimalDegree,expanded
+div_geneticarchive,decimalLongitude,"The geographic longitude (in decimal degrees, WGS84) of the geographic center of the reference area",real,decimalDegree,expanded
+div_geneticarchive,geodeticDatum,"Model used to measure horizontal position on the earth",string,NA,expanded
+div_geneticarchive,coordinateUncertainty,"The horizontal distance (in meters) from the given decimalLatitude and decimalLongitude describing the smallest circle containing the whole of the Location. Zero is not a valid value for this term",real,meter,expanded
+div_geneticarchive,elevation,"Elevation (in meters) above sea level",real,meter,expanded
+div_geneticarchive,elevationUncertainty,"Uncertainty in elevation values (in meters)",real,meter,expanded
+div_geneticarchive,altLatitude,"Alternate Sampling Location coordinate - latitude",real,decimalDegree,expanded
+div_geneticarchive,altLongitude,"Alternate Sampling Location coordinate - longitude",real,decimalDegree,expanded
+div_geneticarchive,altCoordinateUncertainty,"The horizontal distance (in meters) from the given altLatitude and altLongitude describing the smallest circle containing the whole of the Location. Zero is not a valid value for this term",real,meter,expanded
+div_geneticarchive,altGeodeticDatum,"Model used to measure horizontal position on the earth for alternate location coordinate",string,NA,expanded
+div_geneticarchive,altElevation,"Alternate elevation (in meters) above sea level",real,meter,expanded
+div_geneticarchive,altElevationUncertainty,"Alternate uncertainty in elevation values (in meters)",real,meter,expanded
+div_geneticarchive,altCoordinateSource,"Alternate method used to collect or create spatial information",string,NA,expanded
+div_geneticarchive,startDate,"The start date-time or interval during which an event occurred",dateTime,NA,expanded
+div_geneticarchive,endDate,"The end date-time or interval during which an event occurred",dateTime,NA,expanded
+div_geneticarchive,collectedBy,"An identifier for the technician who collected the sample or specimen",string,NA,expanded
+div_geneticarchive,identifiedBy,"An identifier for the technician who identified the specimen",string,NA,expanded
+div_geneticarchive,recordedBy,"An identifier for the technician who recorded the data",string,NA,expanded
+div_geneticarchive,tagID,"Domain-level unique identifier of tag used to mark the individual",string,NA,expanded
+div_geneticarchive,tagCode,"Code of domain-level unique identifier used to mark the individual",string,NA,expanded
+div_geneticarchive,taxonID,"Species code, based on one or more sources",string,NA,expanded
+div_geneticarchive,scientificName,"Scientific name, associated with the taxonID. This is the name of the lowest level taxonomic rank that can be determined",string,NA,expanded
+div_geneticarchive,taxonRank,"The lowest level taxonomic rank that can be determined for the individual or specimen",string,NA,expanded
+div_geneticarchive,family,"The scientific name of the family in which the taxon is classified",string,NA,expanded
+div_geneticarchive,nativeStatusCode,"The process by which the taxon became established in the location",string,NA,expanded
+div_geneticarchive,identificationQualifier,"A standard term to express the determiner's doubts about the Identification",string,NA,expanded
+div_geneticarchive,taxonIDRemarks,"Technician notes about the specific taxon; free text comments accompanying the record",string,NA,expanded
+div_geneticarchive,identificationReferences,"A list of sources (concatenated and semicolon separated) used to derive the specific taxon concept; including field guide editions, books, or versions of NEON keys used",string,NA,expanded
+div_geneticarchive,morphospeciesID,"Identifier for morphospecies",string,NA,expanded
+div_geneticarchive,morphospeciesIDRemarks,"Technician notes about the morphospecies; free text comments accompanying the record",string,NA,expanded
+div_geneticarchive,plantCondition,"Condition of the plant from which material is collected",string,NA,expanded
+div_geneticarchive,geneticSampleID,"Identifier for the genetic sample",string,NA,expanded
+div_geneticarchive,geneticSampleCode,"Barcode of a genetic sample",string,NA,expanded
+div_geneticarchive,remarks,"Technician notes; free text comments accompanying the record",string,NA,expanded
+div_geneticarchive,dataQF,"Data quality flag",string,NA,expanded
+div_voucher,uid,"Unique ID within NEON database; an identifier for the record",string,NA,expanded
+div_voucher,namedLocation,"Name of the measurement location in the NEON database",string,NA,expanded
+div_voucher,domainID,"Unique identifier of the NEON domain",string,NA,expanded
+div_voucher,siteID,"NEON site code",string,NA,expanded
+div_voucher,decimalLatitude,"The geographic latitude (in decimal degrees, WGS84) of the geographic center of the reference area",real,decimalDegree,expanded
+div_voucher,decimalLongitude,"The geographic longitude (in decimal degrees, WGS84) of the geographic center of the reference area",real,decimalDegree,expanded
+div_voucher,geodeticDatum,"Model used to measure horizontal position on the earth",string,NA,expanded
+div_voucher,coordinateUncertainty,"The horizontal distance (in meters) from the given decimalLatitude and decimalLongitude describing the smallest circle containing the whole of the Location. Zero is not a valid value for this term",real,meter,expanded
+div_voucher,elevation,"Elevation (in meters) above sea level",real,meter,expanded
+div_voucher,elevationUncertainty,"Uncertainty in elevation values (in meters)",real,meter,expanded
+div_voucher,altLatitude,"Alternate Sampling Location coordinate - latitude",real,decimalDegree,expanded
+div_voucher,altLongitude,"Alternate Sampling Location coordinate - longitude",real,decimalDegree,expanded
+div_voucher,altCoordinateUncertainty,"The horizontal distance (in meters) from the given altLatitude and altLongitude describing the smallest circle containing the whole of the Location. Zero is not a valid value for this term",real,meter,expanded
+div_voucher,altGeodeticDatum,"Model used to measure horizontal position on the earth for alternate location coordinate",string,NA,expanded
+div_voucher,altElevation,"Alternate elevation (in meters) above sea level",real,meter,expanded
+div_voucher,altElevationUncertainty,"Alternate uncertainty in elevation values (in meters)",real,meter,expanded
+div_voucher,altCoordinateSource,"Alternate method used to collect or create spatial information",string,NA,expanded
+div_voucher,startDate,"The start date-time or interval during which an event occurred",dateTime,NA,expanded
+div_voucher,endDate,"The end date-time or interval during which an event occurred",dateTime,NA,expanded
+div_voucher,taxonID,"Species code, based on one or more sources",string,NA,expanded
+div_voucher,scientificName,"Scientific name, associated with the taxonID. This is the name of the lowest level taxonomic rank that can be determined",string,NA,expanded
+div_voucher,taxonRank,"The lowest level taxonomic rank that can be determined for the individual or specimen",string,NA,expanded
+div_voucher,family,"The scientific name of the family in which the taxon is classified",string,NA,expanded
+div_voucher,nativeStatusCode,"The process by which the taxon became established in the location",string,NA,expanded
+div_voucher,identificationQualifier,"A standard term to express the determiner's doubts about the Identification",string,NA,expanded
+div_voucher,taxonIDRemarks,"Technician notes about the specific taxon; free text comments accompanying the record",string,NA,expanded
+div_voucher,identificationReferences,"A list of sources (concatenated and semicolon separated) used to derive the specific taxon concept; including field guide editions, books, or versions of NEON keys used",string,NA,expanded
+div_voucher,morphospeciesID,"Identifier for morphospecies",string,NA,expanded
+div_voucher,morphospeciesIDRemarks,"Technician notes about the morphospecies; free text comments accompanying the record",string,NA,expanded
+div_voucher,voucherSampleID,"Unique identifier for the voucher sample",string,NA,expanded
+div_voucher,voucherSampleCode,"Barcode of a voucher sample",string,NA,expanded
+div_voucher,habitatDescription,"Description of the habitat in which the event occurred",string,NA,expanded
+div_voucher,remarks,"Technician notes; free text comments accompanying the record",string,NA,expanded
+div_voucher,collectedBy,"An identifier for the technician who collected the sample or specimen",string,NA,expanded
+div_voucher,identifiedBy,"An identifier for the technician who identified the specimen",string,NA,expanded
+div_voucher,recordedBy,"An identifier for the technician who recorded the data",string,NA,expanded
+div_voucher,tagID,"Domain-level unique identifier of tag used to mark the individual",string,NA,expanded
+div_voucher,tagCode,"Code of domain-level unique identifier used to mark the individual",string,NA,expanded
+div_voucher,dataQF,"Data quality flag",string,NA,expanded

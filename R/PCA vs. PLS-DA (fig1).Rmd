@@ -53,7 +53,7 @@ null.cor.p <-
   geom_tile() +
   # scale_fill_gradient2("Correlation Coeficient", limits = c(-1,1)) +
   scale_fill_continuous_diverging(palette = "Blue-Red 3") +
-  labs(x = NULL, y = NULL) +
+  labs(x = NULL, y = NULL, subtitle = '"Null"') +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90), legend.position = "top")
 ```
@@ -63,7 +63,9 @@ null.cor.p <-
 
 ```{r include=FALSE}
 null.pca <- opls(select(null, -group), plot = FALSE)
-null.pls <- opls(select(null, -group), null$group, plot = FALSE, predI = 2, permI = 500)
+# null.pls <- opls(select(null, -group), null$group, plot = FALSE, predI = 2, permI = 500)
+null.pls <- opls(select(null, -group), null$group, plot = FALSE, permI = 500)
+
 ```
 
 ## Create plots for Null
@@ -94,7 +96,7 @@ needle.cor.p <-
   geom_tile() +
   # scale_fill_gradient2("Correlation Coeficient", limits = c(-1,1)) +
   scale_fill_continuous_diverging(palette = "Blue-Red 3") +
-  labs(x = NULL, y = NULL) +
+  labs(x = NULL, y = NULL, subtitle = '"Needle in a haystack"') +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90), legend.position = "top")
 # needle.cor.p
@@ -143,7 +145,7 @@ control.cor.p <-
   geom_tile() +
   # scale_fill_gradient2("Correlation Coeficient", limits = c(-1,1)) +
   scale_fill_continuous_diverging(palette = "Blue-Red 3") +
-  labs(x = NULL, y = NULL) +
+  labs(x = NULL, y = NULL, subtitle = '"Control"') +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90), legend.position = "top")
 ```

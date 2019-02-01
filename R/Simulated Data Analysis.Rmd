@@ -1,6 +1,9 @@
 ---
 title: "Simulated data analysis"
-output: html_notebook
+output: 
+  html_notebook: 
+    toc: yes
+    toc_float: yes
 ---
 # Goal
 To show that PLS-DA performs better than PCA at figuring out which variables are most responsible for group separation.  I do this using VIP scores from PLS-DA and correlations with PC1 for PCA followed by a calculation of Cohen's Kappa.  For now, I'm only doing this with two of the data scenarios where the variables either contribute to group separation or don't: the positive control, and the needle-in-a-haystack.
@@ -21,13 +24,14 @@ Currently if the model fails (e.g. because the first component isn't significant
 
 # Packages and Functions
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(here)
 library(chemhelper)
 library(ropls)
 library(psych) #for cohen.kappa()
 library(tidyverse)
 library(colorspace)
+library(cowplot)
 ```
 ```{r}
 #create "safe" "partial" version of opls() which returns NULL if it errors and never plots or prints results
@@ -37,10 +41,10 @@ safe_opls <- possibly(partial(opls, printL = FALSE, plotL = FALSE), otherwise = 
 # Load Data
 
 ```{r}
-# null <- read_rds(here("data", "null.rds"))
+null <- read_rds(here("data", "null.rds"))
 needle <- read_rds(here("data", "needle.rds"))
 # sample(needle, 1)
-# red_herring <- read_rds(here("data", "red herring.rds"))
+red_herring <- read_rds(here("data", "red herring.rds"))
 control <- read_rds(here("data", "control.rds"))
 # sample(control, 1)
 ```
@@ -89,7 +93,7 @@ control.pls <- control.pls.try[!control.pls.failed]
 - For PCA, I'm defining an "important" variable as one with a correlation to PC1 > 0.5 or  < -0.5
 - For PLS, an "important" variable is one with a VIP score > 1
 
-### PCA kappas
+**PCA kappas**
 
 ```{r message=FALSE, warning=FALSE}
 # Get correlations
@@ -105,8 +109,8 @@ control.cors <-
   map(~ rowwise(.) %>% 
         mutate(distance = sqrt(sum((c(p1, p2) - c(0, 0))^2))) %>% 
         # if corr distance > 0.5, then its "important" variable
-        mutate(#detect_discr = ifelse(distance > 0.5, TRUE, FALSE),
-               detect_discr = ifelse(abs(p1) > 0.5, TRUE, FALSE),
+        mutate(detect_discr = ifelse(distance > 0.5, TRUE, FALSE),
+               #detect_discr = ifelse(abs(p1) > 0.5, TRUE, FALSE),
                is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE))
         )
 sample(control.cors, 2)
@@ -122,7 +126,7 @@ control.pca.k <-
 ```
 
 
-### PLS-DA kappas
+**PLS-DA kappas**
 
 ```{r message=FALSE, warning=FALSE}
 # Get VIP scores
@@ -142,21 +146,13 @@ control.pls.k <-
       .id = "dataset")
 ```
 
-### Join all kappas
+**Join all kappas**
 
 ```{r}
-control.k <- full_join(control.pca.k, control.pls.k)
+control.k <- full_join(control.pca.k, control.pls.k) %>% filter(complete.cases(.))
 ```
 
 ### Build Plot
-
-```{r colors}
-mycolors <- c("PCA" = "#C1383A", "PLS-DA" = "#1F46A3")
-
-mypal <- qualitative_hcl(2, "Harmonic")
-demoplot(mypal, "bar")
-protan(mypal) %>% demoplot("bar")
-```
 
 ```{r}
 control.k.plotdata <-
@@ -167,11 +163,13 @@ control.k.plotdata <-
 control.p <-
   ggplot(control.k.plotdata) +
   geom_histogram(aes(x = `Cohen's Kappa`, fill = Method),
-                 position = "dodge", bins = 15) +
-  # scale_fill_manual("Method", values = mycolors) +
+                 position = "identity", alpha = 0.8,
+                 binwidth = 0.1) +
+  # geom_density(aes(x = `Cohen's Kappa`, fill = Method), alpha = 0.7, trim = TRUE) +
   scale_fill_discrete_qualitative(palette = "Dark 3") +
   theme_bw() +
   labs(x = "Cohen's Kappa", y = "Frequency")
+control.p
 ```
 
 # Needle-in-a-haystack
@@ -211,7 +209,7 @@ needle.pls <- needle.pls.try[!needle.pls.failed]
 - For PCA, I'm defining an "important" variable as one with a correlation to PC1 > 0.5 or  < -0.5
 - For PLS, an "important" variable is one with a VIP score > 1
 
-### PCA kappas
+**PCA kappas**
 
 ```{r message=FALSE, warning=FALSE}
 # Get correlations
@@ -227,8 +225,8 @@ needle.cors <-
   map(~ rowwise(.) %>% 
         mutate(distance = sqrt(sum((c(p1, p2) - c(0, 0))^2))) %>% 
         # if corr distance > 0.5, then its "important" variable
-        mutate(#detect_discr = ifelse(distance > 0.5, TRUE, FALSE),
-               detect_discr = ifelse(abs(p1) > 0.5, TRUE, FALSE),
+        mutate(detect_discr = ifelse(distance > 0.5, TRUE, FALSE),
+               # detect_discr = ifelse(abs(p1) > 0.5, TRUE, FALSE),
                is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE))
         )
 
@@ -244,7 +242,7 @@ needle.pca.k <-
 ```
 
 
-### PLS-DA kappas
+**PLS-DA kappas**
 
 ```{r message=FALSE, warning=FALSE}
 # Get VIP scores
@@ -264,7 +262,7 @@ needle.pls.k <-
       .id = "dataset")
 ```
 
-### Join all kappas
+**Join all kappas**
 
 ```{r}
 needle.k <- full_join(needle.pca.k, needle.pls.k)
@@ -281,28 +279,98 @@ needle.k.plotdata <-
 needle.p <-
   ggplot(needle.k.plotdata) +
   geom_histogram(aes(x = `Cohen's Kappa`, fill = Method),
-                 position = "dodge", bins = 15) +
-  # scale_fill_manual("Method", values = mycolors) +
+                 position = "identity", alpha = 0.8,
+                 binwidth = 0.1) +
+  # geom_density(aes(x = `Cohen's Kappa`, fill = Method), alpha = 0.7, trim = TRUE) +
   scale_fill_discrete_qualitative(palette = "Dark 3") +
   theme_bw() +
   labs(x = "Cohen's Kappa", y = "Frequency")
-# needle.p
+needle.p
 ```
 
 # Plot
 
 ```{r}
-library(cowplot)
 panels <-
-  plot_grid(control.p + theme(legend.position = "none"),
-            needle.p + theme(legend.position = "none"),
+  plot_grid(control.p + theme(legend.position = "none")+ coord_cartesian(xlim = c(-0.5, 1)),
+            needle.p + theme(legend.position = "none")+ coord_cartesian(xlim = c(-0.5, 1)),
             nrow = 1,
             ncol = 2,
             labels = "auto")
 fig2 <-
   plot_grid(panels, get_legend(control.p),
             rel_widths = c(1, 0.15))
-
+fig2
 save_plot(here("figs", "fig2.png"), fig2, ncol = 2)
+```
+
+Cohen's Kappa for PCA and PLS-DA important variables under control (a) and needle-in-a-haystack (b) scenarios.
+
+# PLS statistics for all scenarios
+I want to get $R^2$ and $Q^2_y$ with standard deviations for all scenarios.
+
+I already did control and needle. That leaves null and red herring.
+
+```{r}
+null.pls.try <-
+  map(null,
+      ~ safe_opls(select(., -group), .$group))
+null.pls.failed <- map_lgl(null.pls.try, is.null)
+null.pls <- null.pls.try[!null.pls.failed]
+# sample(null.pls, 1)
+```
+```{r}
+herring.pls.try <-
+  map(red_herring,
+      ~ safe_opls(select(., -group), .$group))
+herring.pls.failed <- map_lgl(herring.pls.try, is.null)
+herring.pls <- herring.pls.try[!herring.pls.failed]
+# sample(herring.pls, 1)
+```
+
+## Map R2 and Q2 extractor
+
+**Control**
+
+```{r}
+control.pls %>%
+  map(~get_modelinfo(.)) %>%
+  map_dfr(~list(Q2 = pluck(., 2, "Q2(cum)"),
+                R2 = pluck(., 2, "R2Y(cum)")),
+          .id = "dataset") %>% 
+  summarize_if(is.numeric, funs(mean, sd))
+```
+
+**Null**
+
+```{r}
+null.pls %>%
+  map(~get_modelinfo(.)) %>%
+  map_dfr(~list(Q2 = pluck(., 2, "Q2(cum)"),
+                R2 = pluck(., 2, "R2Y(cum)")),
+          .id = "dataset") %>% 
+  summarize_if(is.numeric, funs(mean, sd))
+```
+
+**Needle-in-a-haystack**
+
+```{r}
+needle.pls %>%
+  map(~get_modelinfo(.)) %>%
+  map_dfr(~list(Q2 = pluck(., 2, "Q2(cum)"),
+                R2 = pluck(., 2, "R2Y(cum)")),
+          .id = "dataset") %>% 
+  summarize_if(is.numeric, funs(mean, sd))
+```
+
+**Red Herring**
+
+```{r}
+herring.pls %>%
+  map(~get_modelinfo(.)) %>%
+  map_dfr(~list(Q2 = pluck(., 2, "Q2(cum)"),
+                R2 = pluck(., 2, "R2Y(cum)")),
+          .id = "dataset") %>% 
+  summarize_if(is.numeric, funs(mean, sd))
 ```
 
