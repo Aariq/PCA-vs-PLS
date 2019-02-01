@@ -1,0 +1,30 @@
+---
+title: "Rasmann data wrangling"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(here)
+```
+
+
+```{r}
+raw <- read_delim(here("data", "Defossez et al.", "all_data_ind.csv"), ";")
+```
+
+```{r}
+raw
+```
+
+It looks like the "C" treatment rows contain all the info.  Need to look back at paper to figure out what the deal is with ones without an ID
+
+```{r}
+raw %>% 
+  filter(treatment == "C", !is.na(ID)) %>% skim()
+```
+
+```{r}
+library(skimr)
+```
+
