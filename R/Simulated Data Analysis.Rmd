@@ -12,15 +12,13 @@ For each dataset:
 
 - Do PCA
 - Do PLS-DA
+- Record how many PLS-DA's fail because even the first component is not significant, but filter out failing models
 - Calculate Cohen's Kappa for each method as outlined in "Confusion Matrix.Rmd"
 - Plot distributions of Cohen's Kappa
 - Possibly do other stuff like:
     + compare p-values from PCA score based t-tests and PLS-DA permutation tests
     + calculate distance between centriods in score plots for PCA and PLS-DA for all datasets
     
-
-# To ask Elizabeth:
-Currently if the model fails (e.g. because the first component isn't significant) I'm just ignoring it.  Is it better to force 2 axes for all models instead of allowing the function to choose the best number of axes (which might be zero)?
 
 # Packages and Functions
 
@@ -53,7 +51,7 @@ control <- read_rds(here("data", "control.rds"))
 # Control
 
 ## Fit PCA models
-
+Might consider using safely() instead of possibly() to capture errors and report what kind
 ```{r}
 # map the pca function to all datasets
 control.pcas.try <-
@@ -66,27 +64,31 @@ control.pcas.failed <- map_lgl(control.pcas.try, is.null)
 
 # Index by which ones failed to get only the successful models
 control.pcas <- control.pcas.try[!control.pcas.failed]
+
+length(control.pcas.try) - length(control.pcas)
+
 # sample(control.pcas, 1)
 ```
+One failed model
 
 ## Fit PLS models
 
 - Not increasing the number of permutation for now, because I'm not concerned about p-values yet.
-- Many models fail for the null, which makes sense.  What to do?
-    + Force 2 axes?
-    + Force 1 axis?
-    + Do OPLS-DA with one axis forced?
-    + Just look at the models that actually get built?
+- Many models fail for the null, which makes sense. Report how many fail, filter out failing models, and continue on with the remaining models.
 
-Currently, this just picks the ones that worked (at least one component built)
 
 ```{r}
 control.pls.try <-
   map(control,
       ~ safe_opls(select(., -group), .$group))
+
 control.pls.failed <- map_lgl(control.pls.try, is.null)
 control.pls <- control.pls.try[!control.pls.failed]
+
+length(control.pls.try) - length(control.pls)
 ```
+zero failed models
+
 
 ## Calculate Cohen's Kappa
 
@@ -182,9 +184,12 @@ needle.pcas.try <-
   map(needle,
       ~safe_opls(select(., -group)))
 needle.pcas.failed <- map_lgl(needle.pcas.try, is.null)
-needle.pcas <- needle.pcas.try[!needle.pcas.failed]
-```
 
+needle.pcas <- needle.pcas.try[!needle.pcas.failed]
+
+length(needle.pcas.try) - length(needle.pcas)
+```
+zero failed models 
 ## Fit PLS models
 
 - Not increasing the number of permutation for now, because I'm not concerned about p-values yet.
@@ -317,8 +322,13 @@ null.pls.try <-
       ~ safe_opls(select(., -group), .$group))
 null.pls.failed <- map_lgl(null.pls.try, is.null)
 null.pls <- null.pls.try[!null.pls.failed]
+
+length(null.pls.try) - length(null.pls)
+
 # sample(null.pls, 1)
 ```
+75/100 models failed
+
 ```{r}
 herring.pls.try <-
   map(red_herring,
@@ -326,7 +336,10 @@ herring.pls.try <-
 herring.pls.failed <- map_lgl(herring.pls.try, is.null)
 herring.pls <- herring.pls.try[!herring.pls.failed]
 # sample(herring.pls, 1)
+
+length(herring.pls.try) - length(herring.pls)
 ```
+zero models failed
 
 ## Map R2 and Q2 extractor
 
