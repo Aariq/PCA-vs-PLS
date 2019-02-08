@@ -40,18 +40,15 @@ needle <- needle.list[[sample(1:100, 1)]]
 
 ```{r}
 null.cor <-
-  # no_discr %>% 
   null %>% 
   select(-group) %>% 
   cor() %>%
   as_tibble(rownames = "row") %>% 
   gather(-row, key = col, value = cor)
 
-# cor1 <-
 null.cor.p <-
   ggplot(null.cor, aes(x = col, y = row, fill = cor)) +
   geom_tile() +
-  # scale_fill_gradient2("Correlation Coeficient", limits = c(-1,1)) +
   scale_fill_continuous_diverging(palette = "Blue-Red 3") +
   labs(x = NULL, y = NULL, subtitle = '"Null"') +
   theme_minimal() +
@@ -63,16 +60,20 @@ null.cor.p <-
 
 ```{r include=FALSE}
 null.pca <- opls(select(null, -group), plot = FALSE)
-# null.pls <- opls(select(null, -group), null$group, plot = FALSE, predI = 2, permI = 500)
 null.pls <- opls(select(null, -group), null$group, plot = FALSE, permI = 500)
-
 ```
 
 ## Create plots for Null
 
 ```{r message=FALSE, warning=FALSE}
-null.pca.p <- plot_pca(null.pca, null$group, annotate = "subtitle") + scale_color_discrete_qualitative(palette = "Dark 3")
-null.pls.p <- plot_plsda(null.pls, annotate = "subtitle") + scale_color_discrete_qualitative(palette = "Dark 3")
+null.pca.p <-
+  plot_pca(null.pca, null$group, annotate = "subtitle") +
+  scale_color_discrete_qualitative(palette = "Dark 3")
+
+null.pls.p <-
+  plot_plsda(null.pls, annotate = "subtitle") +
+  scale_color_discrete_qualitative(palette = "Dark 3")
+
 plot_grid(null.cor.p,
           null.pca.p + theme(legend.position = "NULL"),
           null.pls.p + theme(legend.position = "NULL"), nrow = 1, ncol = 3)
@@ -85,7 +86,6 @@ plot_grid(null.cor.p,
 ```{r}
 needle.cor <-
   needle %>% 
-  # discr %>% 
   select(-group) %>% 
   cor() %>%
   as_data_frame(rownames = "row") %>%  
@@ -94,12 +94,10 @@ needle.cor <-
 needle.cor.p <-
   ggplot(needle.cor, aes(x = col, y = row, fill = cor)) +
   geom_tile() +
-  # scale_fill_gradient2("Correlation Coeficient", limits = c(-1,1)) +
   scale_fill_continuous_diverging(palette = "Blue-Red 3") +
   labs(x = NULL, y = NULL, subtitle = '"Needle in a haystack"') +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90), legend.position = "top")
-# needle.cor.p
 ```
 
 ## PCA and PLS-DA for needle-in-a-haystack
@@ -143,7 +141,6 @@ control.cor <-
 control.cor.p <-
   ggplot(control.cor, aes(x = col, y = row, fill = cor)) +
   geom_tile() +
-  # scale_fill_gradient2("Correlation Coeficient", limits = c(-1,1)) +
   scale_fill_continuous_diverging(palette = "Blue-Red 3") +
   labs(x = NULL, y = NULL, subtitle = '"Control"') +
   theme_minimal() +
@@ -195,98 +192,3 @@ fig1_new <-
 
 save_plot(here("figs", "fig1_new.png"), fig1_new, ncol = 3, nrow = 3)
 ```
-
-
-
-
-
-# old, not run
-
-VIP scores from the PLS-DA model identify all 5 discriminating variables as being important for separating the groups (VIP > 1).  Using the VIP > 1 cutoff, it also spurriously identifies two of the other variables as being important.  Discriminating variables are not strongly correlated with the first two axes of the PCA.
-
-```{r eval=FALSE, include=FALSE}
-VIPs <- get_VIP(pls2) %>%
-  arrange(desc(VIP))
-
-pca.load <- get_loadings(pca2) %>%
-  select(Variable, p1, p2) %>%
-  arrange(desc(abs(p1)))
-```
-
-```{r eval=FALSE, include=FALSE}
-table1 <- full_join(VIPs, pca.load) %>%
-  arrange(Variable) %>% 
-  rename(`PLS-DA VIP score` = VIP, `PC1 loading` = p1, `PC2 loading` = p2) %>% 
-  mutate_if(is.double, ~round(.,4))
-table1
-write_excel_csv(table1, "figs/table1.csv")
-```
-
-# Red Herring
-Large variation with weak discrimination plus small variation with large discrimination
-
-```{r eval=FALSE, include=FALSE}
-herring <- df %>% 
-  sim_discr(p = 10, var = 1, cov = 0.5, group_means = c(-0.5, 0.5), name = "highvar") %>% 
-  sim_discr(p = 10, var = 1, cov = 0, group_means = c(-1, 1), name = "lowvar") %>% 
-  sim_covar(p = 5, var = 1, cov = 0, name = "noise")
-```
-
-```{r eval=FALSE, include=FALSE}
-herring %>% 
-  select(-group) %>% 
-  cor() %>% 
-  iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
-```
-```{r eval=FALSE, include=FALSE}
-herring.cor <- herring %>% 
-  select(-group) %>% 
-  cor() %>%
-  as.data.frame() %>% 
-  rownames_to_column(var = "row") %>% 
-  gather(-row, key = col, value = cor)
-
-cor3 <- ggplot(herring.cor, aes(x = col, y = row, fill = cor)) +
-  geom_tile() +
-  scale_fill_gradient2("Correlation Coeficient") +
-  labs(x = NULL, y = NULL) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90), legend.position = "top")
-```
-
-
-```{r eval=FALSE, include=FALSE}
-pca3 <- opls(select(herring, -group), plot = FALSE)
-pls3 <- opls(select(herring, -group), no_discr$group, plot = FALSE, predI = 2, permI = 500)
-```
-```{r eval=FALSE, include=FALSE}
-pca3.plot <- plot_pca(pca3, herring$group, annotate = "subtitle")
-pls3.plot <- plot_plsda(pls3, annotate = "subtitle")
-plot_grid(cor3,
-          pca3.plot + theme(legend.position = "NULL"),
-          pls3.plot + theme(legend.position = "NULL"), nrow = 1, ncol = 3)
-```
-
-```{r eval=FALSE, include=FALSE}
-VIPs3 <- get_VIP(pls3) %>%
-  arrange(desc(VIP))
-
-pca3.load <- get_loadings(pca3) %>%
-  select(Variable, p1, p2) %>%
-  arrange(desc(abs(p1)))
-
-table3 <- full_join(VIPs3, pca3.load) %>%
-  arrange(Variable) %>% 
-  rename(`PLS-DA VIP score` = VIP, `PC1 loading` = p1, `PC2 loading` = p2) %>% 
-  mutate_if(is.double, ~round(.,4))
-table3 %>% arrange(desc(`PLS-DA VIP score`))
-table3 %>% arrange(desc(`PC1 loading`))
-# write_excel_csv(table1, "figs/table1.csv")
-
-```
-
-
-
-
-
-
