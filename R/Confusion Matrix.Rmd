@@ -71,66 +71,215 @@ In order to apply this to PLS-DA, I'll use the common cuttoff of VIP > 1 to indi
 
 It's more difficult to decide how to do this for PCA since there are several ways to go about it.  Often correlation plots are used which plot loadings of the first two PCs with a circle representing a correlation coefficient cutoff, usually of 0.5.  Variables with correlations greater than 0.5 are considered significantly correlated with either PC1, PC2 or both, depending on the location of the variable in loading space.
 
-
+# Functions
+Write some mapable functions (as_mapper()??) that calculate cohen's kappa for a dataset.
 ```{r}
-needle_in_haystack <- read_rds(here("data", "needle.rds"))
-test <- needle_in_haystack[[sample(1:100, 1)]]
 
-#PCA
-test.pca <- opls(select(test, -group), plotL = FALSE, printL = FALSE)
-
-test.scores <-
-  test.pca %>% 
-  get_plotdata() %>% 
-  .$plot_data
-
-test.cors <-
-  cor(test.scores[2:3], select(test, -group)) %>%
-  t() %>% 
-  as.data.frame() %>%
-  rownames_to_column("Variable") %>% 
-  rowwise() %>% 
-  mutate(distance = sqrt(sum(
-    (c(p1, p2) - c(0, 0))^2
-    ))) %>% 
-  mutate(detect_discr = ifelse(distance > 0.5, TRUE, FALSE),
-         is_discr = ifelse(str_detect(Variable, "discr"), TRUE, FALSE))
-
-test.cors
-conf.pca <-
-  table(detected_discr = test.cors$detect_discr, is_discr =test.cors$is_discr)
-conf.pca %>% addmargins() # DON'T SAVE IT WITH MARGINS, IT FUCKS UP THE KAPPA COEFFICIENT
-```
-Kappa:
-```{r}
-K.pca = cohen.kappa(conf.pca)
-K.pca$kappa #I checked this by hand, it's correct.
 ```
 
-Let's see how PLS-DA does on the same dataset
 
-```{r}
-test.pls <- opls(select(test, -group), test$group, plotL = FALSE, printL = FALSE)
 
-test.VIPs <-
-  test.pls %>%
-  get_VIP() %>% 
-  mutate(detect_discr = ifelse(VIP > 1, "discr", "uncorr"),
-         is_discr = ifelse(str_detect(Variable, "discr"), "discr", "uncorr"))
-conf.pls <- 
-  table(detected = test.VIPs$detect_discr, actual = test.VIPs$is_discr)
-conf.pls %>% addmargins()
+
+## Control
+### Calculate Cohen's Kappa
+
+- For PCA, I'm defining an "important" variable as one with a correlation to PC1 > 0.5 or  < -0.5
+- For PLS, an "important" variable is one with a VIP score > 1
+
+**PCA kappas**
+
+```{r message=FALSE, warning=FALSE}
+# Get correlations
+control.cors <-
+  map2(.x = control.pcas,
+       #filter .y by getting rid of models that didn't run
+       .y = control[!control.pcas.failed], 
+       #correlation between axis scores and data
+       ~ cor(get_scores(.x)[2:3], select(.y, -group)) %>% 
+         t() %>% 
+         as_data_frame(rownames = "Variable")) %>% 
+  # calculate distance from center in correlation units for each variable
+  map(~ rowwise(.) %>% 
+        mutate(distance = sqrt(sum((c(p1, p2) - c(0, 0))^2))) %>% 
+        # if corr distance > 0.5, then its "important" variable
+        mutate(detect_discr = ifelse(distance > 0.5, TRUE, FALSE),
+               #detect_discr = ifelse(abs(p1) > 0.5, TRUE, FALSE),
+               is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE))
+        )
+sample(control.cors, 2)
+# calculate kappa
+control.pca.k <- 
+  map_dfr(control.cors,
+      ~ select(., detect_discr, is_discr) %>%
+        as.matrix() %>%
+        cohen.kappa() %>%
+        .$kappa %>%
+        data_frame(pca.k = .),
+      .id = "dataset")
 ```
 
-Kappa: 
 
-```{r}
-K.pls <- cohen.kappa(conf.pls)
-K.pls$kappa
+**PLS-DA kappas**
+
+```{r message=FALSE, warning=FALSE}
+# Get VIP scores
+control.vips <-
+  map(control.pls,
+      ~ get_VIP(.) %>% 
+        mutate(detect_discr = ifelse(VIP > 1, TRUE, FALSE),
+               is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE)))
+
+control.pls.k <- 
+  map_dfr(control.vips,
+      ~ select(., detect_discr, is_discr) %>%
+        as.matrix() %>%
+        cohen.kappa() %>%
+        .$kappa %>%
+        data_frame(pls.k = .),
+      .id = "dataset")
 ```
 
-So PLS-DA obviously does a better job in this dataset.
+**Join all kappas**
 
-# Conclusion
+```{r}
+control.k <- full_join(control.pca.k, control.pls.k) %>% filter(complete.cases(.))
+```
 
-This stuff works.  I'm going to apply it to all the datasets in another, less wordy notebook.
+### Build Plot
+
+```{r}
+control.k.plotdata <-
+  control.k %>%
+  gather(-dataset, key = "Method", value = "Cohen's Kappa") %>% 
+  mutate(Method = as.factor(Method) %>% fct_recode(PCA = "pca.k", `PLS-DA` = "pls.k"))
+
+control.p <-
+  ggplot(control.k.plotdata) +
+  geom_histogram(aes(x = `Cohen's Kappa`, fill = Method),
+                 position = "identity", alpha = 0.8,
+                 binwidth = 0.1) +
+  # geom_density(aes(x = `Cohen's Kappa`, fill = Method), alpha = 0.7, trim = TRUE) +
+  scale_fill_discrete_qualitative(palette = "Dark 3") +
+  theme_bw() +
+  labs(x = "Cohen's Kappa", y = "Frequency")
+control.p
+```
+
+# Needle-in-a-haystack
+
+
+
+## Calculate Cohen's Kappa
+
+- For PCA, I'm defining an "important" variable as one with a correlation to PC1 > 0.5 or  < -0.5
+- For PLS, an "important" variable is one with a VIP score > 1
+
+**PCA kappas**
+
+```{r message=FALSE, warning=FALSE}
+# Get correlations
+needle.cors <-
+  map2(.x = needle.pcas,
+       #filter .y by getting rid of models that didn't run
+       .y = needle[!needle.pcas.failed], 
+       #correlation between axis scores and data
+       ~ cor(get_scores(.x)[2:3], select(.y, -group)) %>% 
+         t() %>% 
+         as_data_frame(rownames = "Variable")) %>% 
+  # calculate distance from center in correlation units for each variable
+  map(~ rowwise(.) %>% 
+        mutate(distance = sqrt(sum((c(p1, p2) - c(0, 0))^2))) %>% 
+        # if corr distance > 0.5, then its "important" variable
+        mutate(detect_discr = ifelse(distance > 0.5, TRUE, FALSE),
+               # detect_discr = ifelse(abs(p1) > 0.5, TRUE, FALSE),
+               is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE))
+        )
+
+# calculate kappa
+needle.pca.k <- 
+  map_dfr(needle.cors,
+      ~ select(., detect_discr, is_discr) %>%
+        as.matrix() %>%
+        cohen.kappa() %>%
+        .$kappa %>%
+        data_frame(pca.k = .),
+      .id = "dataset")
+```
+
+
+**PLS-DA kappas**
+
+```{r message=FALSE, warning=FALSE}
+# Get VIP scores
+needle.vips <-
+  map(needle.pls,
+      ~ get_VIP(.) %>% 
+        mutate(detect_discr = ifelse(VIP > 1, TRUE, FALSE),
+               is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE)))
+
+needle.pls.k <- 
+  map_dfr(needle.vips,
+      ~ select(., detect_discr, is_discr) %>%
+        as.matrix() %>%
+        cohen.kappa() %>%
+        .$kappa %>%
+        data_frame(pls.k = .),
+      .id = "dataset")
+```
+
+**Join all kappas**
+
+```{r}
+needle.k <- full_join(needle.pca.k, needle.pls.k)
+```
+
+### Build plot
+
+```{r}
+needle.k.plotdata <-
+  needle.k %>%
+  gather(-dataset, key = "Method", value = "Cohen's Kappa") %>% 
+  mutate(Method = as.factor(Method) %>% fct_recode(PCA = "pca.k", `PLS-DA` = "pls.k"))
+
+needle.p <-
+  ggplot(needle.k.plotdata) +
+  geom_histogram(aes(x = `Cohen's Kappa`, fill = Method),
+                 position = "identity", alpha = 0.8,
+                 binwidth = 0.1) +
+  # geom_density(aes(x = `Cohen's Kappa`, fill = Method), alpha = 0.7, trim = TRUE) +
+  scale_fill_discrete_qualitative(palette = "Dark 3") +
+  theme_bw() +
+  labs(x = "Cohen's Kappa", y = "Frequency")
+needle.p
+```
+
+# Plot
+
+```{r}
+panels <-
+  plot_grid(control.p + theme(legend.position = "none")+ coord_cartesian(xlim = c(-0.5, 1)),
+            needle.p + theme(legend.position = "none")+ coord_cartesian(xlim = c(-0.5, 1)),
+            nrow = 1,
+            ncol = 2,
+            labels = "auto")
+fig2 <-
+  plot_grid(panels, get_legend(control.p),
+            rel_widths = c(1, 0.15))
+fig2
+save_plot(here("figs", "fig2.png"), fig2, ncol = 2)
+```
+
+Cohen's Kappa for PCA and PLS-DA important variables under control (a) and needle-in-a-haystack (b) scenarios.
+
+# PLS statistics for all scenarios
+I want to get $R^2$ and $Q^2_y$ with standard deviations for all scenarios.
+
+I already did control and needle. That leaves null and red herring.
+
+
+
+zero models failed
+
+
+
+
