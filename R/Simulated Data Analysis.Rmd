@@ -33,7 +33,7 @@ library(cowplot)
 ```
 ```{r}
 #create "safe" "partial" version of opls() which returns NULL if it errors and never plots or prints results
-safe_opls <- possibly(partial(opls, printL = FALSE, plotL = FALSE), otherwise = NULL)
+safe_opls <- safely(partial(opls, printL = FALSE, plotL = FALSE), otherwise = NULL)
 ```
 
 # Load Data
@@ -41,54 +41,161 @@ safe_opls <- possibly(partial(opls, printL = FALSE, plotL = FALSE), otherwise = 
 ```{r}
 null <- read_rds(here("data", "null.rds"))
 needle <- read_rds(here("data", "needle.rds"))
-# sample(needle, 1)
 red_herring <- read_rds(here("data", "red herring.rds"))
 control <- read_rds(here("data", "control.rds"))
-# sample(control, 1)
 ```
 
 
-# Control
+# Run Analyses
 
-## Fit PCA models
-Might consider using safely() instead of possibly() to capture errors and report what kind
+For each scenario, run PCA and PLS-DA on all datasets.  Record errors, and calculate summary statistics on the models that are successfullly built
+
+## Null
+
+```{r}
+null.pls.try <-
+  map(null,
+      ~ safe_opls(select(., -group), .$group))
+null.pls.failed <- map_lgl(null.pls.try, 
+                           ~!pluck(., "error") %>%
+                             is.null())
+null.pls <- null.pls.try[!null.pls.failed]
+
+length(null.pls.try) - length(null.pls)
+
+# sample(null.pls, 1)
+```
+
+75/100 models failed
+
+## Control
+
+### Control PCAs
+
 ```{r}
 # map the pca function to all datasets
 control.pcas.try <-
   map(control,
       ~safe_opls(select(., -group)))
-# sample(control.pcas.try, 1)
 
 # figure out which ones failed and returned NULL
-control.pcas.failed <- map_lgl(control.pcas.try, is.null)
+control.pcas.failed <-
+  control.pcas.try %>% 
+  map("error") %>%
+  map_lgl(~!is.null(.))
 
-# Index by which ones failed to get only the successful models
-control.pcas <- control.pcas.try[!control.pcas.failed]
+# Index by which ones failed to get only the successful models, get just the model
+control.pcas <-
+  control.pcas.try[!control.pcas.failed] %>%
+  map("result")
+```
 
+How many errors? 
+
+```{r}
 length(control.pcas.try) - length(control.pcas)
 
-# sample(control.pcas, 1)
+#What was the error?
+control.pcas.try %>% 
+  map("error") %>% 
+  flatten()
 ```
-One failed model
 
-## Fit PLS models
+One failed model due to convergence problems
 
-- Not increasing the number of permutation for now, because I'm not concerned about p-values yet.
-- Many models fail for the null, which makes sense. Report how many fail, filter out failing models, and continue on with the remaining models.
-
+### Control PLS-DAs
 
 ```{r}
 control.pls.try <-
   map(control,
       ~ safe_opls(select(., -group), .$group))
 
-control.pls.failed <- map_lgl(control.pls.try, is.null)
-control.pls <- control.pls.try[!control.pls.failed]
+control.pls.failed <-
+  map_lgl(control.pls.try,
+          ~!pluck(.,"error") %>%
+            is.null())
 
+control.pls <-
+  control.pls.try[!control.pls.failed] %>% 
+  map(~pluck(., "result"))
+```
+
+How many failed models?
+
+```{r}
 length(control.pls.try) - length(control.pls)
 ```
+
 zero failed models
 
+## Needle in a haystack
+
+### Needle PCAs
+
+```{r}
+needle.pcas.try <-
+  map(needle,
+      ~safe_opls(select(., -group)))
+
+needle.pcas.failed <-
+  map_lgl(needle.pcas.try,
+          ~!pluck(., "error") %>% 
+            is.null())
+
+needle.pcas <-
+  needle.pcas.try[!needle.pcas.failed] %>% 
+  map(~pluck(.,"result"))
+```
+
+Any errors?
+
+```{r}
+length(needle.pcas.try) - length(needle.pcas)
+```
+
+zero failed models 
+
+### Needle PLS-DAs
+
+```{r}
+needle.pls.try <-
+  map(needle,
+      ~ safe_opls(select(., -group), .$group))
+
+needle.pls.failed <-
+  map_lgl(needle.pls.try,
+          ~!pluck(., "error") %>%
+            is.null())
+
+needle.pls <-
+  needle.pls.try[!needle.pls.failed] %>% 
+  map(~pluck(.,"result"))
+```
+
+Any errors?
+
+```{r}
+length(needle.pls.try) - length(needle.pls)
+```
+
+zero errors
+
+## Red Herring (might not use this one)
+
+
+# Kappa Coeficient
+
+For the control and needle scenarios, calculate kappa coefficient on confusion matrices built on ability to identify discriminating variables.
+
+
+
+
+
+
+
+
+
+## Control
 
 ## Calculate Cohen's Kappa
 
@@ -176,38 +283,7 @@ control.p
 
 # Needle-in-a-haystack
 
-## Fit PCA models
 
-```{r}
-# map to all datasets in null scenario
-needle.pcas.try <-
-  map(needle,
-      ~safe_opls(select(., -group)))
-needle.pcas.failed <- map_lgl(needle.pcas.try, is.null)
-
-needle.pcas <- needle.pcas.try[!needle.pcas.failed]
-
-length(needle.pcas.try) - length(needle.pcas)
-```
-zero failed models 
-## Fit PLS models
-
-- Not increasing the number of permutation for now, because I'm not concerned about p-values yet.
-- Many models fail for the null, which makes sense.  What to do?
-    + Force 2 axes?
-    + Force 1 axis?
-    + Do OPLS-DA with one axis forced?
-    + Just look at the models that actually get built?
-
-Currently, this just picks the ones that worked (at least one component built)
-
-```{r}
-needle.pls.try <-
-  map(needle,
-      ~ safe_opls(select(., -group), .$group))
-needle.pls.failed <- map_lgl(needle.pls.try, is.null)
-needle.pls <- needle.pls.try[!needle.pls.failed]
-```
 
 ## Calculate Cohen's Kappa
 
@@ -316,18 +392,6 @@ I want to get $R^2$ and $Q^2_y$ with standard deviations for all scenarios.
 
 I already did control and needle. That leaves null and red herring.
 
-```{r}
-null.pls.try <-
-  map(null,
-      ~ safe_opls(select(., -group), .$group))
-null.pls.failed <- map_lgl(null.pls.try, is.null)
-null.pls <- null.pls.try[!null.pls.failed]
-
-length(null.pls.try) - length(null.pls)
-
-# sample(null.pls, 1)
-```
-75/100 models failed
 
 ```{r}
 herring.pls.try <-
