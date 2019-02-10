@@ -60,17 +60,17 @@ Xs <- c("wight", "sla", "toughness", "height", "photosy", "c_n", "gls_c", "gls_j
 ```{r}
 card.pca <- opls(cardamine %>% select(Xs), plotL = FALSE)
 card.pca.data <- get_plotdata(card.pca)
-ggplot(card.pca.data$scores, aes(x = p1, y = p2)) +
-  geom_point(aes(color = cardamine$avg_alt)) +
-  scale_color_viridis_c(option = "A") +
-  labs(x = glue("P1 ({card.pca.data$var_explained[1,1] * 100}%)"),
-       y = glue("P2 ({card.pca.data$var_explained[2,1] * 100}%)")) + theme_dark()
+
+plot_pca(card.pca) +
+  geom_point(aes(color = cardamine$avg_alt)) + 
+  scale_color_viridis_c() +
+  theme_dark()
 ```
 
 
 # PLSR
 ```{r}
-opls(cardamine %>% select(Xs), cardamine$avg_alt, plotL = FALSE)
+opls(cardamine %>% select(Xs), cardamine$avg_alt, plotL = FALSE, printL = FALSE)
 ```
 Good model!  Only one component, so I'll use OPLS
 
@@ -81,6 +81,7 @@ plot_opls(card.opls) + scale_color_viridis_c(option = "A") + theme_dark()
 
 
 # Compare variables
+
 ## PCA
 ```{r}
 card.pca %>%
@@ -147,23 +148,77 @@ Maybe summarizing by population makes sense?
 
 ```{r}
 raw %>%
-  mutate(pop_id = str_extract(id, "\\d+")) %>% 
-  select(id, pop_id, everything()) %>% 
+  # mutate(pop_id = str_extract(id, "\\d+")) %>% # this doesn't work great
+  # select(id, pop_id, everything()) %>% 
   filter(!is.na(collection_date)) %>% 
-  group_by(species_2, pop_id) %>% 
+  # group_by(species_2, pop_id) %>% 
+  group_by(species_2, collection_date) %>% 
   count()
 ```
- Ummm....
+
  
  
 Can I recapitulate species summary data??
 
 ```{r}
-raw %>% 
+recap <- 
+  raw %>% 
   group_by(species_2) %>% 
-  summarize(mean(cn, na.rm = TRUE))
+  filter(!is.na(species_2)) %>% 
+  summarize_at(vars(avg_altitude, av_weight, av_sla, percent_damage, av_height, av_photosynt, av_toughness, cn, gls_c, gls_induced, vocs_c, vocs_induced), funs(mean, .args = list(na.rm = TRUE))) %>% 
+  ungroup() %>% 
+  mutate_all(~ifelse(is.nan(.), NA, .))
+recap
 ```
+
 ```{r}
-cardamine %>% select(spp, c_n)
+cardamine
 ```
-NOPE!
+VOCs and glucosinolate numbers are super different and I don't know why.  C/N is slightly different.  Toughness also slightly different.
+
+```{r}
+opls(recap %>% select(av_weight, av_sla, av_toughness, av_height, av_photosynt, cn, gls_c, gls_induced, vocs_c, vocs_induced), recap$avg_altitude, predI = 1, orthoI = NA, plotL = FALSE, printL = FALSE)
+```
+Woah, pls is way worse
+
+# Population level data
+Let's try for population level data
+
+```{r}
+pop <-
+  raw %>% 
+  group_by(species_2, collection_date) %>% 
+  filter(!is.na(species_2), !is.na(collection_date)) %>% 
+  summarize_at(vars(avg_altitude, av_weight, av_sla, av_height,
+                    av_photosynt, av_toughness, cn, gls_c,
+                    gls_induced, vocs_c, vocs_induced),
+               funs(mean, .args = list(na.rm = TRUE))) %>% 
+  ungroup() %>% 
+  mutate_all(~ifelse(is.nan(.), NA, .))
+```
+
+## Population level PCA
+
+```{r}
+Xs
+
+pop.pca <- opls(select(pop, -avg_altitude, -species_2, - collection_date), plotL = FALSE)
+pop.pca.data <- get_plotdata(pop.pca)
+ggplot(pop.pca.data$scores, aes(x = p1, y = p2)) +
+  geom_point(aes(color = pop$avg_altitude)) +
+  scale_color_viridis_c(option = "A") +
+  labs(x = glue("P1 ({pop.pca.data$axis_stats[1,1] * 100}%)"),
+       y = glue("P2 ({pop.pca.data$axis_stats[2,1] * 100}%)")) + theme_dark()
+```
+
+
+
+```{r}
+pop.opls <- opls(select(pop, -avg_altitude, -species_2, - collection_date), pop$avg_altitude,
+                predI = 1,
+                orthoI = 1,
+                plotL = FALSE)
+plot_opls(pop.opls) + scale_color_viridis_c(option = "A") + theme_dark()
+```
+```
+
