@@ -29,20 +29,23 @@ According to their figure, it also included $g_s$ and water use efficiency
 Recapitulate their PCA
 
 ```{r}
-LES <- select(coffee, amass, lma_g_m2, leafc, leafn, area_cm2, leaf_density_g_cm3, cond, wue)
-pca <-
-  opls(LES,
-       scaleC = "standard")
+LES <- coffee %>% 
+  select(amass, lma_g_m2, leafc, leafn, area_cm2, leaf_density_g_cm3, cond, wue)
+
+coffee.pca <- opls(LES, plotL = FALSE)
 ```
 ```{r}
-plot_pca(pca, group_var = coffee$treatment)
+plot_pca(coffee.pca, group_var = coffee$treatment)
 ```
 
 ```{r}
 opls(LES, coffee$treatment)
 ```
+Poor performing model.  No difference in treatment.
 
-kitchen sink PLS-DA
+
+# Kitchen Sink analysis
+Using all the variables, looking for site differences instead of treatment.
 
 ```{r}
 kitchen_sink <-
@@ -65,3 +68,4 @@ get_VIP(pls_site) %>% arrange(desc(VIP))
 plot_plsda(pls_site)
 ```
 
+So there is some separation of catie, llano, and masatepe along P2.  The VIP variables differ from the PCA loadings for PC1
