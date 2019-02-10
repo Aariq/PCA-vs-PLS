@@ -1,0 +1,169 @@
+---
+title: "Defossez et al OPLS"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(here)
+library(skimr)
+library(janitor)
+library(ropls)
+library(chemhelper)
+library(glue)
+```
+
+
+# Species level averages
+Species-level averages are provided on Dryad.
+
+```{r}
+cardamine <-
+  read_delim(here("data", "Defossez et al.", "all traits averages.csv"), delim = ";") %>%
+  clean_names()
+cardamine
+```
+
+- 'spp': the *Cardamine* species
+- 'alt': ?
+- 'light': ?
+- 'moisture': ?
+- 'ph': soil ph?
+- 'nutrients': ?
+- 'avg_alt': Altitude at center of distribution?
+- 'fd_temperature': ?
+- 'fd_,oisture': ?
+- 'fd_radiation': ?
+- 'wight': weight, total biomass (dry?)
+- 'sla': specific leaf area. Ratio of 6mm diameter leaf disk area to its mass (mm^2^ mg^-1^)
+- 'dmage': % damage where 100% means all leaves were completely eaten
+- 'height': height
+- 'photosy': chlorophyll content (SPAD)
+- 'toughness': leaf toughness
+- 'pieris':
+- 'spod':
+- 'c_n': carbon to nitrogen ratio
+- 'gls_c': constitutive plant glucosinolate concentration
+- 'gls_ja': Glucosinolate concentration in MeJA induced plants
+- 'gls_ja_c': Difference between control and MeJA induced plants
+- 'nb_peaks': ?
+- 'voc_c': constitutive plant volatiles
+- 'voc_ja': MeJA induced plant volatiles
+- 'vocs_ja_c': difference between control and MeJA induced plant volatiles
+
+```{r}
+Xs <- c("wight", "sla", "toughness", "height", "photosy", "c_n", "gls_c", "gls_ja_c", "voc_c", "vocs_ja_c")
+```
+
+# PCA
+
+```{r}
+card.pca <- opls(cardamine %>% select(Xs), plotL = FALSE)
+card.pca.data <- get_plotdata(card.pca)
+ggplot(card.pca.data$scores, aes(x = p1, y = p2)) +
+  geom_point(aes(color = cardamine$avg_alt)) +
+  scale_color_viridis_c(option = "A") +
+  labs(x = glue("P1 ({card.pca.data$var_explained[1,1] * 100}%)"),
+       y = glue("P2 ({card.pca.data$var_explained[2,1] * 100}%)")) + theme_dark()
+```
+
+
+# PLSR
+```{r}
+opls(cardamine %>% select(Xs), cardamine$avg_alt, plotL = FALSE)
+```
+Good model!  Only one component, so I'll use OPLS
+
+```{r}
+card.opls <- opls(cardamine %>% select(Xs), cardamine$avg_alt, predI = 1, orthoI = NA)
+plot_opls(card.opls) + scale_color_viridis_c(option = "A") + theme_dark()
+```
+
+
+# Compare variables
+## PCA
+```{r}
+card.pca %>%
+  get_loadings() %>% 
+  arrange(desc(abs(p1)))
+```
+ so high altitude (negative on PC1) is associated with high constitutive glucosinolates, low SLA, high chlorophyll mostly
+ 
+## OPLS
+```{r}
+card.opls %>% 
+  get_VIP() %>% 
+  arrange(desc(VIP))
+```
+
+ehh, lame.  pretty much the same conclusion.
+
+
+# Individual data
+I emailed Sergio Rasmann and got the un-summarized data, but it's confusing.
+
+```{r}
+raw <- read_delim(here("data", "Defossez et al.", "all_data_ind.csv"), ";") %>% clean_names()
+raw
+```
+
+Within each population, they selected 8 plants, half of which were treated with JA. Some species have multiple populations.
+
+- `species`: specific epithet, don't use--has wrong number of unique values
+- `id`: unique plant ID, includes species abbrev., population number, induction treatment, and rep number
+- `species_2`: Scientific name
+- `treatment`: whether a plant was treated with jasmonic acid (JA) a control plan (C) or NA???
+- `replicate`
+- `treatment_nb`: don't use
+- `leaveas_area_nub`
+- `collection_date`
+- `x_coord`
+- `y_coord`
+- `altitude`: Actual altitude where the plant was collected
+- `avg_altitude`: Average altitude of the species from Swiss-wide occurance data
+- `altitude_class`: Character representation of altitude, don't use.
+- `av_weight`: weight of each plant
+- `av_sla`: specific leaf area (ratio of 6mm diameter leaf disc area to its dry mass ($mm^2/mg$)
+- `percent_damage`: ordinal percentage eaten (100% = all leaves gone)
+- `av_height`: height of each plant
+- `av_photosynt`: Actually chlorophyll content (SPAD)
+- `av_toughness`: leaf toughness
+- `weight_mg_cn`: sample weight for carbon/nitrogen analysis, ignore
+- `nitrogen_percent`: %N content
+- `carbon_percent`: %C content
+- `cn`: Carbon to nitrogen ratio
+- `hydrogen_percent`: ignore
+- `gls_total`: glucosinolates in this specific plant
+- `gls_c`: glucosinolates in this specific plant for control plants
+- `gls_induced`: Mean `gls_total`for JA treated plants in this population - `gls_c`
+- `voc_total`: VOCs in this specific plant
+- `vocs_C`: VOCs in this specifc plant for control plants
+- `vocs_induced`: Mean `voc_total` for JA treated plants in this population (species?) - `vocs_c`
+- 
+
+# Is population summary the same as species summary?
+
+Maybe summarizing by population makes sense?
+
+```{r}
+raw %>%
+  mutate(pop_id = str_extract(id, "\\d+")) %>% 
+  select(id, pop_id, everything()) %>% 
+  filter(!is.na(collection_date)) %>% 
+  group_by(species_2, pop_id) %>% 
+  count()
+```
+ Ummm....
+ 
+ 
+Can I recapitulate species summary data??
+
+```{r}
+raw %>% 
+  group_by(species_2) %>% 
+  summarize(mean(cn, na.rm = TRUE))
+```
+```{r}
+cardamine %>% select(spp, c_n)
+```
+NOPE!
