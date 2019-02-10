@@ -10,6 +10,10 @@ library(ropls)
 library(chemhelper)
 ```
 
+This is worth revisiting!  The PCA and PLS both show similar patterns (separation by site).  However, PLS separates along two axes (one site vs. all others on axis one, the other three sites on axis three) and finds some pretty different VIPs (also check out loadings of p2).  Should check and see what the paper did originally.
+
+
+
 ```{r}
 coffee <- read_tsv(here("data", "Martin et al", "Martin et al. Functional Ecology.txt"))
 ```
@@ -52,6 +56,8 @@ pca_all <- opls(kitchen_sink, plotL = FALSE, printL = FALSE)
 
 ```{r}
 plot_pca(pca_all, coffee$site)
+get_loadings(pca_all) %>% 
+  arrange(desc(abs(p1)))
 ```
 ```{r}
 pls_site <- opls(kitchen_sink, coffee$site, plotL = FALSE, printL = FALSE)

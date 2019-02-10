@@ -9,11 +9,14 @@ library(ropls)
 library(chemhelper)
 ```
 
+Conclusion: boring data.  PCA does really well and the same as PLS
+
+
 # Read in digitized data
 See `Digitizing plots.R` for script to do get these data.
 ```{r}
-Fig2a_data <- read_rds(here("Forister et al", "Fig2a_data.rds"))
-Fig2b_data <- read_rds(here("Forister et al", "Fig2b_data.rds"))
+Fig2a_data <- read_rds(here("data", "Forister et al", "Fig2a_data.rds"))
+Fig2b_data <- read_rds(here("data", "Forister et al", "Fig2b_data.rds"))
 ```
 
 # Spread data so each row is a year.
@@ -60,3 +63,11 @@ test2comp <- opls(butterfly_data %>% select(-year, -species), butterfly_data$spe
      permI = 200)
 ```
 
+# Does PCA show the same pattern?
+
+```{r}
+test.pca <- opls(butterfly_data %>% select(-year, -species))
+get_loadings(test.pca) %>% arrange(desc(abs(p1)))
+```
+
+yup. boring.

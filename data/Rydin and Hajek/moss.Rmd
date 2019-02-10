@@ -2,16 +2,23 @@
 title: "R Notebook"
 output: html_notebook
 ---
-
+# Libraries
 ```{r}
 library(tidyverse)
 library(here)
 library(ropls)
 ```
 
+
+Not taht interesting.  PCA and PLS show phenolics matter for decomposition
+
+#Load data
+
 ```{r}
 moss <- read_csv(here("data", "Rydin and Hajek", "bengtsson_etal_2018_LQ.csv"))
 ```
+
+# Subset data
 
 ```{r}
 moss_complete <- 
@@ -23,14 +30,15 @@ moss_metab <-
   select(HC_mg_g, sphagn_litter_mg_g, phenolics_TA_mg_g, totalKL_mg_g, CEC_meq_g)
 ```
 
-PCA
+# PCA
 
 ```{r}
-opls(moss_metab, predI = 2)
+moss.pca <- opls(moss_metab, predI = 2)
+plot(moss.pca, parAsColFcVn = moss_complete$losslab2b)
 ```
 
 
-PLSR to determine what metabolites contribute to decomp in lab and field
+# PLSR to determine what metabolites contribute to decomp in lab and field
 
 ```{r}
 # opls(moss_metab, moss_complete$lossfield) Fails, just like in paper.
@@ -40,7 +48,14 @@ get_VIP(opls_moss) %>% arrange(desc(VIP))
 ```
 Lignin most important.
 
-Try kitchen sink??
+Hows that compare to PCA?
+
+```{r}
+moss.pca %>% get_loadings() %>% arrange(desc(abs(p1)))
+```
+Almost the same
+
+# Try kitchen sink??
 
 ```{r}
 moss_all <-
@@ -49,11 +64,21 @@ moss_all <-
 ```
 
 ```{r}
-opls(moss_all)
+pca_all <- opls(moss_all, plotL = FALSE)
+plot(pca_all, parAsColFcVn = moss_complete$losslab2b)
+```
+
+```{r}
 opls_all <- opls(moss_all, moss_complete$losslab2b, predI = 1, orthoI = 1,
                  # permI = 500,
                  plotL = FALSE)
 plot_opls(opls_all)
 get_VIP(opls_all) %>% arrange(desc(VIP))
 ```
+```{r}
+pca_all %>% 
+  get_loadings() %>% 
+  arrange(desc(abs(p1)))
+```
 
+about the same.

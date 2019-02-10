@@ -9,19 +9,23 @@ library(ropls)
 library(chemhelper)
 ```
 
+can't remember what these data are, but the PCA just does too good of a job.
+
+
 ```{r}
 leaves <- read_delim(here("data", "Firmat et al", "Table_Figure1.txt"), " ")
 ```
 PCA
 ```{r}
-pca <- opls(leaves %>% select(-Elevation), predI = 2)
-pca_pd <- get_plotdata(pca)
+leaves.pca <- opls(leaves %>% select(-Elevation), predI = 2)
+pca_pd <- get_plotdata(leaves.pca)
 ggplot(pca_pd$scores, aes(x = p1, y = p2, color = leaves$Elevation)) +geom_point()
 ```
 
 
 PLSR
 ```{r}
-opls(leaves %>% select(-Elevation), leaves$Elevation)
+leaves.opls <- opls(leaves %>% select(-Elevation), leaves$Elevation, predI = 1 , orthoI = 1)
+plot_opls(leaves.opls)
 ```
 
