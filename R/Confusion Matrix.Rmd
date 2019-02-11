@@ -76,19 +76,52 @@ Rather than using a cutoff of r = 0.5, I'll use a cutoff of r = 0.38 which is wh
 # Load data
 
 ```{r}
-null.list <- read_rds(here("data", "null.rds"))
-control.list <- read_rds(here("data", "control.rds"))
-needle.list <- read_rds(here("data", "needle.rds"))
+control.pcas <- read_rds(here('data', 'models', 'control-pca.rds'))
+test.pca <- sample(control.pcas, 1)[[1]]
+control.pls <- read_rds(here('data', 'models', 'control-pls.rds'))
+test.pls <- sample(control.pls, 1)[[1]]
 ```
 
 
 # Functions
-Write some mapable functions (as_mapper()??) that calculate cohen's kappa for a dataset.
+
+`conf_pca()` calculates a confusion matrix for PCA models produced by `opls()` by calculating correlation of variables to scores for the first two principal components.  Then, it creates a cutoff correlation which is equivalent to the $r$ you would get if $p = 0.05$ in a correlation test.  It then categorizes variables as discriminating or not based on this cutoff.
+
+`calc_kappa()` takes the results of `conf_pca()` or `conf_pls()` and calculates Cohen's Kappa based on a confusion matrix.
+
 ```{r}
+conf_pca <- function(pca.model) {
+  scores <- get_scores(pca.model)
+  data <- pca.model@suppLs$xModelMN
+  
+  #figure out appropriate cutoff by solving for the r that gives p < 0.05 given n
+  
+  n = test@descriptionMC[1,1] %>% as.numeric()
+  t = qt(0.05, n)
+  r = sqrt(-(t^2)/(-t^2 - n + 2)) #solved t stat calculation for r
+  
+  cor(scores[2:3], data) %>%
+    t() %>%
+    as_tibble(rownames = "Variable") %>% 
+    rowwise(.) %>% 
+    mutate(distance = sqrt(sum((c(p1, p2) - c(0, 0))^2))) %>% 
+    # if corr distance > 0.38, then its "important" variable
+    mutate(detect_discr = ifelse(distance > r, TRUE, FALSE),
+           is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE))
+}
 
+calc_kappa <- function(confusion_df) {
+  confusion_df %>% 
+    select(detect_discr, is_discr) %>%
+    as.matrix() %>%
+    cohen.kappa() %>%
+    .$kappa %>% 
+    data_frame(pls.k = .)
+
+}
+test.pca %>% conf_pca() %>% calc_kappa()
+test.pls %>% conf_pls() %>% calc_kappa()
 ```
-
-
 
 
 ## Control
@@ -100,32 +133,9 @@ Write some mapable functions (as_mapper()??) that calculate cohen's kappa for a 
 **PCA kappas**
 
 ```{r message=FALSE, warning=FALSE}
-# Get correlations
-control.cors <-
-  map2(.x = control.pcas,
-       #filter .y by getting rid of models that didn't run
-       .y = control[!control.pcas.failed], 
-       #correlation between axis scores and data
-       ~ cor(get_scores(.x)[2:3], select(.y, -group)) %>% 
-         t() %>% 
-         as_data_frame(rownames = "Variable")) %>% 
-  # calculate distance from center in correlation units for each variable
-  map(~ rowwise(.) %>% 
-        mutate(distance = sqrt(sum((c(p1, p2) - c(0, 0))^2))) %>% 
-        # if corr distance > 0.5, then its "important" variable
-        mutate(detect_discr = ifelse(distance > 0.38, TRUE, FALSE),
-               is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE))
-        )
-sample(control.cors, 2)
-# calculate kappa
-control.pca.k <- 
-  map_dfr(control.cors,
-      ~ select(., detect_discr, is_discr) %>%
-        as.matrix() %>%
-        cohen.kappa() %>%
-        .$kappa %>%
-        data_frame(pca.k = .),
-      .id = "dataset")
+control.pcas %>%
+  map(conf_df) %>%
+  map_df(calc_kappa, .id = "dataset")
 ```
 
 
