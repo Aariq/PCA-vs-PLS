@@ -25,7 +25,10 @@ I'll read in the datasets from "Generating Datasets.Rmd" and pick individual dat
 null.list <- read_rds(here("data", "null.rds"))
 control.list <- read_rds(here("data", "control.rds"))
 needle.list <- read_rds(here("data", "needle.rds"))
+
 ```
+
+Sample one dataset as an example
 
 ```{r}
 set.seed(999)

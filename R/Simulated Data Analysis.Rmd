@@ -80,6 +80,11 @@ Any errors?
 ```{r}
 length(null.pcas.try) - length(null.pcas)
 ```
+Save em!
+
+```{r}
+write_rds(null.pcas, here("data", "models", "null-pca.rds"))
+```
 
 ### Null PLSs
 
@@ -110,6 +115,9 @@ null.pls.try %>%
 ```
 
 They all failed because the first predictive component already wasn't significant.
+```{r}
+write_rds(null.pls, here("data", "models", "null-pls.rds"))
+```
 
 ## Control
 
@@ -140,6 +148,13 @@ control.pcas.try %>%
 
 One failed model due to convergence problems
 
+Save em!
+
+```{r}
+write_rds(control.pcas, here("data", "models", "control-pca.rds"))
+```
+
+
 ### Control PLS-DAs
 
 ```{r}
@@ -160,6 +175,12 @@ length(control.pls.try) - length(control.pls)
 ```
 
 zero failed models
+
+Save em!
+
+```{r}
+write_rds(control.pls, here("data", "models", "control-pls.rds"))
+```
 
 ## Needle in a haystack
 
@@ -183,6 +204,9 @@ length(needle.pcas.try) - length(needle.pcas)
 ```
 
 zero failed models 
+```{r}
+write_rds(needle.pcas, here("data", "models", "needle-pca.rds"))
+```
 
 ### Needle PLS-DAs
 
@@ -204,6 +228,11 @@ length(needle.pls.try) - length(needle.pls)
 ```
 
 zero errors
+
+```{r}
+write_rds(needle.pls, here("data", "models", "needle-pls.rds"))
+```
+
 
 ## Red Herring (might not use this one)
 
@@ -227,6 +256,9 @@ length(herring.pcas.try) - length(herring.pcas)
 ```
 
 Zero errors
+```{r}
+write_rds(herring.pcas, here("data", 'models', 'herring-pca.rds'))
+```
 
 ### Red Herring PLS-DAs
 
@@ -249,6 +281,9 @@ length(herring.pls.try) - length(herring.pls)
 
 Zero errors
 
+```{r}
+write_rds(herring.pls, here('data','models', 'herring-pls.rds'))
+```
 
 # Get Summary Stats
 ## Map R2 and Q2 extractor
