@@ -8,7 +8,8 @@ output:
 
 # To-Do:
 
-- Write functions for getting kappas to simplify code, move all that to separate .Rmd (perhaps the one called Cohen's Kappas already?)
+- output PCAs and PLSs as .rds
+- move analysis of results to other notebook?
 
 # Goal
 To show that PLS-DA performs better than PCA at figuring out which variables are most responsible for group separation.  I do this using VIP scores from PLS-DA and correlations with PC1 for PCA followed by a calculation of Cohen's Kappa.  For now, I'm only doing this with two of the data scenarios where the variables either contribute to group separation or don't: the positive control, and the needle-in-a-haystack.

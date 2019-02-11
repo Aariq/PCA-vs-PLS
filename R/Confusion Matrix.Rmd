@@ -71,6 +71,17 @@ In order to apply this to PLS-DA, I'll use the common cuttoff of VIP > 1 to indi
 
 It's more difficult to decide how to do this for PCA since there are several ways to go about it.  Often correlation plots are used which plot loadings of the first two PCs with a circle representing a correlation coefficient cutoff, usually of 0.5.  Variables with correlations greater than 0.5 are considered significantly correlated with either PC1, PC2 or both, depending on the location of the variable in loading space.
 
+Rather than using a cutoff of r = 0.5, I'll use a cutoff of r = 0.38 which is what would be significant with n = 20 observations
+
+# Load data
+
+```{r}
+null.list <- read_rds(here("data", "null.rds"))
+control.list <- read_rds(here("data", "control.rds"))
+needle.list <- read_rds(here("data", "needle.rds"))
+```
+
+
 # Functions
 Write some mapable functions (as_mapper()??) that calculate cohen's kappa for a dataset.
 ```{r}
@@ -83,7 +94,7 @@ Write some mapable functions (as_mapper()??) that calculate cohen's kappa for a 
 ## Control
 ### Calculate Cohen's Kappa
 
-- For PCA, I'm defining an "important" variable as one with a correlation to PC1 > 0.5 or  < -0.5
+- For PCA, I'm defining an "important" variable as one with a correlation to PC1 > 0.38 or  < -0.38
 - For PLS, an "important" variable is one with a VIP score > 1
 
 **PCA kappas**
@@ -102,8 +113,7 @@ control.cors <-
   map(~ rowwise(.) %>% 
         mutate(distance = sqrt(sum((c(p1, p2) - c(0, 0))^2))) %>% 
         # if corr distance > 0.5, then its "important" variable
-        mutate(detect_discr = ifelse(distance > 0.5, TRUE, FALSE),
-               #detect_discr = ifelse(abs(p1) > 0.5, TRUE, FALSE),
+        mutate(detect_discr = ifelse(distance > 0.38, TRUE, FALSE),
                is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE))
         )
 sample(control.cors, 2)
