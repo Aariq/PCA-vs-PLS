@@ -1,0 +1,83 @@
+---
+title: "Drivers of Mourning Cloak Population"
+output: html_notebook
+---
+
+# Packages
+```{r}
+library(pls)
+library(tidyverse)
+library(here)
+```
+
+# Read and clean up data
+```{r}
+dat2 <- read_csv(here("data", "mourning-cloaks", "MOCLclim.csv"))
+tail(dat2)
+```
+
+- `year`: Year
+- `MOCL`: Relative abundance of mourning cloak butterflies (*relative to what?*)
+- `WiTemp`: Winter temperature average
+- `SprTemp`: Spring temperature average
+- `SuTemp`: Summer temperature average
+- `FaTemp_prev`: The temperature of the previous fall
+- `*PDSI`: Palmer drought severity index
+- `MOCL_fall`: mourning cloak sightings after June 30 (see note below)
+
+
+*Elizabeth's note:*
+
+>I added a response variable of mourning cloak sightings after June 30 because they fly as adults in spring then lay eggs and the 2nd gen flys in fall.  Could also play around with timing of these responses - I thought fall adults would  work well because summer drought was a weak predictor of total sightings
+
+## Remove trailing row of NAs
+```{r}
+dat2 <- dat2 %>% filter(!is.na(year))
+```
+
+# Fit PLSR
+
+```{r}
+m0 <- plsr(MOCL_fall ~ WiTemp+SprTemp+SuTemp+FaTemp_prev+WiPDSI+SprPDSI+SuPDSI+FaPDSI, validation = "CV", data = dat2)
+summary(m0)
+```
+
+```{r}
+loadings(m0)
+```
+
+The first axis is cool, wet years, especially in the summer/spring when they are caterpillars/adults (overwinter as adults)
+
+Test for model significance by selecting the number of components that significantly reduces prediction error (RMSEP) compared to the global RMSEP.
+
+```{r}
+selectNcomp(m0, alpha = 0.05, plot = TRUE) #NS by prediction error
+```
+
+Recomends 0 components
+
+```{r}
+m0a = lm(dat2$MOCL_fall[1:20] ~ m0$scores[,1] + m0$scores[,2])
+summary(m0a)
+```
+
+# Try with ropls package
+
+```{r}
+library(ropls)
+library(chemhelper)
+m0.ropls <- opls(select(dat2, WiTemp, SprTemp, SuTemp, FaTemp_prev, WiPDSI, SprPDSI, SuPDSI, FaPDSI), dat2$MOCL_fall,
+                 permI = 200)
+```
+
+```{r}
+get_loadings(m0.ropls)
+```
+
+Recommends 1 component, Q2 is very very low.
+
+```{r}
+get_VIP(m0.ropls) %>%
+  arrange(desc(VIP))
+```
+

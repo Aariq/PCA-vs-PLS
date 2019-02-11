@@ -22,26 +22,43 @@ coffee <- read_tsv(here("data", "Martin et al", "Martin et al. Functional Ecolog
 coffee
 ```
 
+# Multivariate analysis of plant traits
+
+The authors of the paper focused on classic leaf economic spectrum (LES) plant traits, although the dataset also includes growth measurements, soil nutrients, and other environmental properties.
+
 "Our PCA included Amass, LMA, leaf C, leaf N, leaf area and leaf tissue density; Amax was not included in the PCA as due to its close correlation with Amass (r2 = 0·84, P < 0·001). We calculated PCA axis 1 and 2 scores for each leaf and included these in analyses on the causes of intraspecific trait variation (see below)."
 
 According to their figure, it also included $g_s$ and water use efficiency
 
-Recapitulate their PCA
+## Recapitulate their PCA
 
 ```{r}
-LES <- coffee %>% 
-  select(amass, lma_g_m2, leafc, leafn, area_cm2, leaf_density_g_cm3, cond, wue)
-
-coffee.pca <- opls(LES, plotL = FALSE)
+# subset LES traits
+LES <- coffee %>% select(amass, lma_g_m2, leafc, leafn, area_cm2, leaf_density_g_cm3, cond, wue)
+# do PCA
+coffee.pca <- opls(LES, plotL = FALSE, printL = FALSE)
 ```
-```{r}
+
+**Score plot:**
+
+```{r message=FALSE, warning=FALSE}
+# plot_pca(coffee.pca, group_var = coffee$site)
 plot_pca(coffee.pca, group_var = coffee$treatment)
 ```
 
+**Loadings (correlations):**
+
+```{r}
+plot(coffee.pca, typeVc = "correlation")
+```
+
+This matches the bi-plot figure in the publication.  There is little separation along PC1, which recapitulates the LES (I think?) and no separation along PC2 which represents water use and transpiration.
+
 ```{r}
 opls(LES, coffee$treatment)
+opls(LES, coffee$site)
 ```
-Poor performing model.  No difference in treatment.
+Poor performing models for both site and treatment.  No difference in treatment.
 
 
 # Kitchen Sink analysis
