@@ -8,7 +8,9 @@ output:
 
 # To-Do:
 
-- output PCAs and PLSs as .rds
+
+- ~~output PCAs and PLSs as .rds~~
+- Add permutation to pls to get p-values.
 - move analysis of results to other notebook?
 
 # Goal
@@ -91,7 +93,7 @@ write_rds(null.pcas, here("data", "models", "null-pca.rds"))
 ```{r}
 null.pls.try <-
   null %>% 
-  map(~ safe_opls(select(., -group), .$group)) #map the opls
+  map(~ safe_opls(select(., -group), .$group, permI = 500)) #map the opls
 
 # get just succesful models
 null.pls <-
@@ -160,7 +162,7 @@ write_rds(control.pcas, here("data", "models", "control-pca.rds"))
 ```{r}
 control.pls.try <-
   map(control,
-      ~ safe_opls(select(., -group), .$group))
+      ~ safe_opls(select(., -group), .$group, permI = 500))
 
 control.pls <-
   control.pls.try %>% 
@@ -213,7 +215,7 @@ write_rds(needle.pcas, here("data", "models", "needle-pca.rds"))
 ```{r}
 needle.pls.try <-
   map(needle,
-      ~ safe_opls(select(., -group), .$group))
+      ~ safe_opls(select(., -group), .$group, permI = 500))
 
 needle.pls <-
   needle.pls.try %>% 
@@ -236,7 +238,7 @@ write_rds(needle.pls, here("data", "models", "needle-pls.rds"))
 
 ## Red Herring (might not use this one)
 
-### Red Herrign PCAs
+### Red Herring PCAs
 
 ```{r}
 herring.pcas.try <-
@@ -265,7 +267,7 @@ write_rds(herring.pcas, here("data", 'models', 'herring-pca.rds'))
 ```{r}
 herring.pls.try <-
   map(red_herring,
-      ~ safe_opls(select(., -group), .$group))
+      ~ safe_opls(select(., -group), .$group, permI = 500))
 
 herring.pls <-
   herring.pls.try %>% 
