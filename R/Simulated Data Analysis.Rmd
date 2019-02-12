@@ -296,7 +296,9 @@ write_rds(herring.pls, here('data','models', 'herring-pls.rds'))
 control.pls %>%
   map(~get_modelinfo(.)) %>%
   map_dfr(~list(Q2 = pluck(., 2, "Q2(cum)"),
-                R2 = pluck(., 2, "R2Y(cum)")),
+                R2 = pluck(., 2, "R2Y(cum)"),
+                pR2 = pluck(., 2, "pR2Y"),
+                pQ2 = pluck(., 2, "pQ2")),
           .id = "dataset") %>% 
   summarize_if(is.numeric, funs(mean, sd))
 ```
@@ -307,7 +309,9 @@ control.pls %>%
 null.pls %>%
   map(~get_modelinfo(.)) %>%
   map_dfr(~list(Q2 = pluck(., 2, "Q2(cum)"),
-                R2 = pluck(., 2, "R2Y(cum)")),
+                R2 = pluck(., 2, "R2Y(cum)"),
+                pR2 = pluck(., 2, "pR2Y"),
+                pQ2 = pluck(., 2, "pQ2")),
           .id = "dataset") %>% 
   summarize_if(is.numeric, funs(mean, sd))
 ```
@@ -318,7 +322,8 @@ null.pls %>%
 needle.pls %>%
   map(~get_modelinfo(.)) %>%
   map_dfr(~list(Q2 = pluck(., 2, "Q2(cum)"),
-                R2 = pluck(., 2, "R2Y(cum)")),
+                R2 = pluck(., 2, "R2Y(cum)"),
+                pQ2 = pluck(., 2, "pQ2")),
           .id = "dataset") %>% 
   summarize_if(is.numeric, funs(mean, sd))
 ```
@@ -329,7 +334,8 @@ needle.pls %>%
 herring.pls %>%
   map(~get_modelinfo(.)) %>%
   map_dfr(~list(Q2 = pluck(., 2, "Q2(cum)"),
-                R2 = pluck(., 2, "R2Y(cum)")),
+                R2 = pluck(., 2, "R2Y(cum)"),
+                pQ2 = pluck(., 2, "pQ2")),
           .id = "dataset") %>% 
   summarize_if(is.numeric, funs(mean, sd))
 ```
