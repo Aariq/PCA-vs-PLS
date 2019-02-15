@@ -55,7 +55,8 @@ plot(coffee.pca, typeVc = "correlation")
 This matches the bi-plot figure in the publication.  There is little separation along PC1, which recapitulates the LES (I think?) and no separation along PC2 which represents water use and transpiration.
 
 ```{r}
-opls(LES, coffee$treatment)
+coffee.pls <- opls(LES, coffee$treatment)
+get_loadings(coffee.pls) %>% arrange(p2)
 opls(LES, coffee$site)
 ```
 Poor performing models for both site and treatment.  No difference in treatment.
@@ -68,6 +69,10 @@ Using all the variables, looking for site differences instead of treatment.
 kitchen_sink <-
   coffee %>% 
   select(plantht_cm, branchht_cm, sproutd_mm, stumpd_mm, num_leaves, num_fruits, area_m2, thick_mm, wt_mg, amax, trans, vpd, temp, rh, ac_ci, ci, leafcn, cond, wue, lma_g_m2, amass, leaf_density_g_cm3, leafn, leafc, area_cm2, soil_p, soil_n, soil_c, soil_ph, soil_moist)
+
+kitchen_sink <-
+  coffee %>% 
+  select(vpd, temp, rh, ac_ci, ci, soil_p, soil_n, soil_c, soil_ph, soil_moist)
 ```
 
 ```{r}
@@ -82,6 +87,7 @@ get_loadings(pca_all) %>%
 ```{r}
 pls_site <- opls(kitchen_sink, coffee$site, plotL = FALSE, printL = FALSE)
 get_VIP(pls_site) %>% arrange(desc(VIP))
+get_loadings(pls_site) %>% arrange(desc(abs(p1)))
 plot_plsda(pls_site)
 ```
 
