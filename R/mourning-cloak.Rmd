@@ -12,7 +12,7 @@ library(here)
 
 # Read and clean up data
 ```{r}
-dat2 <- read_csv(here("data", "mourning-cloaks", "MOCLclim.csv"))
+dat2 <- read_csv(here::here("data", "mourning-cloaks", "MOCLclim.csv"))
 tail(dat2)
 ```
 
@@ -66,7 +66,8 @@ summary(m0a)
 ```{r}
 library(ropls)
 library(chemhelper)
-m0.ropls <- opls(select(dat2, WiTemp, SprTemp, SuTemp, FaTemp_prev, WiPDSI, SprPDSI, SuPDSI, FaPDSI), dat2$MOCL_fall,
+m0.ropls <- opls(select(dat2, WiTemp, SprTemp, SuTemp, FaTemp_prev, WiPDSI, SprPDSI, SuPDSI, FaPDSI),
+                 dat2$MOCL_fall,
                  permI = 200)
 ```
 
