@@ -14,6 +14,9 @@ library(glue)
 
 - get weather data from 1989--2011 so when I lag it, I don't have to get rid of a year of butterfly data
 
+
+Weather data from [NOAA Climate at a Glance](https://www.ncdc.noaa.gov/cag/statewide/time-series/)
+
 ```{r}
 raw <- list.files(here::here("data", "mourning-cloaks"), "^19", full.names = TRUE) %>% 
   map(~read_csv(., col_types = "dd") %>% 
@@ -59,12 +62,9 @@ seasonal_summary <-
             sum_hdd = sum(heating_degree_days),
             sum_precip = sum(precipitation),
             mean_pdsi = mean(palmer_drought_severity_index_pdsi),
-            mean_phdi = mean(palmer_hydrological_drought_index_phdi),
-            mean_pmdi = mean(palmer_modified_drought_index_pmdi),
             mean_avg_temp = mean(average_temperature),
             mean_max_temp = mean(maximum_temperature),
-            mean_min_temp = mean(minimum_temperature),
-            mean_palmer_z = mean(palmer_z_index)) %>% 
+            mean_min_temp = mean(minimum_temperature)) %>% 
   split(.$season) %>% 
   map2(.x = ., .y = names(.),
        ~rename_at(.x,vars(-year, -season), funs(glue("{.y}_{.}")))) %>% 
