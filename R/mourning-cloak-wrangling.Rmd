@@ -1,0 +1,100 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(here)
+library(lubridate)
+library(glue)
+```
+
+# To-Do:
+
+- get weather data from 1989--2011 so when I lag it, I don't have to get rid of a year of butterfly data
+
+```{r}
+raw <- list.files(here::here("data", "mourning-cloaks"), "^19", full.names = TRUE) %>% 
+  map(~read_csv(., col_types = "dd") %>% 
+        rename(ym = "Massachusetts") %>%
+        filter(!is.na(ym))) %>% 
+  reduce(., left_join, by = "ym") %>% 
+  mutate(year = str_extract(ym, "^\\d{4}") %>% as.numeric(),
+         month = str_extract(ym, "\\d{2}$")) %>% 
+  mutate(month = month.abb[as.numeric(month)]) %>% 
+  select(year, month, everything()) %>% 
+  select(-ym) %>%
+  janitor::clean_names()
+raw
+```
+
+split combine
+
+```{r}
+all_the_vars <-
+  raw %>%
+  split(.$month) %>% 
+  map2(.x = ., .y = names(.),
+       ~rename_at(.x,vars(-year, -month), funs(glue("{.y}_{.}")))) %>% 
+  map(~select(., -month)) %>% 
+  reduce(., left_join, by = "year")
+```
+
+summarize, split, combine, add a lagged fall column
+
+Elizabeth counted jan feb march as winter
+
+```{r}
+seasonal_summary <-
+  raw %>% 
+  mutate(season = case_when(month %in% c("Jan", "Feb", "Mar")  ~ "Wi",
+                            month %in% c("Apr", "May", "Jun")  ~ "Sp",
+                            month %in% c("Jul", "Aug", "Sep")  ~ "Su",
+                            month %in% c("Oct", "Nov", "Dec")  ~ "Au")) %>% 
+  select(year, month, season, everything()) %>% 
+  select(-month) %>% 
+  group_by(year, season) %>% 
+  summarize(sum_cdd = sum(cooling_degree_days),
+            sum_hdd = sum(heating_degree_days),
+            sum_precip = sum(precipitation),
+            mean_pdsi = mean(palmer_drought_severity_index_pdsi),
+            mean_phdi = mean(palmer_hydrological_drought_index_phdi),
+            mean_pmdi = mean(palmer_modified_drought_index_pmdi),
+            mean_avg_temp = mean(average_temperature),
+            mean_max_temp = mean(maximum_temperature),
+            mean_min_temp = mean(minimum_temperature),
+            mean_palmer_z = mean(palmer_z_index)) %>% 
+  split(.$season) %>% 
+  map2(.x = ., .y = names(.),
+       ~rename_at(.x,vars(-year, -season), funs(glue("{.y}_{.}")))) %>% 
+  map(~select(., -season)) %>% 
+  reduce(., left_join, by = "year")
+
+#add columns for the previous autumn and remove 1990 (since I don't have data for 1989)
+season_data <-
+  seasonal_summary %>% 
+  ungroup() %>% 
+  mutate_at(vars(starts_with("Au")), funs(prev = lag)) %>% 
+  slice(-1)
+```
+
+read in mourning cloak data and join
+
+```{r}
+mocl <-
+  read_csv(here::here("data", "mourning-cloaks", "MOCLclim.csv")) %>% 
+  select(year, MOCL, MOCL_fall) %>%
+  filter(!is.na(year)) #remove last row of NAs
+```
+
+```{r}
+mocl1 <- left_join(mocl, season_data)
+```
+
+
+
+
+
+
+

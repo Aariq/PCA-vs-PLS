@@ -4,11 +4,12 @@ library(here)
 
 dat2 = read_csv(here("data", "mourning-cloaks", "MOCLclim.csv"))
 head(dat2)
-View(dat2) #there's a trailing row of NAs
+# View(dat2) #there's a trailing row of NAs
 
 dat2 <- dat2 %>% filter(!is.na(year))
 # I added a response variable of mourning cloak sightings after June 30 because they fly as adults in spring then lay eggs and the 2nd gen flys in fall.  Could also play around with timing of these responses - I thought fall adults would  work well because summer drought was a weak predictor of total sightings
-m0 = plsr(MOCL_fall ~ WiTemp+SprTemp+SuTemp+FaTemp_prev+WiPDSI+SprPDSI+SuPDSI+FaPDSI, validation = "CV", data = dat2)
+m0 = plsr(MOCL_fall ~ WiTemp+SprTemp+SuTemp+FaTemp_prev+WiPDSI+SprPDSI+SuPDSI+FaPDSI, validation = "CV", data = dat2,
+          ncomp=1)
 summary(m0)
 loadings(m0)
 # first axis is cool, wet years, especially in the summer/spring when they are caterpillars/adults (overwinter as adults)
@@ -38,3 +39,17 @@ plot(scores(m0)[,2], scores(m1)[,2])
 
 plot(scores(m0)[,1], dat2$MOCL_fall[1:20])
 plot(scores(m1)[,2], dat2$MOCL_fall[1:20])
+
+
+
+library(ropls)
+m0.ropls <-
+  opls(select(dat2, WiTemp, SprTemp, SuTemp, FaTemp_prev, WiPDSI, SprPDSI, SuPDSI, FaPDSI),
+       dat2$MOCL_fall,
+       permI = 500)
+get_loadings(m0.ropls) %>% arrange(desc(abs(p1)))
+
+m0.pca <-
+  opls(select(dat2, WiTemp, SprTemp, SuTemp, FaTemp_prev, WiPDSI, SprPDSI, SuPDSI, FaPDSI))
+
+get_loadings(m0.pca)%>% arrange(desc(abs(p1)))
