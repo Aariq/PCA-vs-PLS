@@ -22,16 +22,16 @@ library(colorspace)
 I'll read in the datasets from "Generating Datasets.Rmd" and pick individual datasets to make figures
 
 ```{r}
-null.list <- read_rds(here("data", "null.rds"))
-control.list <- read_rds(here("data", "control.rds"))
-needle.list <- read_rds(here("data", "needle.rds"))
+null.list <- read_rds(here::here("data", "null.rds"))
+control.list <- read_rds(here::here("data", "control.rds"))
+needle.list <- read_rds(here::here("data", "needle.rds"))
 ```
 
 Sample one dataset as an example
 
 ```{r}
 # set.seed(999)
-set.seed(333)
+set.seed(888)
 null <- sample(null.list, 1)[[1]]
 control <- sample(control.list, 1)[[1]]
 needle <- sample(needle.list, 1)[[1]]
@@ -61,10 +61,10 @@ null.cor.p <-
 
 ## PCA and PLS-DA for Null
 
-```{r include=FALSE}
-null.pca <- opls(select(null, -group), plot = FALSE)
+```{r}
+null.pca <- opls(select(null, -group), plot = TRUE)
 # null.pls <- opls(select(null, -group), null$group, plot = FALSE, permI = 500)
-null.pls <- opls(select(null, -group), null$group, plot = FALSE, permI = 500, predI = 2)
+null.pls <- opls(select(null, -group), null$group, plot = TRUE, permI = 500, predI = 2)
 ```
 
 ## Create plots for Null
