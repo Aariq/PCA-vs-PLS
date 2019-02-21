@@ -2999,11 +2999,12 @@ control &lt;- read_rds(here(&quot;data&quot;, &quot;control.rds&quot;))</code></
 <h3>Null PCAs</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBtYXAgdGhlIHBjYSBmdW5jdGlvbiB0byBhbGwgZGF0YXNldHNcbm51bGwucGNhcy50cnkgPC1cbiAgbnVsbCAlPiUgXG4gIG1hcCh+c2FmZV9vcGxzKHNlbGVjdCguLCAtZ3JvdXApKSlcbiMgR2V0IGp1c3QgdGhlIHN1Y2Nlc3NmdWwgbW9kZWxzXG5udWxsLnBjYXMgPC1cbiAgbnVsbC5wY2FzLnRyeSAlPiVcbiAgbWFwKFwicmVzdWx0XCIpICU+JSAjZ2V0IG9ubHkgcmVzdWx0c1xuICBkaXNjYXJkKGlzLm51bGwpICNnZXQgcmlkIG9mIGFueSB3aXRoIE5VTEwgcmVzdWx0cyAoYW5kIHRoZXJlZm9yZSBhbiBlcnJvcilcbmBgYCJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBtYXAgdGhlIHBjYSBmdW5jdGlvbiB0byBhbGwgZGF0YXNldHNcbm51bGwucGNhcy50cnkgPC1cbiAgbnVsbCAlPiUgXG4gIG1hcCh+c2FmZV9vcGxzKHNlbGVjdCguLCAtZ3JvdXApKSlcblxuIyBHZXQganVzdCB0aGUgc3VjY2Vzc2Z1bCBtb2RlbHNcbm51bGwucGNhcyA8LVxuICBudWxsLnBjYXMudHJ5ICU+JVxuICBtYXAoXCJyZXN1bHRcIikgJT4lICNnZXQgb25seSByZXN1bHRzXG4gIGRpc2NhcmQoaXMubnVsbCkgI2dldCByaWQgb2YgYW55IHdpdGggTlVMTCByZXN1bHRzIChhbmQgdGhlcmVmb3JlIGFuIGVycm9yKVxuYGBgIn0= -->
 <pre class="r"><code># map the pca function to all datasets
 null.pcas.try &lt;-
   null %&gt;% 
   map(~safe_opls(select(., -group)))
+
 # Get just the successful models
 null.pcas &lt;-
   null.pcas.try %&gt;%
@@ -3036,10 +3037,11 @@ null.pcas &lt;-
 <h3>Null PLSs</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubnVsbC5wbHMudHJ5IDwtXG4gIG51bGwgJT4lIFxuICBtYXAofiBzYWZlX29wbHMoc2VsZWN0KC4sIC1ncm91cCksIC4kZ3JvdXAsIHBlcm1JID0gNTAwKSkgI21hcCB0aGUgb3Bsc1xuIyBnZXQganVzdCBzdWNjZXNmdWwgbW9kZWxzXG5udWxsLnBscyA8LVxuICBudWxsLnBscy50cnkgJT4lIFxuICBtYXAoXCJyZXN1bHRcIikgJT4lIFxuICBkaXNjYXJkKGlzLm51bGwpXG5gYGAifQ== -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubnVsbC5wbHMudHJ5IDwtXG4gIG51bGwgJT4lIFxuICBtYXAofiBzYWZlX29wbHMoc2VsZWN0KC4sIC1ncm91cCksIC4kZ3JvdXAsIHBlcm1JID0gNTAwKSkgI21hcCB0aGUgb3Bsc1xuXG4jIGdldCBqdXN0IHN1Y2Nlc2Z1bCBtb2RlbHNcbm51bGwucGxzIDwtXG4gIG51bGwucGxzLnRyeSAlPiUgXG4gIG1hcChcInJlc3VsdFwiKSAlPiUgXG4gIGRpc2NhcmQoaXMubnVsbClcbmBgYCJ9 -->
 <pre class="r"><code>null.pls.try &lt;-
   null %&gt;% 
   map(~ safe_opls(select(., -group), .$group, permI = 500)) #map the opls
+
 # get just succesful models
 null.pls &lt;-
   null.pls.try %&gt;% 
@@ -3093,11 +3095,12 @@ Select a number of predictive components of 1 if you want the algorithm to compu
 <h3>Control PCAs</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBtYXAgdGhlIHBjYSBmdW5jdGlvbiB0byBhbGwgZGF0YXNldHNcbmNvbnRyb2wucGNhcy50cnkgPC1cbiAgbWFwKGNvbnRyb2wsXG4gICAgICB+c2FmZV9vcGxzKHNlbGVjdCguLCAtZ3JvdXApKSlcbmNvbnRyb2wucGNhcyA8LVxuICBjb250cm9sLnBjYXMudHJ5ICU+JVxuICBtYXAoXCJyZXN1bHRcIikgJT4lIFxuICBkaXNjYXJkKGlzLm51bGwpXG5gYGAifQ== -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBtYXAgdGhlIHBjYSBmdW5jdGlvbiB0byBhbGwgZGF0YXNldHNcbmNvbnRyb2wucGNhcy50cnkgPC1cbiAgbWFwKGNvbnRyb2wsXG4gICAgICB+c2FmZV9vcGxzKHNlbGVjdCguLCAtZ3JvdXApKSlcblxuY29udHJvbC5wY2FzIDwtXG4gIGNvbnRyb2wucGNhcy50cnkgJT4lXG4gIG1hcChcInJlc3VsdFwiKSAlPiUgXG4gIGRpc2NhcmQoaXMubnVsbClcbmBgYCJ9 -->
 <pre class="r"><code># map the pca function to all datasets
 control.pcas.try &lt;-
   map(control,
       ~safe_opls(select(., -group)))
+
 control.pcas &lt;-
   control.pcas.try %&gt;%
   map(&quot;result&quot;) %&gt;% 
@@ -3143,10 +3146,11 @@ NULL
 <h3>Control PLS-DAs</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY29udHJvbC5wbHMudHJ5IDwtXG4gIG1hcChjb250cm9sLFxuICAgICAgfiBzYWZlX29wbHMoc2VsZWN0KC4sIC1ncm91cCksIC4kZ3JvdXAsIHBlcm1JID0gNTAwKSlcbmNvbnRyb2wucGxzIDwtXG4gIGNvbnRyb2wucGxzLnRyeSAlPiUgXG4gIG1hcChcInJlc3VsdFwiKSAlPiUgXG4gIGRpc2NhcmQoaXMubnVsbClcbmBgYCJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY29udHJvbC5wbHMudHJ5IDwtXG4gIG1hcChjb250cm9sLFxuICAgICAgfiBzYWZlX29wbHMoc2VsZWN0KC4sIC1ncm91cCksIC4kZ3JvdXAsIHBlcm1JID0gNTAwKSlcblxuY29udHJvbC5wbHMgPC1cbiAgY29udHJvbC5wbHMudHJ5ICU+JSBcbiAgbWFwKFwicmVzdWx0XCIpICU+JSBcbiAgZGlzY2FyZChpcy5udWxsKVxuYGBgIn0= -->
 <pre class="r"><code>control.pls.try &lt;-
   map(control,
       ~ safe_opls(select(., -group), .$group, permI = 500))
+
 control.pls &lt;-
   control.pls.try %&gt;% 
   map(&quot;result&quot;) %&gt;% 
@@ -3182,10 +3186,11 @@ control.pls &lt;-
 <h3>Needle PCAs</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubmVlZGxlLnBjYXMudHJ5IDwtXG4gIG1hcChuZWVkbGUsXG4gICAgICB+c2FmZV9vcGxzKHNlbGVjdCguLCAtZ3JvdXApKSlcbm5lZWRsZS5wY2FzIDwtXG4gIG5lZWRsZS5wY2FzLnRyeSAlPiUgXG4gIG1hcChcInJlc3VsdFwiKSAlPiUgXG4gIGRpc2NhcmQoaXMubnVsbClcbmBgYCJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubmVlZGxlLnBjYXMudHJ5IDwtXG4gIG1hcChuZWVkbGUsXG4gICAgICB+c2FmZV9vcGxzKHNlbGVjdCguLCAtZ3JvdXApKSlcblxubmVlZGxlLnBjYXMgPC1cbiAgbmVlZGxlLnBjYXMudHJ5ICU+JSBcbiAgbWFwKFwicmVzdWx0XCIpICU+JSBcbiAgZGlzY2FyZChpcy5udWxsKVxuYGBgIn0= -->
 <pre class="r"><code>needle.pcas.try &lt;-
   map(needle,
       ~safe_opls(select(., -group)))
+
 needle.pcas &lt;-
   needle.pcas.try %&gt;% 
   map(&quot;result&quot;) %&gt;% 
@@ -3217,10 +3222,11 @@ needle.pcas &lt;-
 <h3>Needle PLS-DAs</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubmVlZGxlLnBscy50cnkgPC1cbiAgbWFwKG5lZWRsZSxcbiAgICAgIH4gc2FmZV9vcGxzKHNlbGVjdCguLCAtZ3JvdXApLCAuJGdyb3VwLCBwZXJtSSA9IDUwMCkpXG5uZWVkbGUucGxzIDwtXG4gIG5lZWRsZS5wbHMudHJ5ICU+JSBcbiAgbWFwKFwicmVzdWx0XCIpICU+JSBcbiAgZGlzY2FyZChpcy5udWxsKVxuYGBgIn0= -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubmVlZGxlLnBscy50cnkgPC1cbiAgbWFwKG5lZWRsZSxcbiAgICAgIH4gc2FmZV9vcGxzKHNlbGVjdCguLCAtZ3JvdXApLCAuJGdyb3VwLCBwZXJtSSA9IDUwMCkpXG5cbm5lZWRsZS5wbHMgPC1cbiAgbmVlZGxlLnBscy50cnkgJT4lIFxuICBtYXAoXCJyZXN1bHRcIikgJT4lIFxuICBkaXNjYXJkKGlzLm51bGwpXG5gYGAifQ== -->
 <pre class="r"><code>needle.pls.try &lt;-
   map(needle,
       ~ safe_opls(select(., -group), .$group, permI = 500))
+
 needle.pls &lt;-
   needle.pls.try %&gt;% 
   map(&quot;result&quot;) %&gt;% 
@@ -3255,10 +3261,11 @@ needle.pls &lt;-
 <h3>Red Herring PCAs</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaGVycmluZy5wY2FzLnRyeSA8LVxuICBtYXAocmVkX2hlcnJpbmcsXG4gICAgICB+c2FmZV9vcGxzKHNlbGVjdCguLCAtZ3JvdXApKSlcbmhlcnJpbmcucGNhcyA8LVxuICBoZXJyaW5nLnBjYXMudHJ5ICU+JSBcbiAgbWFwKFwicmVzdWx0XCIpICU+JSBcbiAgZGlzY2FyZChpcy5udWxsKVxuYGBgIn0= -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaGVycmluZy5wY2FzLnRyeSA8LVxuICBtYXAocmVkX2hlcnJpbmcsXG4gICAgICB+c2FmZV9vcGxzKHNlbGVjdCguLCAtZ3JvdXApKSlcblxuaGVycmluZy5wY2FzIDwtXG4gIGhlcnJpbmcucGNhcy50cnkgJT4lIFxuICBtYXAoXCJyZXN1bHRcIikgJT4lIFxuICBkaXNjYXJkKGlzLm51bGwpXG5gYGAifQ== -->
 <pre class="r"><code>herring.pcas.try &lt;-
   map(red_herring,
       ~safe_opls(select(., -group)))
+
 herring.pcas &lt;-
   herring.pcas.try %&gt;% 
   map(&quot;result&quot;) %&gt;% 
@@ -3290,10 +3297,11 @@ herring.pcas &lt;-
 <h3>Red Herring PLS-DAs</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaGVycmluZy5wbHMudHJ5IDwtXG4gIG1hcChyZWRfaGVycmluZyxcbiAgICAgIH4gc2FmZV9vcGxzKHNlbGVjdCguLCAtZ3JvdXApLCAuJGdyb3VwLCBwZXJtSSA9IDUwMCkpXG5oZXJyaW5nLnBscyA8LVxuICBoZXJyaW5nLnBscy50cnkgJT4lIFxuICBtYXAoXCJyZXN1bHRcIikgJT4lIFxuICBkaXNjYXJkKGlzLm51bGwpXG5gYGAifQ== -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaGVycmluZy5wbHMudHJ5IDwtXG4gIG1hcChyZWRfaGVycmluZyxcbiAgICAgIH4gc2FmZV9vcGxzKHNlbGVjdCguLCAtZ3JvdXApLCAuJGdyb3VwLCBwZXJtSSA9IDUwMCkpXG5cbmhlcnJpbmcucGxzIDwtXG4gIGhlcnJpbmcucGxzLnRyeSAlPiUgXG4gIG1hcChcInJlc3VsdFwiKSAlPiUgXG4gIGRpc2NhcmQoaXMubnVsbClcbmBgYCJ9 -->
 <pre class="r"><code>herring.pls.try &lt;-
   map(red_herring,
       ~ safe_opls(select(., -group), .$group, permI = 500))
+
 herring.pls &lt;-
   herring.pls.try %&gt;% 
   map(&quot;result&quot;) %&gt;% 
@@ -3330,10 +3338,31 @@ herring.pls &lt;-
 <p><strong>Control</strong></p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibmNvbCI6OCwibnJvdyI6MX0sInJkZiI6Ikg0c0lBQUFBQUFBQUF3dHlpVERpaXVCaVlHQmdZbUJtWldSZ1lnWXlXWmlBQkNNREN3TW5pSzVnWUdBV0JqSTRnSmdQSkdEL2d2OUo1Y1E5WVhEK3F5M2JkUUtuTDRMemk3VkQzOHZmZlFQbko1cXd2UExxRVlYek56WDVSTzB5UHdUbnI5ZndsK3hlOEFyT241VGcwYzVvWlFQbmUzMzUxbk4yK1M4MGg3SG1KZWFtRmdNWkFtREhRUVRaQTQzaWMxTVQ4MkRjSUJRdVJ3RTZIMVU1SzVCYm5BTGpCQ0Z4MkFwUWVSQ0ZxQTdpTE1vdjE0TTVpaGNVcEExQTRqOFFvTHM4T1NleEdPWnltQ0JYU21KSm9sNWFFVkEva1BjUFRRdDdma0ZKWm40ZVVCTVRLQzVZMFRRekZxRUpDSlRtZ1Z5U29wdWNVWnFYcld0b0FiSUJMQThCdkZBMkl4S2JBMkluMDMrb1dhd3czNmJtcFdmbXBjSWNuNU9ZbEpvRDVmQUJ2UXoyc1Y1QlVXWmVDY3dyUU5GaXZaTDhra1NZT3E3ay9CeVlDTmh6RFA4QVhUc1BYbm9DQUFBPSJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY29udHJvbC5wbHMgJT4lXG4gIG1hcCh+Z2V0X21vZGVsaW5mbyguKSkgJT4lXG4gIG1hcF9kZnIofmxpc3QoUTIgPSBwbHVjayguLCAyLCBcIlEyKGN1bSlcIiksXG4gICAgICAgICAgICAgICAgUjIgPSBwbHVjayguLCAyLCBcIlIyWShjdW0pXCIpLFxuICAgICAgICAgICAgICAgIHBSMiA9IHBsdWNrKC4sIDIsIFwicFIyWVwiKSxcbiAgICAgICAgICAgICAgICBwUTIgPSBwbHVjayguLCAyLCBcInBRMlwiKSksXG4gICAgICAgICAgLmlkID0gXCJkYXRhc2V0XCIpICU+JSBcbiAgc3VtbWFyaXplX2lmKGlzLm51bWVyaWMsIGZ1bnMobWVhbiwgc2QpKVxuYGBgIn0= -->
+<pre class="r"><code>control.pls %&gt;%
+  map(~get_modelinfo(.)) %&gt;%
+  map_dfr(~list(Q2 = pluck(., 2, &quot;Q2(cum)&quot;),
+                R2 = pluck(., 2, &quot;R2Y(cum)&quot;),
+                pR2 = pluck(., 2, &quot;pR2Y&quot;),
+                pQ2 = pluck(., 2, &quot;pQ2&quot;)),
+          .id = &quot;dataset&quot;) %&gt;% 
+  summarize_if(is.numeric, funs(mean, sd))</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiZnVucygpIGlzIHNvZnQgZGVwcmVjYXRlZCBhcyBvZiBkcGx5ciAwLjguMFxucGxlYXNlIHVzZSBsaXN0KCkgaW5zdGVhZFxuXG4jIEJlZm9yZTpcbmZ1bnMobmFtZSA9IGYoLilcblxuIyBBZnRlcjogXG5saXN0KG5hbWUgPSB+ZiguKSlcblx1MDAxYls5MG1UaGlzIHdhcm5pbmcgaXMgZGlzcGxheWVkIG9uY2UgcGVyIHNlc3Npb24uXHUwMDFiWzM5bVxuIn0= -->
+<pre><code>funs() is soft deprecated as of dplyr 0.8.0
+please use list() instead
+
+# Before:
+funs(name = f(.)
+
+# After: 
+list(name = ~f(.))
+[90mThis warning is displayed once per session.[39m</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibmNvbCI6OCwibnJvdyI6MX0sInJkZiI6Ikg0c0lBQUFBQUFBQUF3dHlpVERpaXVCaVlHQmdZbUJtWldSZ1lnWXlXWmlBQkNNREN3TW5pSzVnWUdBV0JqSTRnSmdQSkdEL2d2OUo1Y1E5WVhEK3F5M2JkUUtuTDRMeml5OUx6MDc3YVF6bkp6eFFFbEg3VndUbmIycnlpZHBsZmdqT1g2L2hMOW05NEJXY1ArSDNkWW5uRmVmaGZGdUQrUkd2ajM1QmN4aHJYbUp1YWpHUUlRQjJIRVNRUGRBb1BqYzFNUS9HRFVMaGNoU2c4MUdWc3dLNXhTa3dUaEFTaDYwQWxRZFJpT29nenFMOGNqMllvM2hCUWRvQUpQNERBYnJMazNNU2kyRXVod2x5cFNTV0pPcWxGUUgxQTNuLzBMU3c1eGVVWk9ibkFUVXhnZUtDRlUwell4R2FnRUJwSHNnbEtickpHYVY1MmJwR2xpQWJ3UElRd0F0bE15S3hPU0IyTXYySG1zVUs4MjFxWG5wbVhpck04VG1KU2FrNVVBNGYwTXRnSCtzVkZHWG1sY0M4QWhRdDFpdkpMMG1FcWVOS3pzK0JpWUE5eC9BUEFNQ3hsNVo2QWdBQSJ9 -->
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["Q2_mean"],"name":[1],"type":["dbl"],"align":["right"]},{"label":["R2_mean"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["pR2_mean"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["pQ2_mean"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Q2_sd"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["R2_sd"],"name":[6],"type":["dbl"],"align":["right"]},{"label":["pR2_sd"],"name":[7],"type":["dbl"],"align":["right"]},{"label":["pQ2_sd"],"name":[8],"type":["dbl"],"align":["right"]}],"data":[{"1":"0.75194","2":"0.83456","3":"0.00468","4":"0.0021","5":"0.07230069","6":"0.06085441","7":"0.01794542","8":"0.0008226589"}],"options":{"columns":{"min":{},"max":[10],"total":[8]},"rows":{"min":[10],"max":[10],"total":[1]},"pages":{}}}
+{"columns":[{"label":["Q2_mean"],"name":[1],"type":["dbl"],"align":["right"]},{"label":["R2_mean"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["pR2_mean"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["pQ2_mean"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Q2_sd"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["R2_sd"],"name":[6],"type":["dbl"],"align":["right"]},{"label":["pR2_sd"],"name":[7],"type":["dbl"],"align":["right"]},{"label":["pQ2_sd"],"name":[8],"type":["dbl"],"align":["right"]}],"data":[{"1":"0.75194","2":"0.83456","3":"0.00484","4":"0.00206","5":"0.07230069","6":"0.06085441","7":"0.01658569","8":"0.000445403"}],"options":{"columns":{"min":{},"max":[10],"total":[8]},"rows":{"min":[10],"max":[10],"total":[1]},"pages":{}}}
   </script>
 </div>
 <!-- rnb-frame-end -->
@@ -3342,10 +3371,20 @@ herring.pls &lt;-
 <p><strong>Null</strong></p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibmNvbCI6OCwibnJvdyI6MX0sInJkZiI6Ikg0c0lBQUFBQUFBQUF3dHlpVERpaXVCaVlHQmdZbUJtWldSZ1lnWXlXWmlBQkNNREN3TW5pSzVnWUdBV0JqSTRnSmdQSkdCL2hsT0dvOFRwQkp6L3FGajNLK3VGWDNEKytTYnRmYWRXZDhINVc3cG1uNyt5bnd2T1AvUnRWK20yU0lUODBaZXlydHR6ZDhINWg4c2kyNkljZGVEOE5TeThkeU1EbDZJNWpEVXZNVGUxR01nUUFEc09Jc2dlYUJTZm01cVlCK01Hb1hBNUN0RDVxTXBaZ2R6aUZCZ25DSW5EVm9ES2d5aEVkUkJuVVg2NUhzeFJ2S0FnYlFBUy80RUEzZVhKT1luRk1KZkRCTGxTRWtzUzlkS0tnUHFCdkg5b1d0anpDMG95OC9PQW1waEFjY0dLcHBteENFMUFvRFFQNUpJVTNlU00wcnhzWFVOTGtBMWdlUWpnaGJJWmtkZ2NFRHVaL2tQTllvWDVOalV2UFRNdkZlYjRuTVNrMUJ3b2h3L29aYkNQOVFxS012TktZRjRCaWhicmxlU1hKTUxVY1NYbjU4QkV3SjVqK0FjQWtEdmlxWG9DQUFBPSJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubnVsbC5wbHMgJT4lXG4gIG1hcCh+Z2V0X21vZGVsaW5mbyguKSkgJT4lXG4gIG1hcF9kZnIofmxpc3QoUTIgPSBwbHVjayguLCAyLCBcIlEyKGN1bSlcIiksXG4gICAgICAgICAgICAgICAgUjIgPSBwbHVjayguLCAyLCBcIlIyWShjdW0pXCIpLFxuICAgICAgICAgICAgICAgIHBSMiA9IHBsdWNrKC4sIDIsIFwicFIyWVwiKSxcbiAgICAgICAgICAgICAgICBwUTIgPSBwbHVjayguLCAyLCBcInBRMlwiKSksXG4gICAgICAgICAgLmlkID0gXCJkYXRhc2V0XCIpICU+JSBcbiAgc3VtbWFyaXplX2lmKGlzLm51bWVyaWMsIGZ1bnMobWVhbiwgc2QpKVxuYGBgIn0= -->
+<pre class="r"><code>null.pls %&gt;%
+  map(~get_modelinfo(.)) %&gt;%
+  map_dfr(~list(Q2 = pluck(., 2, &quot;Q2(cum)&quot;),
+                R2 = pluck(., 2, &quot;R2Y(cum)&quot;),
+                pR2 = pluck(., 2, &quot;pR2Y&quot;),
+                pQ2 = pluck(., 2, &quot;pQ2&quot;)),
+          .id = &quot;dataset&quot;) %&gt;% 
+  summarize_if(is.numeric, funs(mean, sd))</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibmNvbCI6OCwibnJvdyI6MX0sInJkZiI6Ikg0c0lBQUFBQUFBQUF3dHlpVERpaXVCaVlHQmdZbUJtWldSZ1lnWXlXWmlBQkNNREN3TW5pSzVnWUdBV0JqSTRnSmdQSkdCL2hsT0dvOFRwQkp6L3FGajNLK3VGWDNEKytUV3ltbmVLWXVEOHJiTnQyVTk0eDhINWg3N3RLdDBXMlFYbkgzMHA2N285ZHhlY2Y5am8yNWxQWVFWdy9nYTJXejN5enk2ak9ZdzFMekUzdFJqSUVBQTdEaUxJSG1nVW41dWFtQWZqQnFGd09RclErYWpLV1lIYzRoUVlKd2lKdzFhQXlvTW9SSFVRWjFGK3VSN01VYnlnSUcwQUV2K0JBTjNseVRtSnhUQ1h3d1M1VWhKTEV2WFNpb0Q2Z2J4L2FGclk4d3RLTXZQemdKcVlRSEhCaXFhWnNRaE5RS0EwRCtTU0ZOM2tqTks4YkYxakE1QU5ZSGtJNElXeUdaSFlIQkE3bWY1RHpXS0YrVFkxTHowekx4WG0rSnpFcE5RY0tJY1A2R1d3ai9VS2lqTHpTbUJlQVlvVzY1WGtseVRDMUhFbDUrZkFSTUNlWS9nSEFEems4dEY2QWdBQSJ9 -->
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["Q2_mean"],"name":[1],"type":["dbl"],"align":["right"]},{"label":["R2_mean"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["pR2_mean"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["pQ2_mean"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Q2_sd"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["R2_sd"],"name":[6],"type":["dbl"],"align":["right"]},{"label":["pR2_sd"],"name":[7],"type":["dbl"],"align":["right"]},{"label":["pQ2_sd"],"name":[8],"type":["dbl"],"align":["right"]}],"data":[{"1":"0.219028","2":"0.57656","3":"0.24616","4":"0.08024","5":"0.1481546","6":"0.1711766","7":"0.1520492","8":"0.05471843"}],"options":{"columns":{"min":{},"max":[10],"total":[8]},"rows":{"min":[10],"max":[10],"total":[1]},"pages":{}}}
+{"columns":[{"label":["Q2_mean"],"name":[1],"type":["dbl"],"align":["right"]},{"label":["R2_mean"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["pR2_mean"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["pQ2_mean"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Q2_sd"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["R2_sd"],"name":[6],"type":["dbl"],"align":["right"]},{"label":["pR2_sd"],"name":[7],"type":["dbl"],"align":["right"]},{"label":["pQ2_sd"],"name":[8],"type":["dbl"],"align":["right"]}],"data":[{"1":"0.219028","2":"0.57656","3":"0.24744","4":"0.0844","5":"0.1481546","6":"0.1711766","7":"0.1499928","8":"0.06260458"}],"options":{"columns":{"min":{},"max":[10],"total":[8]},"rows":{"min":[10],"max":[10],"total":[1]},"pages":{}}}
   </script>
 </div>
 <!-- rnb-frame-end -->
@@ -3354,10 +3393,19 @@ herring.pls &lt;-
 <p><strong>Needle-in-a-haystack</strong></p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibmNvbCI6NiwibnJvdyI6MX0sInJkZiI6Ikg0c0lBQUFBQUFBQUF3dHlpVERpaXVCaVlHQmdZbUJtWldSZ1lnWXlXWmlBQkNNREN3TW5pSzVnWUdBV0JqTFlnSmdQSkdEL2JJMnM1cDJpR0RqL0xjUEY3ZUlSaitEOHBPdkZFbjhDUE9EODNidGZpclBVV01QNXkyTUZpdjBQejREekE1SjhMMzFjK1IzTll0YTh4TnpVWWlCREFHdzVSSkE5MENnK056VXhEOFlOUXVGeUZLQktzd0s1eFNrd1RoQVNoNjBBSW9WcUpXZFJmcmtlekZwZVVLQTBBSW4vUUlEdXR1U2N4R0tZMjJDQ1hDbUpKWWw2YVVWQS9VRGVQelF0N1BrRkpabjVlVUJOVEtEUVpFWFR6RmlFSmlCUW1nZHlTWXB1Y2tacFhyYXVvUW5JQnJBOEJQQkMyWXhJYkRhSW5Vei9vV2F4d255Ym1wZWVtWmNLYzN4T1lsSnFEcFREQi9ReTJNZDZCVVdaZVNVd3J3QkZpL1ZLOGtzU1llcTRrdk56WUNKZ3p6SDhBd0Q5TjVMWlBBSUFBQT09In0= -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubmVlZGxlLnBscyAlPiVcbiAgbWFwKH5nZXRfbW9kZWxpbmZvKC4pKSAlPiVcbiAgbWFwX2Rmcih+bGlzdChRMiA9IHBsdWNrKC4sIDIsIFwiUTIoY3VtKVwiKSxcbiAgICAgICAgICAgICAgICBSMiA9IHBsdWNrKC4sIDIsIFwiUjJZKGN1bSlcIiksXG4gICAgICAgICAgICAgICAgcFEyID0gcGx1Y2soLiwgMiwgXCJwUTJcIikpLFxuICAgICAgICAgIC5pZCA9IFwiZGF0YXNldFwiKSAlPiUgXG4gIHN1bW1hcml6ZV9pZihpcy5udW1lcmljLCBmdW5zKG1lYW4sIHNkKSlcbmBgYCJ9 -->
+<pre class="r"><code>needle.pls %&gt;%
+  map(~get_modelinfo(.)) %&gt;%
+  map_dfr(~list(Q2 = pluck(., 2, &quot;Q2(cum)&quot;),
+                R2 = pluck(., 2, &quot;R2Y(cum)&quot;),
+                pQ2 = pluck(., 2, &quot;pQ2&quot;)),
+          .id = &quot;dataset&quot;) %&gt;% 
+  summarize_if(is.numeric, funs(mean, sd))</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibmNvbCI6NiwibnJvdyI6MX0sInJkZiI6Ikg0c0lBQUFBQUFBQUF3dHlpVERpaXVCaVlHQmdZbUJtWldSZ1lnWXlXWmlBQkNNREN3TW5pSzVnWUdBV0JqTFlnSmdQSkdEL2JJMnM1cDJpR0RqL0xjUEY3ZUlSaitEOHhQYm5CL0lrZDhMNXUzZS9GR2Vwc1liemw4Y0tGUHNmbmdIbk81czkzaDl3eVJqTll0YTh4TnpVWWlCREFHdzVSSkE5MENnK056VXhEOFlOUXVGeUZLQktzd0s1eFNrd1RoQVNoNjBBSW9WcUpXZFJmcmtlekZwZVVLQTBBSW4vUUlEdXR1U2N4R0tZMjJDQ1hDbUpKWWw2YVVWQS9VRGVQelF0N1BrRkpabjVlVUJOVEtEUVpFWFR6RmlFSmlCUW1nZHlTWXB1Y2tacFhyYXVzU0hJQnJBOEJQQkMyWXhJYkRhSW5Vei9vV2F4d255Ym1wZWVtWmNLYzN4T1lsSnFEcFREQi9ReTJNZDZCVVdaZVNVd3J3QkZpL1ZLOGtzU1llcTRrdk56WUNKZ3p6SDhBd0FZZGVDelBBSUFBQT09In0= -->
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["Q2_mean"],"name":[1],"type":["dbl"],"align":["right"]},{"label":["R2_mean"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["pQ2_mean"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Q2_sd"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["R2_sd"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["pQ2_sd"],"name":[6],"type":["dbl"],"align":["right"]}],"data":[{"1":"0.70851","2":"0.90635","3":"0.0023","4":"0.108336","5":"0.0456319","6":"0.001"}],"options":{"columns":{"min":{},"max":[10],"total":[6]},"rows":{"min":[10],"max":[10],"total":[1]},"pages":{}}}
+{"columns":[{"label":["Q2_mean"],"name":[1],"type":["dbl"],"align":["right"]},{"label":["R2_mean"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["pQ2_mean"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Q2_sd"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["R2_sd"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["pQ2_sd"],"name":[6],"type":["dbl"],"align":["right"]}],"data":[{"1":"0.70851","2":"0.90635","3":"0.00214","4":"0.108336","5":"0.0456319","6":"0.0005863773"}],"options":{"columns":{"min":{},"max":[10],"total":[6]},"rows":{"min":[10],"max":[10],"total":[1]},"pages":{}}}
   </script>
 </div>
 <!-- rnb-frame-end -->
@@ -3366,10 +3414,19 @@ herring.pls &lt;-
 <p><strong>Red Herring</strong></p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibmNvbCI6NiwibnJvdyI6MX0sInJkZiI6Ikg0c0lBQUFBQUFBQUF3dHlpVERpaXVCaVlHQmdZbUJtWldSZ1lnWXlXWmlBQkNNREN3TW5pSzVnWUdBV0JqTFlnSmdQSkdEL0pzZysvY3Z0QjNEK3V5U0xXemFLRW5CK1FvKzlIWFBCT1RoL3hjVDNoMjBYZjRMejU4cGs3YmRnbkFqbmE1azllaTNqckk5bU1XdGVZbTVxTVpBaEFMWWNJc2dlYUJTZm01cVlCK01Hb1hBNUNsQ2xXWUhjNGhRWUp3aUp3MVlBa1VLMWtyTW92MXdQWmkwdktGQWFnTVIvSUVCM1czSk9ZakhNYlRCQnJwVEVra1M5dENLZ2ZpRHZINW9XOXZ5Q2tzejhQS0FtSmxCb3NxSnBaaXhDRXhBb3pRTzVKRVUzT2FNMEwxdlgwQlJrQTFnZUFuaWhiRVlrTmh2RVRxYi9VTE5ZWWI1TnpVdlB6RXVGT1Q0bk1TazFCOHJoQTNvWjdHTzlncUxNdkJLWVY0Q2l4WG9sK1NXSk1IVmN5Zms1TUJHdzV4aitBUUIvNzl5M1BBSUFBQT09In0= -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaGVycmluZy5wbHMgJT4lXG4gIG1hcCh+Z2V0X21vZGVsaW5mbyguKSkgJT4lXG4gIG1hcF9kZnIofmxpc3QoUTIgPSBwbHVjayguLCAyLCBcIlEyKGN1bSlcIiksXG4gICAgICAgICAgICAgICAgUjIgPSBwbHVjayguLCAyLCBcIlIyWShjdW0pXCIpLFxuICAgICAgICAgICAgICAgIHBRMiA9IHBsdWNrKC4sIDIsIFwicFEyXCIpKSxcbiAgICAgICAgICAuaWQgPSBcImRhdGFzZXRcIikgJT4lIFxuICBzdW1tYXJpemVfaWYoaXMubnVtZXJpYywgZnVucyhtZWFuLCBzZCkpXG5gYGAifQ== -->
+<pre class="r"><code>herring.pls %&gt;%
+  map(~get_modelinfo(.)) %&gt;%
+  map_dfr(~list(Q2 = pluck(., 2, &quot;Q2(cum)&quot;),
+                R2 = pluck(., 2, &quot;R2Y(cum)&quot;),
+                pQ2 = pluck(., 2, &quot;pQ2&quot;)),
+          .id = &quot;dataset&quot;) %&gt;% 
+  summarize_if(is.numeric, funs(mean, sd))</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibmNvbCI6NiwibnJvdyI6MX0sInJkZiI6Ikg0c0lBQUFBQUFBQUF3dHlpVERpaXVCaVlHQmdZbUJtWldSZ1lnWXlXWmlBQkNNREN3TW5pSzVnWUdBV0JqTFlnSmdQSkdEL0pzZysvY3Z0QjNEK3V5U0xXemFLRW5CK3dqYURsYUxtQytEOEZSUGZIN1pkL0FuT255dVR0ZCtDY1NLY2IxVG82ZnBIZ3czTll0YTh4TnpVWWlCREFHdzVSSkE5MENnK056VXhEOFlOUXVGeUZLQktzd0s1eFNrd1RoQVNoNjBBSW9WcUpXZFJmcmtlekZwZVVLQTBBSW4vUUlEdXR1U2N4R0tZMjJDQ1hDbUpKWWw2YVVWQS9VRGVQelF0N1BrRkpabjVlVUJOVEtEUVpFWFR6RmlFSmlCUW1nZHlTWXB1Y2tacFhyYXVzUkhJQnJBOEJQQkMyWXhJYkdnUU12Mkhtc1VLODIxcVhucG1YaXJNOFRtSlNhazVVQTRmME10Z0grc1ZGR1htbGNDOEFoUXQxaXZKTDBtRXFlTkt6cytCaVlBOXgvQVBBUElXeE5nOEFnQUEifQ== -->
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["Q2_mean"],"name":[1],"type":["dbl"],"align":["right"]},{"label":["R2_mean"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["pQ2_mean"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Q2_sd"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["R2_sd"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["pQ2_sd"],"name":[6],"type":["dbl"],"align":["right"]}],"data":[{"1":"0.88504","2":"0.94949","3":"0.00202","4":"0.04798841","5":"0.02842871","6":"2e-04"}],"options":{"columns":{"min":{},"max":[10],"total":[6]},"rows":{"min":[10],"max":[10],"total":[1]},"pages":{}}}
+{"columns":[{"label":["Q2_mean"],"name":[1],"type":["dbl"],"align":["right"]},{"label":["R2_mean"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["pQ2_mean"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Q2_sd"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["R2_sd"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["pQ2_sd"],"name":[6],"type":["dbl"],"align":["right"]}],"data":[{"1":"0.88504","2":"0.94949","3":"0.00204","4":"0.04798841","5":"0.02842871","6":"0.0002814106"}],"options":{"columns":{"min":{},"max":[10],"total":[6]},"rows":{"min":[10],"max":[10],"total":[1]},"pages":{}}}
   </script>
 </div>
 <!-- rnb-frame-end -->
