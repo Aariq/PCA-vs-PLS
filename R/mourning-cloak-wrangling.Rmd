@@ -28,7 +28,8 @@ raw <- list.files(here::here("data", "mourning-cloaks"), "^19", full.names = TRU
   mutate(month = month.abb[as.numeric(month)]) %>% 
   select(year, month, everything()) %>% 
   select(-ym) %>%
-  janitor::clean_names()
+  janitor::clean_names() %>% 
+  rename(pdsi = "palmer_drought_severity_index_pdsi", avg_temp = "average_temperature", max_temp = "maximum_temperature", min_temp = "minimum_temperature", precip = "precipitation")
 raw
 ```
 
@@ -42,6 +43,8 @@ all_the_vars <-
        ~rename_at(.x,vars(-year, -month), funs(glue("{.y}_{.}")))) %>% 
   map(~select(., -month)) %>% 
   reduce(., left_join, by = "year")
+
+write_csv(all_the_vars, here::here("data", "mourning-cloaks", "monthly weather.csv"))
 ```
 
 summarize, split, combine, add a lagged fall column
@@ -60,11 +63,11 @@ seasonal_summary <-
   group_by(year, season) %>% 
   summarize(sum_cdd = sum(cooling_degree_days),
             sum_hdd = sum(heating_degree_days),
-            sum_precip = sum(precipitation),
-            mean_pdsi = mean(palmer_drought_severity_index_pdsi),
-            mean_avg_temp = mean(average_temperature),
-            mean_max_temp = mean(maximum_temperature),
-            mean_min_temp = mean(minimum_temperature)) %>% 
+            sum_precip = sum(precip),
+            mean_pdsi = mean(pdsi),
+            mean_avg_temp = mean(avg_temp),
+            mean_max_temp = mean(max_temp),
+            mean_min_temp = mean(min_temp)) %>% 
   split(.$season) %>% 
   map2(.x = ., .y = names(.),
        ~rename_at(.x,vars(-year, -season), funs(glue("{.y}_{.}")))) %>% 
@@ -77,6 +80,8 @@ season_data <-
   ungroup() %>% 
   mutate_at(vars(starts_with("Au")), funs(prev = lag)) %>% 
   slice(-1)
+
+write_csv(season_data, here::here("data", "mourning-cloaks", "seasonal weather.csv"))
 ```
 
 read in mourning cloak data and join
