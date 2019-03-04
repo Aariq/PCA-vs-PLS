@@ -9,49 +9,92 @@ library(here)
 library(ropls)
 library(chemhelper)
 library(glue)
+library(raster)
 ```
 
 # Read in Data
 
 Physiological data:
 ```{r}
-tomato.raw <- read_csv(here("data", "Muir et al.", "data.csv"))
+tomato.raw <- read_csv(here::here("data", "literature", "Muir et al.", "data.csv"))
 tomato <-
   tomato.raw %>%
-  select(-X1, -PC2, -PC1)
+  dplyr::select(-X1, -PC2, -PC1)
 tomato
 ```
 
 Species abbreviations and lat long:
 
 ```{r}
-location <- read_csv(here("data", "Muir et al.", "TableS1.csv"))
+location <- read_csv(here::here("data", "literature", "Muir et al.", "TableS1.csv"))
 ```
 
 Join the two
 
 ```{r}
-tomato.1 <- left_join(tomato, location %>% select(Spe, Latitude, Longitude, Taxon)) %>%
+tomato.1 <- 
+  left_join(tomato, location %>% dplyr::select(Spe, Latitude, Longitude, Taxon)) %>%
   filter(!is.na(Latitude))
 tomato.1
+```
+
+# Get climate data
+
+```{r}
+r <- getData("worldclim",var="bio",res=5)
+r <- r[[c(1,12)]]
+names(r) <- c("temp","precip")
+
+coords <- data.frame(x = tomato.1$Longitude, y = tomato.1$Latitude)
+
+points <- SpatialPoints(coords, proj4string = r@crs)
+weather <- extract(r, points) %>% 
+  as_tibble()
+
+tomato.2 <- tomato.1 %>%
+  add_column(temp = weather$temp, precip = weather$precip)
+```
+
+
+```{r}
+write_rds(tomato.2, here::here("data", "literature", "Muir et al.", "tomatoes.rds"))
 ```
 
 # Fit PCA
 
 ```{r}
-tom.pca <- opls(tomato.1 %>% select(lma.leaflet:Rdark), plotL = FALSE)
+tom.pca <- opls(tomato.2 %>% dplyr::select(lma.leaflet:Rdark), plotL = FALSE)
 tom.pca.data <- get_plotdata(tom.pca)
 
 ggplot(tom.pca.data$scores, aes(x = p1, y = p2)) +
-  geom_point(aes(color = tomato.1$Latitude)) +
+  geom_point(aes(color = tomato.2$precip)) +
   scale_color_viridis_c(option = "A", direction = -1) +
   labs(x = glue("P1 ({tom.pca.data$var_explained[1,1] * 100}%)"),
        y = glue("P2 ({tom.pca.data$var_explained[2,1] * 100}%)"))
+```
+```{r}
+get_loadings(tom.pca) %>% 
+  arrange(desc(abs(p2)))
 ```
 
 # Fit PLSR
 
 ```{r}
-tom.plsr <- opls(tomato.1 %>% select(lma.leaflet:Rdark), tomato.1$Latitude, plotL = FALSE)
+tom.plsr <- 
+  opls(tomato.2 %>% dplyr::select(lma.leaflet:Rdark), tomato.2$precip)
+# single component model
 ```
-Not a great model!
+```{r}
+#plot OPLS for the sake of visualization
+tom.plsr <- 
+  opls(tomato.2 %>% dplyr::select(lma.leaflet:Rdark), tomato.2$precip, 
+       plotL = FALSE, permI = 500, predI = 1, orthoI = NA)
+
+plot_opls(tom.plsr)
+```
+```{r}
+get_loadings(tom.plsr) %>% arrange(desc(abs(p1)))
+```
+
+
+YUSSS!!

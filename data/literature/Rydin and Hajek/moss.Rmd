@@ -15,7 +15,7 @@ Not taht interesting.  PCA and PLS show phenolics matter for decomposition
 #Load data
 
 ```{r}
-moss <- read_csv(here("data", "Rydin and Hajek", "bengtsson_etal_2018_LQ.csv"))
+moss <- read_csv(here("data", "literature", "Rydin and Hajek", "bengtsson_etal_2018_LQ.csv"))
 ```
 
 # Subset data

@@ -1,0 +1,21 @@
+---
+title: "Fajardo et al"
+output: html_notebook
+---
+```{r}
+library(tidyverse)
+```
+
+```{r}
+plants <- read_csv("data/literature/Fajardo et al./patagonia_itv_data3_Sept2018 (1).csv")
+```
+
+```{r}
+opls(plants %>% select(-x, -y, -site, -plot, -species, -cover, -gli))
+```
+
+```{r}
+opls(plants %>% select(-x, -y, -site, -plot, -species, -cover, -gli), log(plants$gli), permI = 100)
+```
+
+Not great

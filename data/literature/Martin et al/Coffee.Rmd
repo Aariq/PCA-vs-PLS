@@ -15,7 +15,7 @@ This is worth revisiting!  The PCA and PLS both show similar patterns (separatio
 
 
 ```{r}
-coffee <- read_tsv(here("data", "Martin et al", "Martin et al. Functional Ecology.txt"))
+coffee <- read_tsv(here("data", "literature", "Martin et al", "Martin et al. Functional Ecology.txt"))
 ```
 
 ```{r}
@@ -55,8 +55,8 @@ plot(coffee.pca, typeVc = "correlation")
 This matches the bi-plot figure in the publication.  There is little separation along PC1, which recapitulates the LES (I think?) and no separation along PC2 which represents water use and transpiration.
 
 ```{r}
-coffee.pls <- opls(LES, coffee$treatment)
-get_loadings(coffee.pls) %>% arrange(p2)
+coffee.pls <- opls(LES, coffee$treatment, permI = 500)
+get_loadings(coffee.pls) %>% arrange(desc(abs(p1)))
 opls(LES, coffee$site)
 ```
 Poor performing models for both site and treatment.  No difference in treatment.

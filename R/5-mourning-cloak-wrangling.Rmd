@@ -95,9 +95,14 @@ mocl <-
 
 ```{r}
 mocl1 <- left_join(mocl, season_data)
+write_rds(mocl1, here::here("data", "mourning-cloaks", "mocl-seasonal.rds"))
 ```
 
 
+```{r}
+mocl2 <- left_join(mocl, all_the_vars)
+write_rds(mocl2, here::here("data", "mourning-cloaks", "mocl-monthly.rds"))
+```
 
 
 
