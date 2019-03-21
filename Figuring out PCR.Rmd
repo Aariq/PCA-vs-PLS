@@ -1,0 +1,230 @@
+---
+title: "What's the deal with PCR?"
+output: html_notebook
+---
+
+Goal:
+
+- ~~figure out what pcr() function does~~
+- ~~best way to select # of components to include in regression~~
+- how to get RMSEP from pcr
+- how best to map this to opls()-created pca models
+- Do a regression on a factor or can you get RMSEP from a t-test?
+
+```{r}
+library(holodeck)
+library(ropls)
+library(tidyverse)
+library(iheatmapr)
+```
+
+# Make a test dataset
+
+I'm going to convert the group factor to numeric to simplify the process of figuring out how to do cross validation. Elizabeth and I confirmed that PLS-DA is just PLS with a dummy variable for the groups.
+
+```{r}
+set.seed(420)
+df <- sim_cat(N = 30, n_groups = 2) %>% 
+  sim_covar(p = 5, var = 1, cov = 0.5, name = "cov") %>% 
+  sim_covar(p = 5, var = 1, cov = 0.5, name = "cov2") %>% 
+  # sim_covar(p = 5, var = 1, cov = 0, name = "noise") %>% 
+  group_by(group) %>% 
+  sim_discr(p = 5, var = 1, cov = 0.1, group_means = c(-1, 1), name = "discr") %>% 
+  ungroup() %>% 
+  mutate(group = as.numeric(as.factor(group)))
+```
+
+## Visualize covariance
+
+```{r}
+df %>% 
+  select(-group) %>% 
+  cov() %>% 
+  iheatmap()
+```
+
+
+
+# Do PLSR
+
+```{r}
+plsda <- opls(select(df, -group), df$group, plotL = FALSE)
+```
+
+
+# Do PCA + Regression
+
+```{r}
+pca <- opls(select(df, -group), plotL = FALSE)
+```
+
+
+
+## Get scores
+
+```{r}
+scores <- get_scores(pca)
+df.aug <-
+  df %>% 
+  add_column(p1 = scores$p1, p2 = scores$p2, p3 = scores$p3)
+
+df.aug %>% select(group, p1, p2, p3)
+```
+
+## Regression
+
+```{r}
+m <- glm(as.numeric(group) ~ p1 + p2, family = gaussian, data = df.aug)
+summary(m)
+car::Anova(m)
+```
+
+
+# Cross-validation
+
+Goal: match CV that `opls()` does with PLS-DA models
+
+0. Read worley and powers utilites paper
+1. subset data
+2. run PCA on analysis(data)
+3. Use resulting loadings to predict PC scores on assessment(data)
+4. do glm() on analysis(data)
+5. use glm() to predict group membership for assessment(data)
+6. calculate RMSEP
+
+## 1. Create splits
+
+Using `rsample` package
+
+```{r}
+library(rsample)
+df.cv <- vfold_cv(df, 7)
+```
+
+## 2-5. CV function
+
+First, a predict function to calculate scores from loadings and data
+
+```{r}
+.newdata = sim_cat(N = 6, n_groups = 2) %>% 
+  sim_covar(p = 5, var = 1, cov = 0.5, name = "cov") %>% 
+  sim_covar(p = 5, var = 1, cov = 0.5, name = "cov2") %>% 
+  group_by(group) %>% 
+  sim_discr(p = 5, var = 1, cov = 0.1, group_means = c(-1, 1), name = "discr") %>% 
+  ungroup() %>% 
+  mutate(group = as.numeric(as.factor(group))) %>% 
+  select(-group)
+```
+
+
+```{r}
+mypredict <- function(pca_mod, .newdata) {
+  #get loadings
+  load <-
+    get_loadings(pca_mod) %>%
+    gather(-Variable, key = axis, value = loading) %>%
+    spread(Variable, loading)
+  
+  #check that columns are the same
+  stopifnot(identical(colnames(.newdata), colnames(load %>% select(-axis))))
+  
+  #calc scores from loadings
+  #clunky, but works
+  pred.scores <- load %>% 
+    group_by(axis) %>% 
+    group_map(~{
+      map2_dfc(.x = .newdata, .y = ., ~.x*.y) %>% rowSums(.) %>% as_tibble()
+    }) %>% 
+    mutate(sample = paste0("s", 1:nrow(.newdata))) %>% 
+    spread(axis, value)
+  
+  return(pred.scores)
+}
+```
+
+**Apply this to original data to check if it works!!!**
+
+
+This function should calculate RMSEP for a single split
+
+```{r}
+#model formula
+mod_form <- as.formula(group ~ p1 + p2)
+
+#test split
+split <- df.cv$splits[[1]]
+
+holdout_results <- function(split, ...) {
+  #do pca on analysis(data)
+  pca_mod <- opls(analysis(split) %>% select(-group), printL = FALSE, plotL = FALSE)
+  
+  #get loadings
+  pca_mod@loadingMN
+  
+ 
+}
+
+```
+
+```{r}
+example <- holdout_results(df.cv$splits[[1]],  mod_form)
+
+```
+
+3. apply that function to all the splits
+
+```{r}
+library(purrr)
+df.cv$results <- map(df.cv$splits,
+                      holdout_results,
+                      mod_form)
+df.cv$accuracy <- map_dbl(df.cv$results, function(x) mean(x$correct))
+```
+
+## 2. CV on GLM alone.
+
+If I do this with a binomial model, it doesn't converge.
+
+```{r}
+m.cv <- boot::cv.glm(df.aug, m, K = 7)
+m.cv$delta[2]
+```
+"adjusted cross-validation estimate of the predction error" = `r m.cv$delta[1]`
+
+
+
+
+#Notes from Elizabeth
+
+```{r}
+
+df2 <- df %>% mutate(group_num = as.numeric(group))
+
+plsda <- opls(select(df, -group), df$group, crossvalI = 7)
+
+plsda2 <- opls(select(df2, -group, -group_num), df2$group_num)
+
+predict(plsda)
+plsda@uMN
+plsda@yMeanVn
+plsda@ySdVn
+```
+$$
+RMSEE = \sqrt{\frac{1}{n}\times \sum(A_i-P_i)^2}
+$$
+
+
+Where A_i is actual PLS score for each observation and P_i is mean value for each group
+
+RMSEP is from CV and P_i is not part of the training data.
+
+```{r}
+get_scores(plsda) %>% 
+  group_by(y1) %>% 
+  mutate(mean = mean(p1)) %>% 
+  mutate(sq_err = (p1 - mean)^2) %>% 
+  ungroup() %>% 
+  summarize(SSE = mean(sq_err)) %>% 
+  mutate(RMSEE = sqrt(SSE))
+```
+
