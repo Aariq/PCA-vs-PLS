@@ -66,9 +66,9 @@ pca <- opls(select(df, -group), plotL = FALSE)
 scores <- get_scores(pca)
 df.aug <-
   df %>% 
-  add_column(p1 = scores$p1, p2 = scores$p2, p3 = scores$p3)
+  add_column(p1 = scores$p1, p2 = scores$p2)
 
-df.aug %>% select(group, p1, p2, p3)
+df.aug %>% select(group, p1, p2)
 ```
 
 ## Regression
@@ -106,31 +106,40 @@ df.cv <- vfold_cv(df, 7)
 First, a predict function to calculate scores from loadings and data
 
 ```{r}
-.newdata = sim_cat(N = 6, n_groups = 2) %>% 
-  sim_covar(p = 5, var = 1, cov = 0.5, name = "cov") %>% 
-  sim_covar(p = 5, var = 1, cov = 0.5, name = "cov2") %>% 
-  group_by(group) %>% 
-  sim_discr(p = 5, var = 1, cov = 0.1, group_means = c(-1, 1), name = "discr") %>% 
-  ungroup() %>% 
-  mutate(group = as.numeric(as.factor(group))) %>% 
-  select(-group)
+# .newdata = sim_cat(N = 6, n_groups = 2) %>% 
+#   sim_covar(p = 5, var = 1, cov = 0.5, name = "cov") %>% 
+#   sim_covar(p = 5, var = 1, cov = 0.5, name = "cov2") %>% 
+#   group_by(group) %>% 
+#   sim_discr(p = 5, var = 1, cov = 0.1, group_means = c(-1, 1), name = "discr") %>% 
+#   ungroup() %>% 
+#   mutate(group = as.numeric(as.factor(group))) %>% 
+#   select(-group) %>% 
+#   mutate_all(~scale(.))
+# 
+# pca_mod = pca
 ```
 
 
 ```{r}
-mypredict <- function(pca_mod, .newdata) {
+mypredict <- function(pca_mod, .newdata, .scale = TRUE) {
   #get loadings
   load <-
     get_loadings(pca_mod) %>%
     gather(-Variable, key = axis, value = loading) %>%
     spread(Variable, loading)
   
+  #scale newdata
+  if(scale){
+    .newdata <- .newdata %>% mutate_all(~scale(.))
+  }
+  
   #check that columns are the same
   stopifnot(identical(colnames(.newdata), colnames(load %>% select(-axis))))
   
   #calc scores from loadings
   #clunky, but works
-  pred.scores <- load %>% 
+  pred.scores <-
+    load %>% 
     group_by(axis) %>% 
     group_map(~{
       map2_dfc(.x = .newdata, .y = ., ~.x*.y) %>% rowSums(.) %>% as_tibble()
@@ -144,6 +153,12 @@ mypredict <- function(pca_mod, .newdata) {
 
 **Apply this to original data to check if it works!!!**
 
+```{r}
+mypredict(pca, df %>% select(-group)) %>% arrange((sample))
+get_scores(pca) %>% arrange(sample)
+```
+
+
 
 This function should calculate RMSEP for a single split
 
@@ -154,77 +169,45 @@ mod_form <- as.formula(group ~ p1 + p2)
 #test split
 split <- df.cv$splits[[1]]
 
-holdout_results <- function(split, ...) {
+RMSEP <- function(split, ...) {
   #do pca on analysis(data)
   pca_mod <- opls(analysis(split) %>% select(-group), printL = FALSE, plotL = FALSE)
   
-  #get loadings
-  pca_mod@loadingMN
+  #get_scores
+  pca_scores <- cbind(get_scores(pca_mod), group = analysis(split)$group)
   
- 
+  #predict pc axis scores on assessment data
+  scores.pred <- mypredict(pca_mod, assessment(split) %>% select(-group))
+  
+  #do glm on analysis data
+  m <- glm(mod_form, family = gaussian, data = pca_scores)
+
+  #use glm to predict `group` for newdata
+  scores.pred %>% 
+    mutate(group.pred = predict(m, newdata = scores.pred)) %>% 
+    add_column(group.actual = assessment(split)$group) %>% 
+    mutate(sq_err = (group.actual - group.pred)^2) %>% 
+    summarize(RMSEP = sqrt(mean(sq_err))) %>% 
+    as.numeric()
+
 }
 
 ```
 
-```{r}
-example <- holdout_results(df.cv$splits[[1]],  mod_form)
-
-```
-
-3. apply that function to all the splits
-
-```{r}
-library(purrr)
-df.cv$results <- map(df.cv$splits,
-                      holdout_results,
-                      mod_form)
-df.cv$accuracy <- map_dbl(df.cv$results, function(x) mean(x$correct))
-```
-
-## 2. CV on GLM alone.
-
-If I do this with a binomial model, it doesn't converge.
-
-```{r}
-m.cv <- boot::cv.glm(df.aug, m, K = 7)
-m.cv$delta[2]
-```
-"adjusted cross-validation estimate of the predction error" = `r m.cv$delta[1]`
-
-
-
-
-#Notes from Elizabeth
-
-```{r}
-
-df2 <- df %>% mutate(group_num = as.numeric(group))
-
-plsda <- opls(select(df, -group), df$group, crossvalI = 7)
-
-plsda2 <- opls(select(df2, -group, -group_num), df2$group_num)
-
-predict(plsda)
-plsda@uMN
-plsda@yMeanVn
-plsda@ySdVn
-```
 $$
 RMSEE = \sqrt{\frac{1}{n}\times \sum(A_i-P_i)^2}
 $$
 
+```{r}
+example <- RMSEP(df.cv$splits[[1]])
+```
 
-Where A_i is actual PLS score for each observation and P_i is mean value for each group
-
-RMSEP is from CV and P_i is not part of the training data.
+#6. apply that function to all the splits and get mean RMSEP
 
 ```{r}
-get_scores(plsda) %>% 
-  group_by(y1) %>% 
-  mutate(mean = mean(p1)) %>% 
-  mutate(sq_err = (p1 - mean)^2) %>% 
-  ungroup() %>% 
-  summarize(SSE = mean(sq_err)) %>% 
-  mutate(RMSEE = sqrt(SSE))
+df.cv %>%
+  mutate(RMSEP = map_dbl(splits, RMSEP)) %>% 
+  summarize(RMSEP = mean(RMSEP))
 ```
+
 
