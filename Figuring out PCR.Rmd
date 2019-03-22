@@ -32,17 +32,19 @@ df <- sim_cat(N = 30, n_groups = 2) %>%
   sim_discr(p = 5, var = 1, cov = 0.1, group_means = c(-1, 1), name = "discr") %>% 
   ungroup() %>% 
   mutate(group = as.numeric(as.factor(group)))
+
+X = df %>% select(-group)
+Y = df$group
 ```
 
 ## Visualize covariance
 
 ```{r}
-df %>% 
-  select(-group) %>% 
-  cov() %>% 
-  iheatmap()
+# df %>% 
+#   select(-group) %>% 
+#   cov() %>% 
+#   iheatmap()
 ```
-
 
 
 # Do PLSR
@@ -57,6 +59,7 @@ plsda <- opls(select(df, -group), df$group, plotL = FALSE)
 ```{r}
 pca <- opls(select(df, -group), plotL = FALSE)
 ```
+
 
 
 
@@ -199,7 +202,8 @@ RMSEE = \sqrt{\frac{1}{n}\times \sum(A_i-P_i)^2}
 $$
 
 ```{r}
-example <- RMSEP(df.cv$splits[[1]])
+example <- RMSEP(df.cv$splits[[1]], X_vars = -group, Y_vars = group)
+analysis(df.cv$splits[[1]])
 ```
 
 #6. apply that function to all the splits and get mean RMSEP
