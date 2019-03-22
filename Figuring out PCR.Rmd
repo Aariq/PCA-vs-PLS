@@ -29,9 +29,9 @@ df <- sim_cat(N = 30, n_groups = 2) %>%
   sim_covar(p = 5, var = 1, cov = 0.5, name = "cov2") %>% 
   # sim_covar(p = 5, var = 1, cov = 0, name = "noise") %>% 
   group_by(group) %>% 
-  sim_discr(p = 5, var = 1, cov = 0.1, group_means = c(-1, 1), name = "discr") %>% 
-  ungroup() %>% 
-  mutate(group = as.numeric(as.factor(group)))
+  sim_discr(p = 5, var = 1, cov = 0.1, group_means = c(-1, 1), name = "discr") %>%
+  ungroup() #%>% 
+  # mutate(group = as.numeric(as.factor(group)))
 
 X = df %>% select(-group)
 Y = df$group
@@ -58,6 +58,7 @@ plsda <- opls(select(df, -group), df$group, plotL = FALSE)
 
 ```{r}
 pca <- opls(select(df, -group), plotL = FALSE)
+pca_mod <- pca.null <- opls(select(null$null_df_1, -group), plotL = FALSE)
 ```
 
 
@@ -72,6 +73,12 @@ df.aug <-
   add_column(p1 = scores$p1, p2 = scores$p2)
 
 df.aug %>% select(group, p1, p2)
+
+scores.null <- get_scores(pca.null)
+null.aug <- 
+  null$null_df_1 %>% add_column(p1 = scores.null$p1,
+                                p2 = scores.null$p2,
+                                p3 = scores.null$p3)
 ```
 
 ## Regression
@@ -80,6 +87,8 @@ df.aug %>% select(group, p1, p2)
 m <- glm(as.numeric(group) ~ p1 + p2, family = gaussian, data = df.aug)
 summary(m)
 car::Anova(m)
+
+m <- glm(as.numeric(as.factor(group)) ~ p1 + p2 + p3, family = gaussian, data = null.aug)
 ```
 
 
@@ -102,6 +111,10 @@ Using `rsample` package
 ```{r}
 library(rsample)
 df.cv <- vfold_cv(df, 7)
+null.cv <- vfold_cv(null$null_df_1, 7)
+null.cv$splits[[1]] %>% analysis()
+null.cv$splits[[1]] %>% assessment()
+
 ```
 
 ## 2-5. CV function

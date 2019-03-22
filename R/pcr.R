@@ -1,9 +1,11 @@
 library(glue)
 library(dplyr)
+library(tibble)
 library(ropls)
 library(rlang)
 library(rsample)
 library(holodeck)
+library(purrr)
 
 #' Do PCA regression using ropls::opls() and gaussian glm.
 #'
@@ -24,14 +26,31 @@ library(holodeck)
 pcreg <- function(X_vars, Y_var, CV = 7, data){
   X <- enquo(X_vars)
   Y <- enquo(Y_var)
-  # data <- quo(data)
+  
+  #check if Y_var is factor or numeric
+  if(is.character(data[[quo_name(Y)]])){
+    data <-
+      data %>% 
+      mutate(!!Y := as.factor(!!Y)) %>% 
+      mutate(!!Y := as.numeric(!!Y))
+  } 
+  
+  if(is.factor(data[[quo_name(Y)]])){
+    data <-
+      data %>%
+      mutate(!!Y := as.numeric(!!Y))
+  }
+  if(!is.numeric(data[[quo_name(Y)]])){
+    stop("grouping variable must be character, factor, or numeric")
+  }
+
   # Do PCA on X
   pca <- opls(select(data, !!X), plotL = FALSE, printL = FALSE)
   
   # Get scores and bind with Y
   scores <- get_scores(pca) %>% 
     add_column(!!Y := data[[quo_name(Y)]])
-
+  
   # Make formula
   npcs <- pca@summaryDF$pre
   pcs <- glue("p{1:npcs}")
@@ -43,15 +62,22 @@ pcreg <- function(X_vars, Y_var, CV = 7, data){
   # Do CV
   df.cv <- rsample::vfold_cv(data, CV)
   RMSEP <- df.cv %>%
-    mutate(RMSEP = map_dbl(splits, ~pca_RMSEP(., !!X, !!Y))) %>% 
+    mutate(RMSEP = map_dbl(.$splits, ~pca_RMSEP(., !!X, !!Y))) %>% 
     summarize(RMSEP = mean(RMSEP)) %>%
     as.numeric()
   
   return(list(pca = pca, glm = m, RMSEP = RMSEP))
 }
-
-# m <- pcreg(X_vars = -group, Y_var = group, CV = 10, data = df)
-# m
+test.df <- sim_cat(N = 30, n_groups = 2) %>% 
+  sim_covar(p = 5, var = 1, cov = 0.5, name = "cov") %>% 
+  sim_covar(p = 5, var = 1, cov = 0.5, name = "cov2") %>% 
+  # sim_covar(p = 5, var = 1, cov = 0, name = "noise") %>% 
+  group_by(group) %>% 
+  sim_discr(p = 5, var = 1, cov = 0.1, group_means = c(-1, 1), name = "discr") %>%
+  ungroup() #%>% 
+# mutate(group = as.numeric(as.factor(group)))
+m <- pcreg(X_vars = -group, Y_var = group, CV = 10, data = test.df)
+m
 
 
 #' Predict PC axis scores of new data from loadings
@@ -69,7 +95,8 @@ mypredict <- function(pca_mod, .newdata, .scale = TRUE) {
   load <-
     get_loadings(pca_mod) %>%
     gather(-Variable, key = axis, value = loading) %>%
-    spread(Variable, loading)
+    spread(Variable, loading) %>% 
+    select(axis, colnames(.newdata))
   
   #scale newdata
   if(.scale){

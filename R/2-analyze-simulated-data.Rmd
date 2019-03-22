@@ -10,7 +10,9 @@ output:
 
 
 - ~~output PCAs and PLSs as .rds~~
-- Add permutation to pls to get p-values.
+- implement PCA regression on all scenarios, output PCR models.
+- deprecate red herring scenario
+- Add permutation to pls to get p-values.?
 - move analysis of results to other notebook?
 
 # Goal
@@ -38,12 +40,14 @@ library(psych) #for cohen.kappa()
 library(tidyverse)
 library(colorspace)
 library(cowplot)
+source(here("R","pcr.R"))
 ```
 
 Create "safe" "partial" version of opls() which returns NULL if it errors and never plots or prints results
 
 ```{r}
 safe_opls <- safely(partial(opls, printL = FALSE, plotL = FALSE), otherwise = NULL)
+safe_pcr <- safely(pcreg, otherwise = NULL)
 ```
 
 # Load Data
@@ -51,7 +55,7 @@ safe_opls <- safely(partial(opls, printL = FALSE, plotL = FALSE), otherwise = NU
 ```{r}
 null <- read_rds(here("data", "null.rds"))
 needle <- read_rds(here("data", "needle.rds"))
-red_herring <- read_rds(here("data", "red herring.rds"))
+# red_herring <- read_rds(here("data", "red herring.rds"))
 control <- read_rds(here("data", "control.rds"))
 ```
 
@@ -69,6 +73,11 @@ For each scenario, run PCA and PLS-DA on all datasets.  Record errors, and calcu
 null.pcas.try <-
   null %>% 
   map(~safe_opls(select(., -group)))
+
+#try with my PCR function instead
+null.pcr.try <- 
+  null %>% 
+  map(~safe_pcr(-group, group, data = .))
 
 # Get just the successful models
 null.pcas <-
