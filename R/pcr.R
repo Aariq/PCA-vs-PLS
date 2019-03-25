@@ -7,6 +7,92 @@ library(rsample)
 library(holodeck)
 library(purrr)
 
+#' Predict PC axis scores of new data from loadings
+#'
+#' @param pca_mod 
+#' @param .newdata 
+#' @param .scale 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+mypredict <- function(pca_mod, .newdata, .scale = TRUE) {
+  #get loadings
+  load <-
+    get_loadings(pca_mod) %>%
+    gather(-Variable, key = axis, value = loading) %>%
+    spread(Variable, loading) %>% 
+    select(axis, colnames(.newdata))
+  
+  #scale newdata
+  if(.scale){
+    .newdata <- .newdata %>% mutate_all(~scale(.))
+  }
+  
+  #check that columns are the same
+  stopifnot(identical(colnames(.newdata), colnames(load %>% select(-axis))))
+  
+  #calc scores from loadings
+  #clunky, but works
+  pred.scores <-
+    load %>% 
+    group_by(axis) %>% 
+    group_map(~{
+      map2_dfc(.x = .newdata, .y = ., ~.x*.y) %>% rowSums(.) %>% as_tibble()
+    }) %>% 
+    mutate(sample = paste0("s", 1:nrow(.newdata))) %>% 
+    spread(axis, value)
+  
+  return(pred.scores)
+}
+
+
+
+#' Calculate RMSEP on rsplit object
+#'
+#' @param split 
+#' @param ... not used
+#' @import rsample
+#'
+#' @return
+#' @export
+#'
+#' @examples
+pca_RMSEP <- function(split, X_vars, Y_var) {
+  #do pca on analysis(data)
+  
+  X <- enquo(X_vars)
+  Y <- enquo(Y_var)
+  # Do PCA on X
+  pca <- opls(select(analysis(split), !!X), plotL = FALSE, printL = FALSE)
+  
+  # Get scores and bind with Y
+  scores <-
+    get_scores(pca) %>% 
+    add_column(!!Y := analysis(split)[[quo_name(Y)]])
+  
+  #predict pc axis scores on assessment data
+  scores.pred <- mypredict(pca, assessment(split) %>% select(!!X))
+  
+  # Make formula
+  npcs <- pca@summaryDF$pre
+  pcs <- glue("p{1:npcs}")
+  mod_form <- as.formula(glue("{quo_name(Y)} ~ {glue_collapse(pcs, sep = '+')}"))
+  
+  #do glm on analysis data
+  m <- glm(mod_form, family = gaussian, data = scores)
+  
+  #use glm to predict `group` for newdata
+  scores.pred %>%
+    mutate(group.pred = predict(m, newdata = scores.pred)) %>%
+    add_column(group.actual = assessment(split)[[quo_name(Y)]]) %>%
+    mutate(sq_err = (group.actual - group.pred)^2) %>%
+    summarize(RMSEP = sqrt(mean(sq_err))) %>%
+    as.numeric()
+}
+
+
 #' Do PCA regression using ropls::opls() and gaussian glm.
 #'
 #' @param X_vars 
@@ -80,85 +166,3 @@ m <- pcreg(X_vars = -group, Y_var = group, CV = 10, data = test.df)
 m
 
 
-#' Predict PC axis scores of new data from loadings
-#'
-#' @param pca_mod 
-#' @param .newdata 
-#' @param .scale 
-#'
-#' @return
-#' @export
-#'
-#' @examples
-mypredict <- function(pca_mod, .newdata, .scale = TRUE) {
-  #get loadings
-  load <-
-    get_loadings(pca_mod) %>%
-    gather(-Variable, key = axis, value = loading) %>%
-    spread(Variable, loading) %>% 
-    select(axis, colnames(.newdata))
-  
-  #scale newdata
-  if(.scale){
-    .newdata <- .newdata %>% mutate_all(~scale(.))
-  }
-  
-  #check that columns are the same
-  stopifnot(identical(colnames(.newdata), colnames(load %>% select(-axis))))
-  
-  #calc scores from loadings
-  #clunky, but works
-  pred.scores <-
-    load %>% 
-    group_by(axis) %>% 
-    group_map(~{
-      map2_dfc(.x = .newdata, .y = ., ~.x*.y) %>% rowSums(.) %>% as_tibble()
-    }) %>% 
-    mutate(sample = paste0("s", 1:nrow(.newdata))) %>% 
-    spread(axis, value)
-  
-  return(pred.scores)
-}
-
-#' Calculate RMSEP on rsplit object
-#'
-#' @param split 
-#' @param ... not used
-#' @import rsample
-#'
-#' @return
-#' @export
-#'
-#' @examples
-pca_RMSEP <- function(split, X_vars, Y_var) {
-  #do pca on analysis(data)
-  
-  X <- enquo(X_vars)
-  Y <- enquo(Y_var)
-  # Do PCA on X
-  pca <- opls(select(analysis(split), !!X), plotL = FALSE, printL = FALSE)
-  
-  # Get scores and bind with Y
-  scores <-
-    get_scores(pca) %>% 
-    add_column(!!Y := analysis(split)[[quo_name(Y)]])
-  
-  #predict pc axis scores on assessment data
-  scores.pred <- mypredict(pca, assessment(split) %>% select(!!X))
-  
-  # Make formula
-  npcs <- pca@summaryDF$pre
-  pcs <- glue("p{1:npcs}")
-  mod_form <- as.formula(glue("{quo_name(Y)} ~ {glue_collapse(pcs, sep = '+')}"))
-  
-  #do glm on analysis data
-  m <- glm(mod_form, family = gaussian, data = scores)
-
-  #use glm to predict `group` for newdata
-  scores.pred %>%
-    mutate(group.pred = predict(m, newdata = scores.pred)) %>%
-    add_column(group.actual = assessment(split)[[quo_name(Y)]]) %>%
-    mutate(sq_err = (group.actual - group.pred)^2) %>%
-    summarize(RMSEP = sqrt(mean(sq_err))) %>%
-    as.numeric()
-}
