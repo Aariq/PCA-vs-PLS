@@ -143,7 +143,7 @@ pcreg <- function(X_vars, Y_var, CV = 7, data){
   mod_form <- as.formula(glue::glue("{quo_name(Y)} ~ {glue_collapse(pcs, sep = '+')}"))
   
   # Do regression
-  m <- glm(mod_form, family = gaussian, data = scores)
+  m <- lm(mod_form, data = scores)
   
   # Do CV
   df.cv <- rsample::vfold_cv(data, CV)
@@ -152,8 +152,9 @@ pcreg <- function(X_vars, Y_var, CV = 7, data){
     summarize(RMSEP = mean(RMSEP)) %>%
     as.numeric()
   
-  return(list(pca = pca, glm = m, RMSEP = RMSEP))
+  return(list(pca = pca, lm = m, RMSEP = RMSEP))
 }
+set.seed(400)
 test.df <- sim_cat(N = 30, n_groups = 2) %>% 
   sim_covar(p = 5, var = 1, cov = 0.5, name = "cov") %>% 
   sim_covar(p = 5, var = 1, cov = 0.5, name = "cov2") %>% 
@@ -164,5 +165,4 @@ test.df <- sim_cat(N = 30, n_groups = 2) %>%
 # mutate(group = as.numeric(as.factor(group)))
 m <- pcreg(X_vars = -group, Y_var = group, CV = 10, data = test.df)
 m
-
 
