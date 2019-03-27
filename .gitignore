@@ -4,3 +4,5 @@
 .Ruserdata
 *.icloud
 data/wc5
+*.numbers
+*.pdf
