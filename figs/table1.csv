@@ -1,0 +1,22 @@
+﻿Scenario,Statistic,PLS-DA,PCA-DA
+control,p,NA,0 ± 0.003
+control,pQ2,0.002 ± 0.001,NA
+control,pR2,0.005 ± 0.016,NA
+control,Q2,0.752 ± 0.072,NA
+control,R2X,0.313 ± 0.052,0.558 ± 0.025
+control,R2Y,0.835 ± 0.061,0.803 ± 0.062
+control,RMSEP,0.211 ± 0.04,0.355 ± 0.062
+null,p,NA,0.463 ± 0.292
+null,pQ2,0.078 ± 0.054,NA
+null,pR2,0.244 ± 0.159,NA
+null,Q2,0.219 ± 0.148,NA
+null,R2X,0.295 ± 0.129,0.545 ± 0.027
+null,R2Y,0.577 ± 0.171,0.154 ± 0.114
+null,RMSEP,0.335 ± 0.08,0.533 ± 0.035
+needle,p,NA,0.106 ± 0.238
+needle,pQ2,0.002 ± 0.001,NA
+needle,pR2,0.003 ± 0.003,NA
+needle,Q2,0.709 ± 0.108,NA
+needle,R2X,0.397 ± 0.125,0.559 ± 0.038
+needle,R2Y,0.906 ± 0.046,0.562 ± 0.3
+needle,RMSEP,0.16 ± 0.043,0.442 ± 0.083
