@@ -36,6 +36,10 @@ needle.pcr <- read_rds(here('data', 'models', 'needle-pcr.rds'))
 This is annoying because of the data structure.  I'm sure there is a more efficient way to do all this.
 
 ```{r}
+get_modelinfo(control.pls[[1]])
+control.pcr -> pcr
+```
+```{r}
 pls_pcr_summary <- function(pls, pcr) {
   pls.summary <-
     pls %>%
@@ -45,30 +49,35 @@ pls_pcr_summary <- function(pls, pcr) {
                   R2X = pluck(., 2, "R2X(cum)"),
                   pR2 = pluck(., 2, "pR2Y"),
                   pQ2 = pluck(., 2, "pQ2"),
-                  RMSEP = pluck(., 2, "RMSEE")),
+                  RMSEP = pluck(., 2, "RMSEE"),
+                  ncomp = pluck(., 2, "pre")),
             .id = "dataset") %>% 
     summarize_if(is.numeric, funs(mean, sd)) %>% 
     gather() %>% 
     separate(key, into = c("Statistic", "part")) %>% 
     spread(key = part, value = value) %>% 
     mutate(`PLS-DA` = glue("{round(mean, 3)} ± {round(sd, 3)}")) %>% 
-    select(-sd, -mean)
+    select(-sd, -mean) %>% 
+    add_row(Statistic = "n", `PLS-DA` = length(pls))
   
   pcr.summary <- 
     pcr %>% 
     map_dfr(~broom::glance(.$lm), .id = "dataset") %>% 
     mutate(RMSEP = map_dbl(pcr, "RMSEP"),
-           R2X = map_dbl(pcr, ~.$pca@summaryDF$`R2X(cum)`)) %>% 
-    select(dataset, R2Y = r.squared, p = p.value, RMSEP, R2X) %>% 
+           R2X = map_dbl(pcr, ~.$pca@summaryDF$`R2X(cum)`),
+           ncomp = map_dbl(pcr, ~.$pca@summaryDF$pre)) %>% 
+    select(dataset, R2Y = r.squared, p = p.value, RMSEP, R2X, ncomp) %>% 
     summarize_if(is.numeric, funs(mean, sd)) %>%
     gather() %>% 
     separate(key, into = c("Statistic", "part")) %>% 
     spread(key = part, value = value) %>% 
     mutate(`PCA-DA` = glue("{round(mean, 3)} ± {round(sd, 3)}")) %>% 
-    select(-mean, -sd)
+    select(-mean, -sd) %>% 
+    add_row(Statistic = "n", `PCA-DA` = length(pcr))
   
   return(full_join(pls.summary, pcr.summary))
 }
+
 ```
 
 ## Make table and write to .csv
