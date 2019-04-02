@@ -3,18 +3,17 @@ title: "PCA regression and PLS-DA models summary statistics"
 output: html_notebook
 ---
 
-- compare p-values and RMSEP from PCA regression and PLS-DA permutation tests
-- Get other summary stats from PLS-DA models (e.g. R2, Q2)
+- ~~compare p-values and RMSEP from PCA regression and PLS-DA permutation tests~~
+- ~~Get other summary stats from PLS-DA models (e.g. R2, Q2)~~
 
-- Make a table using gtable
-  - columns = Scenario, statistic, PCA regression, PLS-DA
-  - rows to add: kappa coef?, number of models, number of significant components (mean ± sd)?
+- ~~Make a table~~
+  - ~~columns = Scenario, statistic, PCA regression, PLS-DA~~
+  - rows to add: **kappa coef?**, ~~number of models, number of significant components (mean ± sd)~~?
 
 ```{r message=FALSE}
 library(here)
 library(tidyverse)
 library(holodeck) #for get_* functions
-# source(here("R","pcr.R"))
 library(glue)
 ```
 
@@ -22,10 +21,13 @@ library(glue)
 
 ```{r}
 control.pls <- read_rds(here('data', 'models', 'control-pls.rds'))
+control.pls.forced <- read_rds(here('data', 'models', 'control-pls-force.rds'))
 control.pcr <- read_rds(here('data', 'models', 'control-pcr.rds'))
 null.pls <- read_rds(here('data', 'models', 'null-pls.rds'))
+null.pls.forced <- read_rds(here('data', 'models', 'null-pls-force.rds'))
 null.pcr <- read_rds(here('data', 'models', 'null-pcr.rds'))
 needle.pls <- read_rds(here('data', 'models', 'needle-pls.rds'))
+needle.pls.forced <- read_rds(here('data', 'models', 'needle-pls-force.rds'))
 needle.pcr <- read_rds(here('data', 'models', 'needle-pcr.rds'))
 ```
 
@@ -36,22 +38,14 @@ needle.pcr <- read_rds(here('data', 'models', 'needle-pcr.rds'))
 This is annoying because of the data structure.  I'm sure there is a more efficient way to do all this.
 
 ```{r}
-get_modelinfo(control.pls[[1]])
-control.pcr -> pcr
-```
-```{r}
-pls_pcr_summary <- function(pls, pcr) {
+pls.forced <- control.pls.forced
+pls <- control.pls
+pcr <- control.pcr
+pls_pcr_summary <- function(pls, pls.forced, pcr) {
   pls.summary <-
-    pls %>%
-    map(~get_modelinfo(.)) %>%
-    map_dfr(~list(Q2 = pluck(., 2, "Q2(cum)"),
-                  R2Y = pluck(., 2, "R2Y(cum)"),
-                  R2X = pluck(., 2, "R2X(cum)"),
-                  pR2 = pluck(., 2, "pR2Y"),
-                  pQ2 = pluck(., 2, "pQ2"),
-                  RMSEP = pluck(., 2, "RMSEE"),
-                  ncomp = pluck(., 2, "pre")),
-            .id = "dataset") %>% 
+    pls %>% 
+    bind_rows(.id = "dataset") %>% 
+    select(dataset, Q2 = `Q2(cum)`, R2Y = `R2Y(cum)`, R2X = `R2X(cum)`, pR2 = pR2Y, pQ2 = pQ2, RMSEP, ncomp = pre) %>% 
     summarize_if(is.numeric, funs(mean, sd)) %>% 
     gather() %>% 
     separate(key, into = c("Statistic", "part")) %>% 
@@ -60,9 +54,21 @@ pls_pcr_summary <- function(pls, pcr) {
     select(-sd, -mean) %>% 
     add_row(Statistic = "n", `PLS-DA` = length(pls))
   
+  pls.forced.summary <-
+    pls.forced %>% 
+    bind_rows(.id = "dataset") %>% 
+    select(dataset, Q2 = `Q2(cum)`, R2Y = `R2Y(cum)`, R2X = `R2X(cum)`, pR2 = pR2Y, pQ2 = pQ2, RMSEP, ncomp = pre) %>% 
+    summarize_if(is.numeric, funs(mean, sd)) %>% 
+    gather() %>% 
+    separate(key, into = c("Statistic", "part")) %>% 
+    spread(key = part, value = value) %>% 
+    mutate("PLS-DA (ncomp forced)" = glue("{round(mean, 3)} ± {round(sd, 3)}")) %>% 
+    select(-sd, -mean) %>% 
+    add_row(Statistic = "n", "PLS-DA (ncomp forced)" = length(pls.forced))
+  
   pcr.summary <- 
     pcr %>% 
-    map_dfr(~broom::glance(.$lm), .id = "dataset") %>% 
+    map_dfr(~broom::glance(.x$lm), .id = "dataset") %>% 
     mutate(RMSEP = map_dbl(pcr, "RMSEP"),
            R2X = map_dbl(pcr, ~.$pca@summaryDF$`R2X(cum)`),
            ncomp = map_dbl(pcr, ~.$pca@summaryDF$pre)) %>% 
@@ -74,8 +80,7 @@ pls_pcr_summary <- function(pls, pcr) {
     mutate(`PCA-DA` = glue("{round(mean, 3)} ± {round(sd, 3)}")) %>% 
     select(-mean, -sd) %>% 
     add_row(Statistic = "n", `PCA-DA` = length(pcr))
-  
-  return(full_join(pls.summary, pcr.summary))
+  return(full_join(pls.summary, pls.forced.summary) %>% full_join(pcr.summary))
 }
 
 ```
@@ -84,9 +89,9 @@ pls_pcr_summary <- function(pls, pcr) {
 
 ```{r}
 table1 <-
-  list(control = pls_pcr_summary(control.pls, control.pcr) %>% arrange(Statistic),
-       null = pls_pcr_summary(null.pls, null.pcr) %>% arrange(Statistic),
-       needle = pls_pcr_summary(needle.pls, needle.pcr) %>% arrange(Statistic)
+  list(control = pls_pcr_summary(control.pls, control.pls.forced, control.pcr),
+       null = pls_pcr_summary(null.pls, null.pls.forced, null.pcr),
+       needle = pls_pcr_summary(needle.pls, needle.pls.forced, needle.pcr)
   ) %>%
   bind_rows(.id = "Scenario")
 table1

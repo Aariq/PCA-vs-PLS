@@ -81,7 +81,7 @@ pca_RMSEP <- function(split, X_vars, Y_var) {
   mod_form <- as.formula(glue("{quo_name(Y)} ~ {glue_collapse(pcs, sep = '+')}"))
   
   #do glm on analysis data
-  m <- glm(mod_form, family = gaussian, data = scores)
+  m <- lm(mod_form, data = scores)
   
   #use glm to predict `group` for newdata
   scores.pred %>%
@@ -109,7 +109,7 @@ pca_RMSEP <- function(split, X_vars, Y_var) {
 #'
 #' @examples
 #' 
-pcreg <- function(X_vars, Y_var, CV = 7, data){
+pcreg <- function(data, X_vars, Y_var, CV = 7){
   X <- enquo(X_vars)
   Y <- enquo(Y_var)
   
@@ -154,15 +154,15 @@ pcreg <- function(X_vars, Y_var, CV = 7, data){
   
   return(list(pca = pca, lm = m, RMSEP = RMSEP))
 }
-set.seed(400)
-test.df <- sim_cat(N = 30, n_groups = 2) %>% 
-  sim_covar(p = 5, var = 1, cov = 0.5, name = "cov") %>% 
-  sim_covar(p = 5, var = 1, cov = 0.5, name = "cov2") %>% 
-  # sim_covar(p = 5, var = 1, cov = 0, name = "noise") %>% 
-  group_by(group) %>% 
-  sim_discr(p = 5, var = 1, cov = 0.1, group_means = c(-1, 1), name = "discr") %>%
-  ungroup() #%>% 
-# mutate(group = as.numeric(as.factor(group)))
-m <- pcreg(X_vars = -group, Y_var = group, CV = 10, data = test.df)
-m
+# set.seed(400)
+# test.df <- sim_cat(N = 30, n_groups = 2) %>% 
+#   sim_covar(p = 5, var = 1, cov = 0.5, name = "cov") %>% 
+#   sim_covar(p = 5, var = 1, cov = 0.5, name = "cov2") %>% 
+#   # sim_covar(p = 5, var = 1, cov = 0, name = "noise") %>% 
+#   group_by(group) %>% 
+#   sim_discr(p = 5, var = 1, cov = 0.1, group_means = c(-1, 1), name = "discr") %>%
+#   ungroup() #%>% 
+# # mutate(group = as.numeric(as.factor(group)))
+# m <- pcreg(X_vars = -group, Y_var = group, CV = 10, data = test.df)
+# m
 

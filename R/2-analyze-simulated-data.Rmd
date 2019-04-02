@@ -32,9 +32,10 @@ library(here)
 library(ropls)
 library(tidyverse)
 source(here("R","pcr.R"))
+source(here("R", "RMSEP.R"))
 ```
 
-Create "safe" "partial" version of opls() which returns NULL if it errors and never plots or prints results
+Create "safe" "partial" version of opls() which returns NULL if it errors and never plots or prints results.
 
 ```{r}
 safe_opls <- safely(partial(opls, printL = FALSE, plotL = FALSE), otherwise = NULL)
@@ -46,7 +47,6 @@ safe_pcr <- safely(pcreg, otherwise = NULL)
 ```{r}
 null <- read_rds(here("data", "null.rds"))
 needle <- read_rds(here("data", "needle.rds"))
-# red_herring <- read_rds(here("data", "red herring.rds"))
 control <- read_rds(here("data", "control.rds"))
 ```
 
@@ -60,15 +60,10 @@ For each scenario, run PCA and PLS-DA on all datasets.  Record errors, and calcu
 ### Null PCAs
 
 ```{r}
-# # map the pca function to all datasets
-# null.pcas.try <-
-#   null %>% 
-#   map(~safe_opls(select(., -group)))
-
 #try with my PCR function instead
 null.pcr.try <- 
   null %>% 
-  map(~safe_pcr(-group, group, data = .))
+  map(~safe_pcr(.x, -group, group, CV = 7))
 
 # Get just the successful models
 null.pcr <-
@@ -104,7 +99,19 @@ null.pls.try <-
 null.pls <-
   null.pls.try %>% 
   map("result") %>% 
-  discard(is.null)
+  discard(is.null) %>% 
+  # do RMSEP on successful models and store in summaryDF 
+  map(~.x@summaryDF %>% mutate(RMSEP = plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7)))
+
+
+# with one component forced
+null.pls.force <-
+  null %>% 
+  map(~ safe_opls(select(., -group), .$group, predI = 1, permI = 500)) %>% 
+  map("result") %>% 
+  discard(is.null) %>% 
+  map(~.x@summaryDF %>% mutate(RMSEP = plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7)))
+
 ```
 
 Any errors?
@@ -125,6 +132,7 @@ They all failed because the first predictive component already wasn't significan
 
 ```{r}
 write_rds(null.pls, here("data", "models", "null-pls.rds"))
+write_rds(null.pls.force, here("data", "models", "null-pls-force.rds"))
 ```
 
 ## Control
@@ -135,7 +143,7 @@ write_rds(null.pls, here("data", "models", "null-pls.rds"))
 # map the pca function to all datasets
 control.pcr.try <-
   map(control,
-      ~safe_pcr(-group, group, data = .))
+      ~safe_pcr(.x, -group, group, CV = 7))
 
 control.pcr <-
   control.pcr.try %>%
@@ -173,7 +181,16 @@ control.pls.try <-
 control.pls <-
   control.pls.try %>% 
   map("result") %>% 
-  discard(is.null)
+  discard(is.null) %>% 
+  map(~.x@summaryDF %>% mutate(RMSEP = plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7)))
+
+# with one component forced (the average)
+control.pls.force <-
+  map(control,
+      ~ safe_opls(select(., -group), .$group, predI = 1, permI = 500)) %>% 
+  map("result") %>% 
+  discard(is.null) %>% 
+  map(~.x@summaryDF %>% mutate(RMSEP = plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7)))  
 ```
 
 How many failed models?
@@ -188,6 +205,7 @@ Save em!
 
 ```{r}
 write_rds(control.pls, here("data", "models", "control-pls.rds"))
+write_rds(control.pls.force, here("data", "models", "control-pls-force.rds"))
 ```
 
 ## Needle in a haystack
@@ -197,7 +215,7 @@ write_rds(control.pls, here("data", "models", "control-pls.rds"))
 ```{r}
 needle.pcr.try <-
   map(needle,
-      ~safe_pcr(-group, group, data = .))
+      ~safe_pcr(.x, -group, group, CV = 7))
 
 needle.pcr <-
   needle.pcr.try %>% 
@@ -227,8 +245,17 @@ needle.pls.try <-
 needle.pls <-
   needle.pls.try %>% 
   map("result") %>% 
-  discard(is.null)
-# skrrrahh(18)
+  discard(is.null) %>% 
+  map(~.x@summaryDF %>% mutate(RMSEP = plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7))) 
+
+
+# with 2 components (the average) forced
+needle.pls.force <-
+  map(needle,
+      ~ safe_opls(select(., -group), .$group, predI = 2, permI = 500)) %>% 
+  map("result") %>% 
+  discard(is.null) %>% 
+  map(~.x@summaryDF %>% mutate(RMSEP = plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7))) 
 ```
 
 Any errors?
@@ -241,6 +268,10 @@ zero errors
 
 ```{r}
 write_rds(needle.pls, here("data", "models", "needle-pls.rds"))
+write_rds(needle.pls.force, here("data", "models", "needle-pls-force.rds"))
 ```
 
+```{r}
+BRRR::skrrrahh(18)
+```
 
