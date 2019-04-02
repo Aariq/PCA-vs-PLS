@@ -142,10 +142,11 @@ mypredict <- function(pca_mod, .newdata, .scale = TRUE) {
   load <-
     get_loadings(pca_mod) %>%
     gather(-Variable, key = axis, value = loading) %>%
-    spread(Variable, loading)
+    spread(Variable, loading) %>% 
+    select(axis, colnames(.newdata))
   
   #scale newdata
-  if(scale){
+  if(.scale){
     .newdata <- .newdata %>% mutate_all(~scale(.))
   }
   
@@ -185,27 +186,37 @@ mod_form <- as.formula(group ~ p1 + p2)
 #test split
 split <- df.cv$splits[[1]]
 
-RMSEP <- function(split, ...) {
+pca_RMSEP <- function(split, X_vars, Y_var) {
   #do pca on analysis(data)
-  pca_mod <- opls(analysis(split) %>% select(-group), printL = FALSE, plotL = FALSE)
   
-  #get_scores
-  pca_scores <- cbind(get_scores(pca_mod), group = analysis(split)$group)
+  X <- enquo(X_vars)
+  Y <- enquo(Y_var)
+  # Do PCA on X
+  pca <- opls(select(analysis(split), !!X), plotL = FALSE, printL = FALSE)
+  
+  # Get scores and bind with Y
+  scores <-
+    get_scores(pca) %>% 
+    add_column(!!Y := analysis(split)[[quo_name(Y)]])
   
   #predict pc axis scores on assessment data
-  scores.pred <- mypredict(pca_mod, assessment(split) %>% select(-group))
+  scores.pred <- mypredict(pca, assessment(split) %>% select(!!X))
+  
+  # Make formula
+  npcs <- pca@summaryDF$pre
+  pcs <- glue("p{1:npcs}")
+  mod_form <- as.formula(glue("{quo_name(Y)} ~ {glue_collapse(pcs, sep = '+')}"))
   
   #do glm on analysis data
-  m <- glm(mod_form, family = gaussian, data = pca_scores)
-
+  m <- glm(mod_form, family = gaussian, data = scores)
+  
   #use glm to predict `group` for newdata
-  scores.pred %>% 
-    mutate(group.pred = predict(m, newdata = scores.pred)) %>% 
-    add_column(group.actual = assessment(split)$group) %>% 
-    mutate(sq_err = (group.actual - group.pred)^2) %>% 
-    summarize(RMSEP = sqrt(mean(sq_err))) %>% 
+  scores.pred %>%
+    mutate(group.pred = predict(m, newdata = scores.pred)) %>%
+    add_column(group.actual = assessment(split)[[quo_name(Y)]]) %>%
+    mutate(sq_err = (group.actual - group.pred)^2) %>%
+    summarize(RMSEP = sqrt(mean(sq_err))) %>%
     as.numeric()
-
 }
 
 ```
@@ -215,7 +226,7 @@ RMSEE = \sqrt{\frac{1}{n}\times \sum(A_i-P_i)^2}
 $$
 
 ```{r}
-example <- RMSEP(df.cv$splits[[1]], X_vars = -group, Y_vars = group)
+example <- pca_RMSEP(df.cv$splits[[1]], X_vars = -group, Y_var = group)
 analysis(df.cv$splits[[1]])
 ```
 
@@ -225,6 +236,69 @@ analysis(df.cv$splits[[1]])
 df.cv %>%
   mutate(RMSEP = map_dbl(splits, RMSEP)) %>% 
   summarize(RMSEP = mean(RMSEP))
+```
+
+
+# Q^2^
+
+$$
+Q^2 = (1-PRESS/SS)
+$$
+
+$$
+PRESS = \sum_i\sum_m(Y_{im} - \hat{Y}_{im})^2
+$$
+Or the squared differences between observed and predicted values when observations were kept out.  SS is the residual sum of squares.  When Q^2^ is computed for PLS-DA, its the product of the Q^2^ for each component.  So, I'm not sure that it's really comparable if I calculate this for PCA-DA
+
+```{r}
+test.split <- df.cv$splits[[1]]
+assessment(test.split)
+analysis(test.split)
+```
+
+do PCA
+
+```{r}
+# Do PCA on X
+pca <- opls(select(analysis(test.split), -group), plotL = FALSE, printL = FALSE)
+
+# Get scores and bind with Y
+scores <- get_scores(pca) %>% 
+  add_column(group = analysis(test.split)$group)
+
+#predict pc axis scores on assessment data
+scores.pred <- mypredict(pca, assessment(test.split) %>% select(-group))
+  
+```
+
+do regression
+
+```{r}
+  #do glm on analysis data
+m <- lm(as.numeric(as.factor(group)) ~ p1 + p2, data = scores)
+m %>% broom::augment() %>% 
+  mutate(sqdev = (.fitted - .resid)^2) %>% 
+  summarize(SS = sum(sqdev))
+
+
+scores.pred %>%
+    mutate(group.pred = predict(m, newdata = scores.pred)) %>%
+    add_column(group.actual = assessment(split)[["group"]]) %>%
+    mutate(sq_err = (group.actual - group.pred)^2) %>%
+    summarize(RMSEP = sqrt(mean(sq_err))) %>%
+    as.numeric()
+
+broom::glance(m)
+```
+
+
+Is the SS from the full model?  I think maybe?
+
+
+
+
+```{r}
+View(plsda)
 ```
 
 
