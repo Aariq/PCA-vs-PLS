@@ -80,7 +80,7 @@ null.pcr.try %>%
   map("error") %>%
   unique()
 ```
-6 failed because of non-convergence.
+1 failed because of non-convergence.
 
 Save em!
 
@@ -99,19 +99,14 @@ null.pls.try <-
 null.pls <-
   null.pls.try %>% 
   map("result") %>% 
-  discard(is.null) %>% 
-  # do RMSEP on successful models and store in summaryDF 
-  map(~.x@summaryDF %>% mutate(RMSEP = plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7)))
-
+  discard(is.null) 
 
 # with one component forced
 null.pls.force <-
   null %>% 
   map(~ safe_opls(select(., -group), .$group, predI = 1, permI = 500)) %>% 
   map("result") %>% 
-  discard(is.null) %>% 
-  map(~.x@summaryDF %>% mutate(RMSEP = plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7)))
-
+  discard(is.null)
 ```
 
 Any errors?
@@ -181,16 +176,14 @@ control.pls.try <-
 control.pls <-
   control.pls.try %>% 
   map("result") %>% 
-  discard(is.null) %>% 
-  map(~.x@summaryDF %>% mutate(RMSEP = plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7)))
+  discard(is.null) 
 
 # with one component forced (the average)
 control.pls.force <-
   map(control,
       ~ safe_opls(select(., -group), .$group, predI = 1, permI = 500)) %>% 
   map("result") %>% 
-  discard(is.null) %>% 
-  map(~.x@summaryDF %>% mutate(RMSEP = plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7)))  
+  discard(is.null) 
 ```
 
 How many failed models?
@@ -245,8 +238,7 @@ needle.pls.try <-
 needle.pls <-
   needle.pls.try %>% 
   map("result") %>% 
-  discard(is.null) %>% 
-  map(~.x@summaryDF %>% mutate(RMSEP = plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7))) 
+  discard(is.null) 
 
 
 # with 2 components (the average) forced
@@ -254,8 +246,7 @@ needle.pls.force <-
   map(needle,
       ~ safe_opls(select(., -group), .$group, predI = 2, permI = 500)) %>% 
   map("result") %>% 
-  discard(is.null) %>% 
-  map(~.x@summaryDF %>% mutate(RMSEP = plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7))) 
+  discard(is.null)
 ```
 
 Any errors?
