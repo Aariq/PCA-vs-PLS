@@ -38,12 +38,15 @@ needle.pcr <- read_rds(here('data', 'models', 'needle-pcr.rds'))
 This is annoying because of the data structure.  I'm sure there is a more efficient way to do all this.
 
 ```{r}
-pls.forced <- control.pls.forced
-pls <- control.pls
-pcr <- control.pcr
+pls.forced <- null.pls.forced
+pls <- null.pls
+pcr <- null.pcr
 pls_pcr_summary <- function(pls, pls.forced, pcr) {
   pls.summary <-
-    pls %>% 
+    pls %>%
+    # do RMSEP on successful models and store in summaryDF 
+    map(~.x@summaryDF %>%
+          mutate(RMSEP = plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7))) %>% 
     bind_rows(.id = "dataset") %>% 
     select(dataset, Q2 = `Q2(cum)`, R2Y = `R2Y(cum)`, R2X = `R2X(cum)`, pR2 = pR2Y, pQ2 = pQ2, RMSEP, ncomp = pre) %>% 
     summarize_if(is.numeric, funs(mean, sd)) %>% 
@@ -56,6 +59,9 @@ pls_pcr_summary <- function(pls, pls.forced, pcr) {
   
   pls.forced.summary <-
     pls.forced %>% 
+    # do RMSEP on successful models and store in summaryDF 
+    map(~.x@summaryDF %>%
+          mutate(RMSEP = plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7))) %>% 
     bind_rows(.id = "dataset") %>% 
     select(dataset, Q2 = `Q2(cum)`, R2Y = `R2Y(cum)`, R2X = `R2X(cum)`, pR2 = pR2Y, pQ2 = pQ2, RMSEP, ncomp = pre) %>% 
     summarize_if(is.numeric, funs(mean, sd)) %>% 
