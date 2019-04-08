@@ -4,8 +4,9 @@ library(tibble)
 library(ropls)
 library(rlang)
 library(rsample)
-library(holodeck)
 library(purrr)
+library(here)
+source(here("R", "ropls_helpers.R"))
 
 #' Predict PC axis scores of new data from loadings
 #'

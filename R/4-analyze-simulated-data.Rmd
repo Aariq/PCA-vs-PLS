@@ -1,0 +1,260 @@
+---
+title: "Simulated data analysis"
+output: 
+  html_notebook: 
+    toc: yes
+    toc_float: yes
+---
+
+# Goal
+To show that PLS-DA performs better than PCA at figuring out which variables are most responsible for group separation.  I do this using VIP scores from PLS-DA and correlations with PC1 for PCA followed by a calculation of Cohen's Kappa.  For now, I'm only doing this with two of the data scenarios where the variables either contribute to group separation or don't: the positive control, and the needle-in-a-haystack.
+
+For each dataset:
+
+- Do PCA regression
+- Do PLS-DA
+- Record how many PLS-DA's fail because even the first component is not significant, but filter out failing models
+  
+
+# Packages and Functions
+
+```{r message=FALSE, warning=FALSE}
+library(here)
+library(ropls)
+library(tidyverse)
+source(here("R","pcr.R"))
+source(here("R", "RMSEP.R"))
+```
+
+Create "safe" "partial" version of opls() which returns NULL if it errors and never plots or prints results.
+
+```{r}
+safe_opls <- safely(partial(opls, printL = FALSE, plotL = FALSE), otherwise = NULL)
+safe_pcr <- safely(pcreg, otherwise = NULL)
+```
+
+# Load Data
+
+```{r}
+null <- read_rds(here("data", "null.rds"))
+needle <- read_rds(here("data", "needle.rds"))
+control <- read_rds(here("data", "control.rds"))
+```
+
+
+# Run Analyses
+
+For each scenario, run PCA and PLS-DA on all datasets.  Record errors, and calculate summary statistics on the models that are successfullly built
+
+## Null
+
+### Null PCAs
+
+```{r}
+#try with my PCR function instead
+null.pcr.try <- 
+  null %>% 
+  map(~safe_pcr(.x, -group, group, CV = 7))
+
+# Get just the successful models
+null.pcr <-
+  null.pcr.try %>%
+  map("result") %>% #get only results
+  discard(is.null) #get rid of any with NULL results (and therefore an error)
+```
+
+Any errors?
+
+```{r}
+length(null.pcr.try) - length(null.pcr)
+null.pcr.try %>% 
+  map("error") %>%
+  unique()
+```
+
+1 failed because of non-convergence.
+
+Save em!
+
+```{r}
+write_rds(null.pcr, here("data", "models", "null-pcr.rds"))
+```
+
+### Null PLSs
+
+```{r}
+null.pls.try <-
+  null %>% 
+  map(~ safe_opls(select(., -group), .$group, permI = 500)) #map the opls
+
+# get just succesful models
+null.pls <-
+  null.pls.try %>% 
+  map("result") %>% 
+  discard(is.null) 
+
+# with one component forced
+null.pls.force <-
+  null %>% 
+  map(~ safe_opls(select(., -group), .$group, predI = 1, permI = 500)) %>% 
+  map("result") %>% 
+  discard(is.null)
+```
+
+Any errors?
+
+```{r}
+length(null.pls.try) - length(null.pls)
+```
+
+75/100 models failed.  Why?
+
+```{r}
+null.pls.try %>% 
+  map("error") %>%
+  unique()
+```
+
+They all failed because the first predictive component already wasn't significant.
+
+```{r}
+write_rds(null.pls, here("data", "models", "null-pls.rds"))
+write_rds(null.pls.force, here("data", "models", "null-pls-force.rds"))
+```
+
+## Control
+
+### Control PCAs
+
+```{r}
+# map the pca function to all datasets
+control.pcr.try <-
+  map(control,
+      ~safe_pcr(.x, -group, group, CV = 7))
+
+control.pcr <-
+  control.pcr.try %>%
+  map("result") %>% 
+  discard(is.null)
+```
+
+How many errors? 
+
+```{r}
+length(control.pcr.try) - length(control.pcr)
+
+#What was the error?
+control.pcr.try %>% 
+  map("error") %>% 
+  unique()
+```
+
+Two failed models due to convergence problems
+
+Save em!
+
+```{r}
+write_rds(control.pcr, here("data", "models", "control-pcr.rds"))
+```
+
+
+### Control PLS-DAs
+
+```{r}
+control.pls.try <-
+  map(control,
+      ~ safe_opls(select(., -group), .$group, permI = 500))
+
+control.pls <-
+  control.pls.try %>% 
+  map("result") %>% 
+  discard(is.null) 
+
+# with one component forced (the average)
+control.pls.force <-
+  map(control,
+      ~ safe_opls(select(., -group), .$group, predI = 1, permI = 500)) %>% 
+  map("result") %>% 
+  discard(is.null) 
+```
+
+How many failed models?
+
+```{r}
+length(control.pls.try) - length(control.pls)
+```
+
+zero failed models
+
+Save em!
+
+```{r}
+write_rds(control.pls, here("data", "models", "control-pls.rds"))
+write_rds(control.pls.force, here("data", "models", "control-pls-force.rds"))
+```
+
+## Needle in a haystack
+
+### Needle PCAs
+
+```{r}
+needle.pcr.try <-
+  map(needle,
+      ~safe_pcr(.x, -group, group, CV = 7))
+
+needle.pcr <-
+  needle.pcr.try %>% 
+  map("result") %>% 
+  discard(is.null)
+# skrrrahh(18)
+```
+
+Any errors?
+
+```{r}
+length(needle.pcr.try) - length(needle.pcr)
+```
+
+zero failed models 
+```{r}
+write_rds(needle.pcr, here("data", "models", "needle-pcr.rds"))
+```
+
+### Needle PLS-DAs
+
+```{r}
+needle.pls.try <-
+  map(needle,
+      ~ safe_opls(select(., -group), .$group, permI = 500))
+
+needle.pls <-
+  needle.pls.try %>% 
+  map("result") %>% 
+  discard(is.null) 
+
+
+# with 2 components (the average) forced
+needle.pls.force <-
+  map(needle,
+      ~ safe_opls(select(., -group), .$group, predI = 2, permI = 500)) %>% 
+  map("result") %>% 
+  discard(is.null)
+```
+
+Any errors?
+
+```{r}
+length(needle.pls.try) - length(needle.pls)
+```
+
+zero errors
+
+```{r}
+write_rds(needle.pls, here("data", "models", "needle-pls.rds"))
+write_rds(needle.pls.force, here("data", "models", "needle-pls-force.rds"))
+```
+
+```{r}
+BRRR::skrrrahh(18)
+```
+
