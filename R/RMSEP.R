@@ -1,3 +1,6 @@
+library(ggfortify)
+library(rlang)
+
 .plsda_RMSEP <- function(split, X_vars, Y_var, ncomp){
   X_vars = enquo(X_vars)
   Y_var = enquo(Y_var)

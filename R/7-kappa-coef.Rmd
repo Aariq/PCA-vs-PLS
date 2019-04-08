@@ -1,0 +1,298 @@
+---
+title: "Confusion Matrix Calculations"
+output: html_notebook
+---
+
+To Do:
+
+- Make PLS-DA and PCA use same criteria (distance cutoff)
+- Make function work with whatever number of axes there are in the model.
+
+```{r}
+library(psych) # for cohen.kappa
+library(tidyverse)
+library(ropls)
+library(here)
+library(holodeck)
+library(cowplot)
+library(colorspace)
+```
+
+This notebook is an exploratory look at confusion matrices and Cohen's Kappa coefficient with my simulated data scenarios in mind.  Analysis of the data happens in "Simulated Data Analysis.Rmd"
+
+# Confusion Matrixes
+
+To do this, I employ a confusion matrix/kappa coefficient method.  A confusion matrix is just a contingency table with the intended categories of variables on one side, and the actual classification of the variables by some model on the other side.
+
+E.g.:
+
+```{r echo=FALSE}
+df <- tribble(~detected.as, ~actual, ~freq,
+              "discriminating", "discriminating", 15,
+              "discriminating", "uncorrelated", 2,
+              "uncorrelated", "uncorrelated", 10,
+              "uncorrelated", "discriminating", 3)
+xtabs(freq ~ detected.as + actual, data = df) %>% addmargins()
+```
+
+We have 15 true positives in the upper left, 10 true negatives in the lower right, and then 2 false positives in the upper right, and 3 false negatives in the lower left.
+
+## Kappa coefficient
+
+Using the confusion matrix, we can calculate Cohen's kappa which summarizes the ability of a model to classify things correctly.
+
+Cohen's kappa is defined as:
+
+$$
+\kappa = \frac{ p_o - p_e}{1-p_e}
+$$
+
+where $p_o$ is observed proportionate agreement:
+
+$$
+p_o = \frac{\text{true positives} + \text{true negatives}}{\text{total}}
+$$
+In my above example, $p_o = (15+10)/30$ or 0.8333
+
+and $p_e$ is probability of random agreement:
+
+$$
+p_e = (p_{(\text{detected discr})}\times p_{(\text{actual discr})}) + (p_{(\text{detected uncorr})} \times p_{(\text{actual uncorr})})
+$$
+That is, it uses the row and column summs from the contingency table to calculate probabilities.  For example, 17/30 variables were detected as discriminating, so $p_{\text{(detected discr)}} = 0.5666$
+
+```{r}
+pe = (17/30 * 18/30) + (12/30 * 13/30)
+pe
+```
+
+So K = 
+
+```{r}
+K = (0.8333333 - pe)/(1-pe)
+K
+```
+
+# Applying to PLS-DA and PCA
+
+In order to apply this to PLS-DA, I'll use the common cuttoff of VIP > 1 to indicate whether a variable is discriminating or not.  The name of the variable contains information on whether it was meant to be discriminating or not, so I can then create a confusion matrix and calculate K
+
+It's more difficult to decide how to do this for PCA since there are several ways to go about it.  Often correlation plots are used which plot loadings of the first two PCs with a circle representing a correlation coefficient cutoff, usually of 0.5.  Variables with correlations greater than 0.5 are considered significantly correlated with either PC1, PC2 or both, depending on the location of the variable in loading space.
+
+Rather than using a cutoff of r = 0.5, I'll use a cutoff of r = 0.38 which is what would be significant with n = 20 observations
+
+# Load data
+
+```{r}
+control.pcas <- read_rds(here("data", "models", "control-pcr.rds")) %>% map("pca")
+control.pls <- read_rds(here('data', 'models', 'control-pls.rds'))
+
+needle.pcas <- read_rds(here("data", "models", "needle-pcr.rds")) %>% map("pca")
+needle.pls <- read_rds(here('data', 'models', 'needle-pls.rds'))
+```
+
+
+# Functions
+
+`conf_pca()` creates a confusion matrix for PCA models produced by `opls()` by calculating correlation of variables to scores for the first two principal components.  Then, it creates a cutoff correlation which is equivalent to the $r$ you would get if $p = 0.05$ in a correlation test.  It then categorizes variables as discriminating or not based on this cutoff.
+
+`conf_pls()` creates a confusion matrix for PLS models produced by `opls()` by extracting VIP scores and assigning variables with VIP > 1 as discrminating.
+
+`calc_kappa()` takes the results of `conf_pca()` or `conf_pls()` and calculates Cohen's Kappa based on a confusion matrix.
+
+```{r}
+pca.model <- control.pcas[[1]]
+
+
+conf_pca <- function(pca.model){
+  scores <- get_scores(pca.model)
+  data <- pca.model@suppLs$xModelMN
+  
+  #figure out appropriate cutoff by solving for the r that gives p < 0.05 given n
+  
+  n = pca.model@descriptionMC[1,1] %>% as.numeric()
+  t = qt(0.05, n)
+  r = sqrt(-(t^2)/(-t^2 - n + 2)) #solved t stat calculation for r
+  
+  cor(scores[2:3], data) %>%
+    t() %>%
+    as_tibble(rownames = "Variable") %>% 
+    rowwise(.) %>% 
+    mutate(distance = sqrt(sum((c(p1, p2) - c(0, 0))^2))) %>% 
+    # if corr distance > 0.38, then its "important" variable
+    mutate(detect_discr = ifelse(distance > r, TRUE, FALSE),
+           is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE))
+}
+
+
+conf_pls <- function(pls.model){
+  # get_VIP(pls.model) %>% 
+  #   mutate(detect_discr = ifelse(VIP > 1, TRUE, FALSE),
+  #          is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE))
+  
+  #using same critera as PCA
+  
+  scores <- get_scores(pls.model)
+  data <- pls.model@suppLs$xModelMN
+  # ensure that scores$y1 is numeric
+  if(is.character(scores$y1)){
+    scores <- scores %>% mutate(y1 = as.numeric(as.factor(y1)))
+    message("Converting categorical Y variable to numeric")
+  }
+  
+}
+
+calc_kappa <- function(confusion_df) {
+  confusion_df %>% 
+    select(detect_discr, is_discr) %>%
+    as.matrix() %>%
+    cohen.kappa() %>%
+    .$kappa %>% 
+    data_frame(kappa = .)
+}
+
+conf_pca(control.pls[[1]])
+get_scores(control.pls[[1]])
+```
+
+
+## Control
+### Calculate Cohen's Kappa
+
+- For PCA, I'm defining an "important" variable as one with a correlation to PC1 > 0.38 or  < -0.38
+- For PLS, an "important" variable is one with a VIP score > 1
+
+**PCA kappas**
+
+```{r message=FALSE, warning=FALSE}
+control.pca.k <-
+  control.pcas %>%
+  map(conf_pca) %>%
+  map_df(calc_kappa, .id = "dataset") %>% 
+  rename(pca.k = "kappa")
+```
+
+
+**PLS-DA kappas**
+
+```{r message=FALSE, warning=FALSE}
+control.pls.k <-
+  control.pls %>% 
+  map(conf_pls) %>% 
+  map_df(calc_kappa, .id = "dataset") %>% 
+  rename(pls.k = "kappa")
+```
+
+**Join all kappas**
+
+```{r}
+control.k <- full_join(control.pca.k, control.pls.k) %>% filter(complete.cases(.))
+control.k %>% 
+  summarize(pca.k_mean = mean(pca.k),
+            pca.k_sd = sd(pca.k),
+            pls.k_mean = mean(pls.k),
+            pls.k_sd = sd(pls.k))
+```
+
+### Build Plot
+
+```{r}
+control.k.plotdata <-
+  control.k %>%
+  gather(-dataset, key = "Method", value = "Cohen's Kappa") %>% 
+  mutate(Method = as.factor(Method) %>% fct_recode(PCA = "pca.k", `PLS-DA` = "pls.k"))
+
+control.p <-
+  ggplot(control.k.plotdata) +
+  geom_histogram(aes(x = `Cohen's Kappa`, fill = Method),
+                 position = "identity", alpha = 0.8,
+                 binwidth = 0.1) +
+  # geom_density(aes(x = `Cohen's Kappa`, fill = Method), alpha = 0.7, trim = TRUE) +
+  scale_fill_discrete_qualitative(palette = "Dark 3") +
+  theme_bw() +
+  labs(x = "Cohen's Kappa", y = "Frequency")
+control.p
+```
+
+# Needle-in-a-haystack
+
+
+
+## Calculate Cohen's Kappa
+
+- For PCA, I'm defining an "important" variable as one with a correlation to PC1 > 0.5 or  < -0.5
+- For PLS, an "important" variable is one with a VIP score > 1
+
+**PCA kappas**
+
+```{r message=FALSE, warning=FALSE}
+needle.pca.k <-
+  needle.pcas %>%
+  map(conf_pca) %>%
+  map_df(calc_kappa, .id = "dataset") %>% 
+  rename(pca.k = "kappa")
+```
+
+
+**PLS-DA kappas**
+
+```{r message=FALSE, warning=FALSE}
+needle.pls.k <-
+  needle.pls %>%
+  map(conf_pls) %>%
+  map_df(calc_kappa, .id = "dataset") %>% 
+  rename(pls.k = "kappa")
+```
+
+**Join all kappas**
+
+```{r}
+needle.k <- full_join(needle.pca.k, needle.pls.k)
+needle.k %>% 
+  summarize(pca.k_mean = mean(pca.k),
+            pca.k_sd = sd(pca.k),
+            pls.k_mean = mean(pls.k),
+            pls.k_sd = sd(pls.k))
+```
+
+### Build plot
+
+```{r}
+needle.k.plotdata <-
+  needle.k %>%
+  gather(-dataset, key = "Method", value = "Cohen's Kappa") %>% 
+  mutate(Method = as.factor(Method) %>% fct_recode(PCA = "pca.k", `PLS-DA` = "pls.k"))
+
+needle.p <-
+  ggplot(needle.k.plotdata) +
+  geom_histogram(aes(x = `Cohen's Kappa`, fill = Method),
+                 position = "identity", alpha = 0.8,
+                 binwidth = 0.1) +
+  # geom_density(aes(x = `Cohen's Kappa`, fill = Method), alpha = 0.7, trim = TRUE) +
+  scale_fill_discrete_qualitative(palette = "Dark 3") +
+  theme_bw() +
+  labs(x = "Cohen's Kappa", y = "Frequency")
+needle.p
+```
+
+# Plot
+
+```{r}
+panels <-
+  plot_grid(control.p + theme(legend.position = "none")+ coord_cartesian(xlim = c(-0.5, 1)),
+            needle.p + theme(legend.position = "none")+ coord_cartesian(xlim = c(-0.5, 1)),
+            nrow = 1,
+            ncol = 2,
+            labels = "AUTO")
+fig2 <-
+  plot_grid(panels, get_legend(control.p),
+            rel_widths = c(1, 0.15))
+fig2
+save_plot(here("figs", "fig2.png"), fig2, ncol = 2)
+```
+
+Cohen's Kappa for PCA and PLS-DA important variables under control (a) and needle-in-a-haystack (b) scenarios.
+
+
+
+
