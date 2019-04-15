@@ -1780,8 +1780,8 @@ myseed &lt;- 258</code></pre>
 <p>It makes sense to make randomly generated datasets under my three scenarios <strong>once</strong> and then save them as .RDS files. Then, I can do comparisons of PCA and PLS-DA, pick individual datasets to make figures out of, etc. using these saved files.</p>
 <p><strong>For all datasets:</strong></p>
 <ul>
-<li>p (number of variables) = 25</li>
-<li>N (number of observations) = 20</li>
+<li>n_vars (number of variables) = 25</li>
+<li>n_obs (number of observations) = 20</li>
 <li>var (variation parameter, passed to mvrnorm) = 1</li>
 <li>Number of groups = 2</li>
 <li>Number of datasets generated = 100</li>
@@ -1810,14 +1810,14 @@ myseed &lt;- 258</code></pre>
 <h1>1. NULL</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc2V0LnNlZWQobXlzZWVkKVxubnVsbCA8LVxuICBtYXAoMToxMDAsXG4gICAgICB+IHNpbV9jYXQoTiA9IDIwLCBuX2dyb3VwcyA9IDIpICU+JSBcbiAgICAgICAgc2ltX2NvdmFyKHAgPSA1LCB2YXIgPSAxLCBjb3YgPSAwLCBuYW1lID0gXCJOXCIpICU+JSBcbiAgICAgICAgc2ltX2NvdmFyKHAgPSAxMCwgdmFyID0gMSwgY292ID0gMC41LCBuYW1lID0gXCJDMVwiKSAlPiUgXG4gICAgICAgIHNpbV9jb3ZhcihwID0gMTAsIHZhciA9IDEsIGNvdiA9IDAuNSwgbmFtZSA9IFwiQzJcIilcbiAgKSAlPiVcbiAgc2V0X25hbWVzKHBhc3RlMChcIm51bGxfZGZfXCIsIDE6MTAwKSlcbmBgYCJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc2V0LnNlZWQobXlzZWVkKVxubnVsbCA8LVxuICBtYXAoMToxMDAsXG4gICAgICB+IHNpbV9jYXQobl9vYnMgPSAyMCwgbl9ncm91cHMgPSAyKSAlPiUgXG4gICAgICAgIHNpbV9jb3ZhcihuX3ZhcnMgPSA1LCB2YXIgPSAxLCBjb3YgPSAwLCBuYW1lID0gXCJOXCIpICU+JSBcbiAgICAgICAgc2ltX2NvdmFyKG5fdmFycyA9IDEwLCB2YXIgPSAxLCBjb3YgPSAwLjUsIG5hbWUgPSBcIkMxXCIpICU+JSBcbiAgICAgICAgc2ltX2NvdmFyKG5fdmFycyA9IDEwLCB2YXIgPSAxLCBjb3YgPSAwLjUsIG5hbWUgPSBcIkMyXCIpXG4gICkgJT4lXG4gIHNldF9uYW1lcyhwYXN0ZTAoXCJudWxsX2RmX1wiLCAxOjEwMCkpXG5gYGAifQ== -->
 <pre class="r"><code>set.seed(myseed)
 null &lt;-
   map(1:100,
-      ~ sim_cat(N = 20, n_groups = 2) %&gt;% 
-        sim_covar(p = 5, var = 1, cov = 0, name = &quot;N&quot;) %&gt;% 
-        sim_covar(p = 10, var = 1, cov = 0.5, name = &quot;C1&quot;) %&gt;% 
-        sim_covar(p = 10, var = 1, cov = 0.5, name = &quot;C2&quot;)
+      ~ sim_cat(n_obs = 20, n_groups = 2) %&gt;% 
+        sim_covar(n_vars = 5, var = 1, cov = 0, name = &quot;N&quot;) %&gt;% 
+        sim_covar(n_vars = 10, var = 1, cov = 0.5, name = &quot;C1&quot;) %&gt;% 
+        sim_covar(n_vars = 10, var = 1, cov = 0.5, name = &quot;C2&quot;)
   ) %&gt;%
   set_names(paste0(&quot;null_df_&quot;, 1:100))</code></pre>
 <!-- rnb-source-end -->
@@ -1840,15 +1840,15 @@ null[[sample(1:100, 1)]] %&gt;%
 <h1>2. Needle in a haystack</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc2V0LnNlZWQobXlzZWVkKVxubmVlZGxlX2luX2hheXN0YWNrIDwtXG4gIG1hcCgxOjEwMCxcbiAgICAgIH4gc2ltX2NhdChOID0gMjAsIG5fZ3JvdXBzID0gMikgJT4lIFxuICAgICAgICBncm91cF9ieShncm91cCkgJT4lIFxuICAgICAgICBzaW1fZGlzY3IocCA9IDUsIHZhciA9IDEsIGNvdiA9IDAsIGdyb3VwX21lYW5zID0gYygtMSwgMSksIG5hbWUgPSBcIkRcIikgJT4lIFxuICAgICAgICBzaW1fY292YXIocCA9IDEwLCB2YXIgPSAxLCBjb3YgPSAwLjUsIG5hbWUgPSBcIkMxXCIpICU+JSBcbiAgICAgICAgc2ltX2NvdmFyKHAgPSAxMCwgdmFyID0gMSwgY292ID0gMC41LCBuYW1lID0gXCJDMlwiKSAlPiUgXG4gICAgICAgIHVuZ3JvdXAoKVxuICApICU+JVxuICBzZXRfbmFtZXMocGFzdGUwKFwibmVlZGxlX2luX2hheXN0YWNrX1wiLCAxOjEwMCkpXG5gYGAifQ== -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc2V0LnNlZWQobXlzZWVkKVxubmVlZGxlX2luX2hheXN0YWNrIDwtXG4gIG1hcCgxOjEwMCxcbiAgICAgIH4gc2ltX2NhdChuX29icyA9IDIwLCBuX2dyb3VwcyA9IDIpICU+JSBcbiAgICAgICAgZ3JvdXBfYnkoZ3JvdXApICU+JSBcbiAgICAgICAgc2ltX2Rpc2NyKG5fdmFycyA9IDUsIHZhciA9IDEsIGNvdiA9IDAsIGdyb3VwX21lYW5zID0gYygtMSwgMSksIG5hbWUgPSBcIkRcIikgJT4lIFxuICAgICAgICBzaW1fY292YXIobl92YXJzID0gMTAsIHZhciA9IDEsIGNvdiA9IDAuNSwgbmFtZSA9IFwiQzFcIikgJT4lIFxuICAgICAgICBzaW1fY292YXIobl92YXJzID0gMTAsIHZhciA9IDEsIGNvdiA9IDAuNSwgbmFtZSA9IFwiQzJcIikgJT4lIFxuICAgICAgICB1bmdyb3VwKClcbiAgKSAlPiVcbiAgc2V0X25hbWVzKHBhc3RlMChcIm5lZWRsZV9pbl9oYXlzdGFja19cIiwgMToxMDApKVxuYGBgIn0= -->
 <pre class="r"><code>set.seed(myseed)
 needle_in_haystack &lt;-
   map(1:100,
-      ~ sim_cat(N = 20, n_groups = 2) %&gt;% 
+      ~ sim_cat(n_obs = 20, n_groups = 2) %&gt;% 
         group_by(group) %&gt;% 
-        sim_discr(p = 5, var = 1, cov = 0, group_means = c(-1, 1), name = &quot;D&quot;) %&gt;% 
-        sim_covar(p = 10, var = 1, cov = 0.5, name = &quot;C1&quot;) %&gt;% 
-        sim_covar(p = 10, var = 1, cov = 0.5, name = &quot;C2&quot;) %&gt;% 
+        sim_discr(n_vars = 5, var = 1, cov = 0, group_means = c(-1, 1), name = &quot;D&quot;) %&gt;% 
+        sim_covar(n_vars = 10, var = 1, cov = 0.5, name = &quot;C1&quot;) %&gt;% 
+        sim_covar(n_vars = 10, var = 1, cov = 0.5, name = &quot;C2&quot;) %&gt;% 
         ungroup()
   ) %&gt;%
   set_names(paste0(&quot;needle_in_haystack_&quot;, 1:100))</code></pre>
@@ -1871,16 +1871,16 @@ needle_in_haystack &lt;-
 <h1>3. Control</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc2V0LnNlZWQobXlzZWVkKVxuY29udHJvbCA8LVxuICBtYXAoMToxMDAsXG4gICAgICB+IHNpbV9jYXQoTiA9IDIwLCBuX2dyb3VwcyA9IDIpICU+JSBcbiAgICAgICAgZ3JvdXBfYnkoZ3JvdXApICU+JSBcbiAgICAgICAgc2ltX2Rpc2NyKHAgPSA1LCB2YXIgPSAxLCBjb3YgPSAwLjUsIGdyb3VwX21lYW5zID0gYygtMSwgMSksIG5hbWUgPSBcIkQxXCIpICU+JSBcbiAgICAgICAgc2ltX2Rpc2NyKHAgPSA1LCB2YXIgPSAxLCBjb3YgPSAwLjUsIGdyb3VwX21lYW5zID0gYygtMSwgMSksIG5hbWUgPSBcIkQyXCIpICU+JSBcbiAgICAgICAgc2ltX2NvdmFyKHAgPSAxMCwgdmFyID0gMSwgY292ID0gMCwgbmFtZSA9IFwiTlwiKSAlPiUgXG4gICAgICAgIHNpbV9jb3ZhcihwID0gNSwgdmFyID0gMSwgY292ID0gMC41LCBuYW1lID0gXCJDXCIpICU+JSBcbiAgICAgICAgdW5ncm91cCgpXG4gICkgJT4lXG4gIHNldF9uYW1lcyhwYXN0ZTAoXCJjb250cm9sX1wiLCAxOjEwMCkpXG5gYGAifQ== -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc2V0LnNlZWQobXlzZWVkKVxuY29udHJvbCA8LVxuICBtYXAoMToxMDAsXG4gICAgICB+IHNpbV9jYXQobl9vYnMgPSAyMCwgbl9ncm91cHMgPSAyKSAlPiUgXG4gICAgICAgIGdyb3VwX2J5KGdyb3VwKSAlPiUgXG4gICAgICAgIHNpbV9kaXNjcihuX3ZhcnMgPSA1LCB2YXIgPSAxLCBjb3YgPSAwLjUsIGdyb3VwX21lYW5zID0gYygtMSwgMSksIG5hbWUgPSBcIkQxXCIpICU+JSBcbiAgICAgICAgc2ltX2Rpc2NyKG5fdmFycyA9IDUsIHZhciA9IDEsIGNvdiA9IDAuNSwgZ3JvdXBfbWVhbnMgPSBjKC0xLCAxKSwgbmFtZSA9IFwiRDJcIikgJT4lIFxuICAgICAgICBzaW1fY292YXIobl92YXJzID0gMTAsIHZhciA9IDEsIGNvdiA9IDAsIG5hbWUgPSBcIk5cIikgJT4lIFxuICAgICAgICBzaW1fY292YXIobl92YXJzID0gNSwgdmFyID0gMSwgY292ID0gMC41LCBuYW1lID0gXCJDXCIpICU+JSBcbiAgICAgICAgdW5ncm91cCgpXG4gICkgJT4lXG4gIHNldF9uYW1lcyhwYXN0ZTAoXCJjb250cm9sX1wiLCAxOjEwMCkpXG5gYGAifQ== -->
 <pre class="r"><code>set.seed(myseed)
 control &lt;-
   map(1:100,
-      ~ sim_cat(N = 20, n_groups = 2) %&gt;% 
+      ~ sim_cat(n_obs = 20, n_groups = 2) %&gt;% 
         group_by(group) %&gt;% 
-        sim_discr(p = 5, var = 1, cov = 0.5, group_means = c(-1, 1), name = &quot;D1&quot;) %&gt;% 
-        sim_discr(p = 5, var = 1, cov = 0.5, group_means = c(-1, 1), name = &quot;D2&quot;) %&gt;% 
-        sim_covar(p = 10, var = 1, cov = 0, name = &quot;N&quot;) %&gt;% 
-        sim_covar(p = 5, var = 1, cov = 0.5, name = &quot;C&quot;) %&gt;% 
+        sim_discr(n_vars = 5, var = 1, cov = 0.5, group_means = c(-1, 1), name = &quot;D1&quot;) %&gt;% 
+        sim_discr(n_vars = 5, var = 1, cov = 0.5, group_means = c(-1, 1), name = &quot;D2&quot;) %&gt;% 
+        sim_covar(n_vars = 10, var = 1, cov = 0, name = &quot;N&quot;) %&gt;% 
+        sim_covar(n_vars = 5, var = 1, cov = 0.5, name = &quot;C&quot;) %&gt;% 
         ungroup()
   ) %&gt;%
   set_names(paste0(&quot;control_&quot;, 1:100))</code></pre>
@@ -1915,7 +1915,7 @@ write_rds(control, here(&quot;data&quot;, &quot;control.rds&quot;))</code></pre>
 <!-- rnb-text-end -->
 </div>
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiU2ltdWxhdGluZyBEYXRhc2V0cyIKb3V0cHV0OiBodG1sX25vdGVib29rCi0tLQpgYGB7ciBtZXNzYWdlPUZBTFNFLCB3YXJuaW5nPUZBTFNFfQpsaWJyYXJ5KGloZWF0bWFwcikKbGlicmFyeShob2xvZGVjaykKbGlicmFyeSh0aWR5dmVyc2UpCm15c2VlZCA8LSAyNTgKYGBgCgoKSXQgbWFrZXMgc2Vuc2UgdG8gbWFrZSByYW5kb21seSBnZW5lcmF0ZWQgZGF0YXNldHMgdW5kZXIgbXkgdGhyZWUgc2NlbmFyaW9zICoqb25jZSoqIGFuZCB0aGVuIHNhdmUgdGhlbSBhcyAuUkRTIGZpbGVzLiAgVGhlbiwgSSBjYW4gZG8gY29tcGFyaXNvbnMgb2YgUENBIGFuZCBQTFMtREEsIHBpY2sgaW5kaXZpZHVhbCBkYXRhc2V0cyB0byBtYWtlIGZpZ3VyZXMgb3V0IG9mLCBldGMuIHVzaW5nIHRoZXNlIHNhdmVkIGZpbGVzLgoKKipGb3IgYWxsIGRhdGFzZXRzOioqCgogLSBwIChudW1iZXIgb2YgdmFyaWFibGVzKSA9IDI1CiAtIE4gKG51bWJlciBvZiBvYnNlcnZhdGlvbnMpID0gMjAKIC0gdmFyICh2YXJpYXRpb24gcGFyYW1ldGVyLCBwYXNzZWQgdG8gbXZybm9ybSkgPSAxCiAtIE51bWJlciBvZiBncm91cHMgPSAyCiAtIE51bWJlciBvZiBkYXRhc2V0cyBnZW5lcmF0ZWQgPSAxMDAKIAoqKlNjZW5hcmlvczoqKgoKMS4gKipOVUxMKioKICAgIC0gbm8gZGlzY3JpbWluYXRpbmcgdmFyaWFibGVzCiAgICAtIDUgdmFyaWFibGVzIHdpdGggY292ID0gMAogICAgLSB0d28gZ3JvdXBzIG9mIDEwIHZhcmlhYmxlcyB3aXRoIGNvdiA9IDAuNQogIAoyLiAqKk5lZWRsZSBpbiBhIGhheXN0YWNrKioKICAgIC0gNSB2YXJpYWJsZXMgdGhhdCBkaXNjcmltaW5hdGUgYmV0d2VlbiBncm91cHMgd2l0aCBhIGRpZmZlcmVuY2UgaW4gbWVhbnMgb2YgMiwgY292ID0gMAogICAgLSB0d28gZ3JvdXBzIG9mIDEwIHZhcmlhYmxlcyB3aXRoIGNvdiA9IDAuNQogIAo0LiAqKkNvbnRyb2wqKgogICAgLSA1IHZhcmlhYmxlcyB0aGF0IGRpc2NyaW1pbmF0ZSBiZXR3ZWVuIGdyb3VwcyB3aXRoIGRpZmZlcmVuY2UgaW4gbWVhbnMgb2YgMiwgY292ID0gMC41CiAgICAtIDEwIHZhcmlhYmxlcyB3aXRoIGNvdiA9IDAKICAgIC0gMTAgdmFyaWFibGVzIHdpdGggY292ID0gMC4yICh3ZWFrbHkgY292YXJ5aW5nLCBidXQgbm90IGRpc2NyaW1pbmF0aW5nLiAgU29tZXRoaW5nIGZvciBheGlzMiB0byBwaWNrIHVwIG9uPykKCiMgMS4gTlVMTAoKYGBge3J9CnNldC5zZWVkKG15c2VlZCkKbnVsbCA8LQogIG1hcCgxOjEwMCwKICAgICAgfiBzaW1fY2F0KE4gPSAyMCwgbl9ncm91cHMgPSAyKSAlPiUgCiAgICAgICAgc2ltX2NvdmFyKHAgPSA1LCB2YXIgPSAxLCBjb3YgPSAwLCBuYW1lID0gIk4iKSAlPiUgCiAgICAgICAgc2ltX2NvdmFyKHAgPSAxMCwgdmFyID0gMSwgY292ID0gMC41LCBuYW1lID0gIkMxIikgJT4lIAogICAgICAgIHNpbV9jb3ZhcihwID0gMTAsIHZhciA9IDEsIGNvdiA9IDAuNSwgbmFtZSA9ICJDMiIpCiAgKSAlPiUKICBzZXRfbmFtZXMocGFzdGUwKCJudWxsX2RmXyIsIDE6MTAwKSkKYGBgCgpJbnNwZWN0IG9uZToKCmBgYHtyfQpzZXQuc2VlZChteXNlZWQpCm51bGxbW3NhbXBsZSgxOjEwMCwgMSldXSAlPiUKICBkcGx5cjo6c2VsZWN0KC1ncm91cCkgJT4lIAogIGNvcigpICU+JSAKICBpaGVhdG1hcChyb3dfbGFiZWxzID0gVFJVRSwgY29sX2xhYmVscyA9IFRSVUUsIG5hbWUgPSAiY29yIikKYGBgCgojIDIuIE5lZWRsZSBpbiBhIGhheXN0YWNrCgpgYGB7cn0Kc2V0LnNlZWQobXlzZWVkKQpuZWVkbGVfaW5faGF5c3RhY2sgPC0KICBtYXAoMToxMDAsCiAgICAgIH4gc2ltX2NhdChOID0gMjAsIG5fZ3JvdXBzID0gMikgJT4lIAogICAgICAgIGdyb3VwX2J5KGdyb3VwKSAlPiUgCiAgICAgICAgc2ltX2Rpc2NyKHAgPSA1LCB2YXIgPSAxLCBjb3YgPSAwLCBncm91cF9tZWFucyA9IGMoLTEsIDEpLCBuYW1lID0gIkQiKSAlPiUgCiAgICAgICAgc2ltX2NvdmFyKHAgPSAxMCwgdmFyID0gMSwgY292ID0gMC41LCBuYW1lID0gIkMxIikgJT4lIAogICAgICAgIHNpbV9jb3ZhcihwID0gMTAsIHZhciA9IDEsIGNvdiA9IDAuNSwgbmFtZSA9ICJDMiIpICU+JSAKICAgICAgICB1bmdyb3VwKCkKICApICU+JQogIHNldF9uYW1lcyhwYXN0ZTAoIm5lZWRsZV9pbl9oYXlzdGFja18iLCAxOjEwMCkpCmBgYAoKSW5zcGVjdCBvbmU6CgpgYGB7cn0KbmVlZGxlX2luX2hheXN0YWNrW1tzYW1wbGUoMToxMDAsIDEpXV0gJT4lCiAgZHBseXI6OnNlbGVjdCgtZ3JvdXApICU+JSAKICBjb3IoKSAlPiUgCiAgaWhlYXRtYXAocm93X2xhYmVscyA9IFRSVUUsIGNvbF9sYWJlbHMgPSBUUlVFLCBuYW1lID0gImNvciIpCmBgYAoKCiMgMy4gQ29udHJvbAoKYGBge3J9CnNldC5zZWVkKG15c2VlZCkKY29udHJvbCA8LQogIG1hcCgxOjEwMCwKICAgICAgfiBzaW1fY2F0KE4gPSAyMCwgbl9ncm91cHMgPSAyKSAlPiUgCiAgICAgICAgZ3JvdXBfYnkoZ3JvdXApICU+JSAKICAgICAgICBzaW1fZGlzY3IocCA9IDUsIHZhciA9IDEsIGNvdiA9IDAuNSwgZ3JvdXBfbWVhbnMgPSBjKC0xLCAxKSwgbmFtZSA9ICJEMSIpICU+JSAKICAgICAgICBzaW1fZGlzY3IocCA9IDUsIHZhciA9IDEsIGNvdiA9IDAuNSwgZ3JvdXBfbWVhbnMgPSBjKC0xLCAxKSwgbmFtZSA9ICJEMiIpICU+JSAKICAgICAgICBzaW1fY292YXIocCA9IDEwLCB2YXIgPSAxLCBjb3YgPSAwLCBuYW1lID0gIk4iKSAlPiUgCiAgICAgICAgc2ltX2NvdmFyKHAgPSA1LCB2YXIgPSAxLCBjb3YgPSAwLjUsIG5hbWUgPSAiQyIpICU+JSAKICAgICAgICB1bmdyb3VwKCkKICApICU+JQogIHNldF9uYW1lcyhwYXN0ZTAoImNvbnRyb2xfIiwgMToxMDApKQpgYGAKCkluc3BlY3Qgb25lOgoKYGBge3J9CmNvbnRyb2xbW3NhbXBsZSgxOjEwMCwgMSldXSAlPiUKICBkcGx5cjo6c2VsZWN0KC1ncm91cCkgJT4lIAogIGNvcigpICU+JSAKICBpaGVhdG1hcChyb3dfbGFiZWxzID0gVFJVRSwgY29sX2xhYmVscyA9IFRSVUUsIG5hbWUgPSAiY29yIikKYGBgCgoKIyBTYXZlICdlbQoKYGBge3J9CmxpYnJhcnkoaGVyZSkKd3JpdGVfcmRzKG51bGwsIGhlcmUoImRhdGEiLCAibnVsbC5yZHMiKSkKd3JpdGVfcmRzKG5lZWRsZV9pbl9oYXlzdGFjaywgaGVyZSgiZGF0YSIsICJuZWVkbGUucmRzIikpCndyaXRlX3JkcyhyZWRfaGVycmluZywgaGVyZSgiZGF0YSIsICJyZWQgaGVycmluZy5yZHMiKSkKd3JpdGVfcmRzKGNvbnRyb2wsIGhlcmUoImRhdGEiLCAiY29udHJvbC5yZHMiKSkKYGBgCgo=</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiU2ltdWxhdGluZyBEYXRhc2V0cyIKb3V0cHV0OiBodG1sX25vdGVib29rCi0tLQpgYGB7ciBtZXNzYWdlPUZBTFNFLCB3YXJuaW5nPUZBTFNFfQpsaWJyYXJ5KGloZWF0bWFwcikKbGlicmFyeShob2xvZGVjaykKbGlicmFyeSh0aWR5dmVyc2UpCm15c2VlZCA8LSAyNTgKYGBgCgoKSXQgbWFrZXMgc2Vuc2UgdG8gbWFrZSByYW5kb21seSBnZW5lcmF0ZWQgZGF0YXNldHMgdW5kZXIgbXkgdGhyZWUgc2NlbmFyaW9zICoqb25jZSoqIGFuZCB0aGVuIHNhdmUgdGhlbSBhcyAuUkRTIGZpbGVzLiAgVGhlbiwgSSBjYW4gZG8gY29tcGFyaXNvbnMgb2YgUENBIGFuZCBQTFMtREEsIHBpY2sgaW5kaXZpZHVhbCBkYXRhc2V0cyB0byBtYWtlIGZpZ3VyZXMgb3V0IG9mLCBldGMuIHVzaW5nIHRoZXNlIHNhdmVkIGZpbGVzLgoKKipGb3IgYWxsIGRhdGFzZXRzOioqCgogLSBuX3ZhcnMgKG51bWJlciBvZiB2YXJpYWJsZXMpID0gMjUKIC0gbl9vYnMgKG51bWJlciBvZiBvYnNlcnZhdGlvbnMpID0gMjAKIC0gdmFyICh2YXJpYXRpb24gcGFyYW1ldGVyLCBwYXNzZWQgdG8gbXZybm9ybSkgPSAxCiAtIE51bWJlciBvZiBncm91cHMgPSAyCiAtIE51bWJlciBvZiBkYXRhc2V0cyBnZW5lcmF0ZWQgPSAxMDAKIAoqKlNjZW5hcmlvczoqKgoKMS4gKipOVUxMKioKICAgIC0gbm8gZGlzY3JpbWluYXRpbmcgdmFyaWFibGVzCiAgICAtIDUgdmFyaWFibGVzIHdpdGggY292ID0gMAogICAgLSB0d28gZ3JvdXBzIG9mIDEwIHZhcmlhYmxlcyB3aXRoIGNvdiA9IDAuNQogIAoyLiAqKk5lZWRsZSBpbiBhIGhheXN0YWNrKioKICAgIC0gNSB2YXJpYWJsZXMgdGhhdCBkaXNjcmltaW5hdGUgYmV0d2VlbiBncm91cHMgd2l0aCBhIGRpZmZlcmVuY2UgaW4gbWVhbnMgb2YgMiwgY292ID0gMAogICAgLSB0d28gZ3JvdXBzIG9mIDEwIHZhcmlhYmxlcyB3aXRoIGNvdiA9IDAuNQogIAo0LiAqKkNvbnRyb2wqKgogICAgLSA1IHZhcmlhYmxlcyB0aGF0IGRpc2NyaW1pbmF0ZSBiZXR3ZWVuIGdyb3VwcyB3aXRoIGRpZmZlcmVuY2UgaW4gbWVhbnMgb2YgMiwgY292ID0gMC41CiAgICAtIDEwIHZhcmlhYmxlcyB3aXRoIGNvdiA9IDAKICAgIC0gMTAgdmFyaWFibGVzIHdpdGggY292ID0gMC4yICh3ZWFrbHkgY292YXJ5aW5nLCBidXQgbm90IGRpc2NyaW1pbmF0aW5nLiAgU29tZXRoaW5nIGZvciBheGlzMiB0byBwaWNrIHVwIG9uPykKCiMgMS4gTlVMTAoKYGBge3J9CnNldC5zZWVkKG15c2VlZCkKbnVsbCA8LQogIG1hcCgxOjEwMCwKICAgICAgfiBzaW1fY2F0KG5fb2JzID0gMjAsIG5fZ3JvdXBzID0gMikgJT4lIAogICAgICAgIHNpbV9jb3ZhcihuX3ZhcnMgPSA1LCB2YXIgPSAxLCBjb3YgPSAwLCBuYW1lID0gIk4iKSAlPiUgCiAgICAgICAgc2ltX2NvdmFyKG5fdmFycyA9IDEwLCB2YXIgPSAxLCBjb3YgPSAwLjUsIG5hbWUgPSAiQzEiKSAlPiUgCiAgICAgICAgc2ltX2NvdmFyKG5fdmFycyA9IDEwLCB2YXIgPSAxLCBjb3YgPSAwLjUsIG5hbWUgPSAiQzIiKQogICkgJT4lCiAgc2V0X25hbWVzKHBhc3RlMCgibnVsbF9kZl8iLCAxOjEwMCkpCmBgYAoKSW5zcGVjdCBvbmU6CgpgYGB7cn0Kc2V0LnNlZWQobXlzZWVkKQpudWxsW1tzYW1wbGUoMToxMDAsIDEpXV0gJT4lCiAgZHBseXI6OnNlbGVjdCgtZ3JvdXApICU+JSAKICBjb3IoKSAlPiUgCiAgaWhlYXRtYXAocm93X2xhYmVscyA9IFRSVUUsIGNvbF9sYWJlbHMgPSBUUlVFLCBuYW1lID0gImNvciIpCmBgYAoKIyAyLiBOZWVkbGUgaW4gYSBoYXlzdGFjawoKYGBge3J9CnNldC5zZWVkKG15c2VlZCkKbmVlZGxlX2luX2hheXN0YWNrIDwtCiAgbWFwKDE6MTAwLAogICAgICB+IHNpbV9jYXQobl9vYnMgPSAyMCwgbl9ncm91cHMgPSAyKSAlPiUgCiAgICAgICAgZ3JvdXBfYnkoZ3JvdXApICU+JSAKICAgICAgICBzaW1fZGlzY3Iobl92YXJzID0gNSwgdmFyID0gMSwgY292ID0gMCwgZ3JvdXBfbWVhbnMgPSBjKC0xLCAxKSwgbmFtZSA9ICJEIikgJT4lIAogICAgICAgIHNpbV9jb3ZhcihuX3ZhcnMgPSAxMCwgdmFyID0gMSwgY292ID0gMC41LCBuYW1lID0gIkMxIikgJT4lIAogICAgICAgIHNpbV9jb3ZhcihuX3ZhcnMgPSAxMCwgdmFyID0gMSwgY292ID0gMC41LCBuYW1lID0gIkMyIikgJT4lIAogICAgICAgIHVuZ3JvdXAoKQogICkgJT4lCiAgc2V0X25hbWVzKHBhc3RlMCgibmVlZGxlX2luX2hheXN0YWNrXyIsIDE6MTAwKSkKYGBgCgpJbnNwZWN0IG9uZToKCmBgYHtyfQpuZWVkbGVfaW5faGF5c3RhY2tbW3NhbXBsZSgxOjEwMCwgMSldXSAlPiUKICBkcGx5cjo6c2VsZWN0KC1ncm91cCkgJT4lIAogIGNvcigpICU+JSAKICBpaGVhdG1hcChyb3dfbGFiZWxzID0gVFJVRSwgY29sX2xhYmVscyA9IFRSVUUsIG5hbWUgPSAiY29yIikKYGBgCgoKIyAzLiBDb250cm9sCgpgYGB7cn0Kc2V0LnNlZWQobXlzZWVkKQpjb250cm9sIDwtCiAgbWFwKDE6MTAwLAogICAgICB+IHNpbV9jYXQobl9vYnMgPSAyMCwgbl9ncm91cHMgPSAyKSAlPiUgCiAgICAgICAgZ3JvdXBfYnkoZ3JvdXApICU+JSAKICAgICAgICBzaW1fZGlzY3Iobl92YXJzID0gNSwgdmFyID0gMSwgY292ID0gMC41LCBncm91cF9tZWFucyA9IGMoLTEsIDEpLCBuYW1lID0gIkQxIikgJT4lIAogICAgICAgIHNpbV9kaXNjcihuX3ZhcnMgPSA1LCB2YXIgPSAxLCBjb3YgPSAwLjUsIGdyb3VwX21lYW5zID0gYygtMSwgMSksIG5hbWUgPSAiRDIiKSAlPiUgCiAgICAgICAgc2ltX2NvdmFyKG5fdmFycyA9IDEwLCB2YXIgPSAxLCBjb3YgPSAwLCBuYW1lID0gIk4iKSAlPiUgCiAgICAgICAgc2ltX2NvdmFyKG5fdmFycyA9IDUsIHZhciA9IDEsIGNvdiA9IDAuNSwgbmFtZSA9ICJDIikgJT4lIAogICAgICAgIHVuZ3JvdXAoKQogICkgJT4lCiAgc2V0X25hbWVzKHBhc3RlMCgiY29udHJvbF8iLCAxOjEwMCkpCmBgYAoKSW5zcGVjdCBvbmU6CgpgYGB7cn0KY29udHJvbFtbc2FtcGxlKDE6MTAwLCAxKV1dICU+JQogIGRwbHlyOjpzZWxlY3QoLWdyb3VwKSAlPiUgCiAgY29yKCkgJT4lIAogIGloZWF0bWFwKHJvd19sYWJlbHMgPSBUUlVFLCBjb2xfbGFiZWxzID0gVFJVRSwgbmFtZSA9ICJjb3IiKQpgYGAKCgojIFNhdmUgJ2VtCgpgYGB7cn0KbGlicmFyeShoZXJlKQp3cml0ZV9yZHMobnVsbCwgaGVyZSgiZGF0YSIsICJudWxsLnJkcyIpKQp3cml0ZV9yZHMobmVlZGxlX2luX2hheXN0YWNrLCBoZXJlKCJkYXRhIiwgIm5lZWRsZS5yZHMiKSkKd3JpdGVfcmRzKHJlZF9oZXJyaW5nLCBoZXJlKCJkYXRhIiwgInJlZCBoZXJyaW5nLnJkcyIpKQp3cml0ZV9yZHMoY29udHJvbCwgaGVyZSgiZGF0YSIsICJjb250cm9sLnJkcyIpKQpgYGAKCg==</div>
 
 
 

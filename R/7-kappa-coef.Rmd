@@ -13,7 +13,6 @@ library(psych) # for cohen.kappa
 library(tidyverse)
 library(ropls)
 library(here)
-library(holodeck)
 library(cowplot)
 library(colorspace)
 source(here("R", "ropls_helpers.R"))

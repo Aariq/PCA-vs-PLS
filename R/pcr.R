@@ -156,12 +156,13 @@ pcreg <- function(data, X_vars, Y_var, CV = 7){
   return(list(pca = pca, lm = m, RMSEP = RMSEP))
 }
 # set.seed(400)
-# test.df <- sim_cat(N = 30, n_groups = 2) %>% 
-#   sim_covar(p = 5, var = 1, cov = 0.5, name = "cov") %>% 
-#   sim_covar(p = 5, var = 1, cov = 0.5, name = "cov2") %>% 
-#   # sim_covar(p = 5, var = 1, cov = 0, name = "noise") %>% 
+# library(holodeck)
+# test.df <- sim_cat(n_obs = 30, n_groups = 2) %>% 
+#   sim_covar(n_vars = 5, var = 1, cov = 0.5, name = "cov") %>% 
+#   sim_covar(n_vars = 5, var = 1, cov = 0.5, name = "cov2") %>% 
+#   # sim_covar(n_vars = 5, var = 1, cov = 0, name = "noise") %>% 
 #   group_by(group) %>% 
-#   sim_discr(p = 5, var = 1, cov = 0.1, group_means = c(-1, 1), name = "discr") %>%
+#   sim_discr(n_vars = 5, var = 1, cov = 0.1, group_means = c(-1, 1), name = "discr") %>%
 #   ungroup() #%>% 
 # # mutate(group = as.numeric(as.factor(group)))
 # m <- pcreg(X_vars = -group, Y_var = group, CV = 10, data = test.df)
