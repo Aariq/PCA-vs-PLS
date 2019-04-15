@@ -16,6 +16,7 @@ library(here)
 library(holodeck)
 library(cowplot)
 library(colorspace)
+source(here("R", "ropls_helpers.R"))
 ```
 
 This notebook is an exploratory look at confusion matrices and Cohen's Kappa coefficient with my simulated data scenarios in mind.  Analysis of the data happens in "Simulated Data Analysis.Rmd"
@@ -94,27 +95,42 @@ needle.pls <- read_rds(here('data', 'models', 'needle-pls.rds'))
 
 # Functions
 
-`conf_pca()` creates a confusion matrix for PCA models produced by `opls()` by calculating correlation of variables to scores for the first two principal components.  Then, it creates a cutoff correlation which is equivalent to the $r$ you would get if $p = 0.05$ in a correlation test.  It then categorizes variables as discriminating or not based on this cutoff.
+`conf_df()` creates a confusion matrix for models produced by `opls()` by calculating correlation of variables to scores for up to two principal components. These correlations are mathematically related to loadings. Then, it creates a cutoff correlation which is equivalent to the $r$ you would get if $p = 0.05$ in a correlation test.  It then categorizes variables as discriminating or not based on this cutoff and their distance from 0 in "correlation space".
 
 `conf_pls()` creates a confusion matrix for PLS models produced by `opls()` by extracting VIP scores and assigning variables with VIP > 1 as discrminating.
 
-`calc_kappa()` takes the results of `conf_pca()` or `conf_pls()` and calculates Cohen's Kappa based on a confusion matrix.
+`calc_kappa()` takes the results of `conf_df()` or `conf_pls()` and calculates Cohen's Kappa based on a confusion matrix.
 
 ```{r}
-pca.model <- control.pcas[[1]]
+# opls.model <- pca.model <- control.pcas[[3]]
 
-
-conf_pca <- function(pca.model){
-  scores <- get_scores(pca.model)
-  data <- pca.model@suppLs$xModelMN
+conf_df <- function(opls.model){
+  scores <- get_scores(opls.model)
+  data <- opls.model@suppLs$xModelMN
+  ncomp = opls.model@summaryDF$pre
+  
+  #if its a pls, get rid of the Y variable
+  if(opls.model@typeC == "PLS-DA"){
+    scores = scores[ , -2]
+  }
   
   #figure out appropriate cutoff by solving for the r that gives p < 0.05 given n
   
-  n = pca.model@descriptionMC[1,1] %>% as.numeric()
+  n = opls.model@descriptionMC[1,1] %>% as.numeric()
   t = qt(0.05, n)
   r = sqrt(-(t^2)/(-t^2 - n + 2)) #solved t stat calculation for r
   
-  cor(scores[2:3], data) %>%
+  if(ncomp == 1){
+    cor(scores[2], data) %>%
+    t() %>%
+    as_tibble(rownames = "Variable") %>% 
+    # if corr > 0.38, then its "important" variable
+    mutate(detect_discr = ifelse(p1 > r, TRUE, FALSE),
+           is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE))
+  } else if(ncomp > 1){
+  
+  #if there is more than 1 component, just use the first two.
+    cor(scores[2:3], data) %>%
     t() %>%
     as_tibble(rownames = "Variable") %>% 
     rowwise(.) %>% 
@@ -122,26 +138,22 @@ conf_pca <- function(pca.model){
     # if corr distance > 0.38, then its "important" variable
     mutate(detect_discr = ifelse(distance > r, TRUE, FALSE),
            is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE))
+  }
 }
+```
 
+
+```{r}
+# opls.model <- pls.model <- control.pls[[3]]
 
 conf_pls <- function(pls.model){
-  # get_VIP(pls.model) %>% 
-  #   mutate(detect_discr = ifelse(VIP > 1, TRUE, FALSE),
-  #          is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE))
-  
-  #using same critera as PCA
-  
-  scores <- get_scores(pls.model)
-  data <- pls.model@suppLs$xModelMN
-  # ensure that scores$y1 is numeric
-  if(is.character(scores$y1)){
-    scores <- scores %>% mutate(y1 = as.numeric(as.factor(y1)))
-    message("Converting categorical Y variable to numeric")
-  }
-  
+  get_VIP(pls.model) %>%
+    mutate(detect_discr = ifelse(VIP > 1, TRUE, FALSE),
+           is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE))
 }
+```
 
+```{r}
 calc_kappa <- function(confusion_df) {
   confusion_df %>% 
     select(detect_discr, is_discr) %>%
@@ -150,9 +162,6 @@ calc_kappa <- function(confusion_df) {
     .$kappa %>% 
     data_frame(kappa = .)
 }
-
-conf_pca(control.pls[[1]])
-get_scores(control.pls[[1]])
 ```
 
 
@@ -167,7 +176,7 @@ get_scores(control.pls[[1]])
 ```{r message=FALSE, warning=FALSE}
 control.pca.k <-
   control.pcas %>%
-  map(conf_pca) %>%
+  map(conf_df) %>%
   map_df(calc_kappa, .id = "dataset") %>% 
   rename(pca.k = "kappa")
 ```
@@ -178,20 +187,26 @@ control.pca.k <-
 ```{r message=FALSE, warning=FALSE}
 control.pls.k <-
   control.pls %>% 
-  map(conf_pls) %>% 
+  map(conf_df) %>% 
   map_df(calc_kappa, .id = "dataset") %>% 
   rename(pls.k = "kappa")
+
+control.pls.VIP.k <-
+  control.pls %>% 
+  map(conf_pls) %>% 
+  map_df(calc_kappa, .id = "dataset") %>% 
+  rename(pls.VIP.k = "kappa")
 ```
 
 **Join all kappas**
 
 ```{r}
-control.k <- full_join(control.pca.k, control.pls.k) %>% filter(complete.cases(.))
+control.k <-
+  full_join(control.pca.k, control.pls.k) %>%
+  full_join(control.pls.VIP.k) %>% 
+  filter(complete.cases(.))
 control.k %>% 
-  summarize(pca.k_mean = mean(pca.k),
-            pca.k_sd = sd(pca.k),
-            pls.k_mean = mean(pls.k),
-            pls.k_sd = sd(pls.k))
+  summarise_if(is.numeric, .funs = funs(mean, sd))
 ```
 
 ### Build Plot
@@ -200,7 +215,8 @@ control.k %>%
 control.k.plotdata <-
   control.k %>%
   gather(-dataset, key = "Method", value = "Cohen's Kappa") %>% 
-  mutate(Method = as.factor(Method) %>% fct_recode(PCA = "pca.k", `PLS-DA` = "pls.k"))
+  mutate(Method = as.factor(Method) %>%
+           fct_recode(PCA = "pca.k", `PLS-DA` = "pls.k", `PLS-DA VIP` = "pls.VIP.k"))
 
 control.p <-
   ggplot(control.k.plotdata) +
@@ -217,7 +233,6 @@ control.p
 # Needle-in-a-haystack
 
 
-
 ## Calculate Cohen's Kappa
 
 - For PCA, I'm defining an "important" variable as one with a correlation to PC1 > 0.5 or  < -0.5
@@ -228,7 +243,7 @@ control.p
 ```{r message=FALSE, warning=FALSE}
 needle.pca.k <-
   needle.pcas %>%
-  map(conf_pca) %>%
+  map(conf_df) %>%
   map_df(calc_kappa, .id = "dataset") %>% 
   rename(pca.k = "kappa")
 ```
@@ -239,20 +254,26 @@ needle.pca.k <-
 ```{r message=FALSE, warning=FALSE}
 needle.pls.k <-
   needle.pls %>%
-  map(conf_pls) %>%
+  map(conf_df) %>%
   map_df(calc_kappa, .id = "dataset") %>% 
   rename(pls.k = "kappa")
+
+needle.pls.VIP.k <-
+  needle.pls %>% 
+  map(conf_pls) %>% 
+  map_df(calc_kappa, .id = "dataset") %>% 
+  rename(pls.VIP.k = "kappa")
 ```
 
 **Join all kappas**
 
 ```{r}
-needle.k <- full_join(needle.pca.k, needle.pls.k)
+needle.k <-
+  full_join(needle.pca.k, needle.pls.k) %>% 
+  full_join(needle.pls.VIP.k) %>% 
+  filter(complete.cases(.))
 needle.k %>% 
-  summarize(pca.k_mean = mean(pca.k),
-            pca.k_sd = sd(pca.k),
-            pls.k_mean = mean(pls.k),
-            pls.k_sd = sd(pls.k))
+  summarize_if(is.numeric, funs(mean, sd))
 ```
 
 ### Build plot
@@ -279,8 +300,8 @@ needle.p
 
 ```{r}
 panels <-
-  plot_grid(control.p + theme(legend.position = "none")+ coord_cartesian(xlim = c(-0.5, 1)),
-            needle.p + theme(legend.position = "none")+ coord_cartesian(xlim = c(-0.5, 1)),
+  plot_grid(control.p + theme(legend.position = "none")+ coord_cartesian(xlim = c(-0.7, 1)),
+            needle.p + theme(legend.position = "none")+ coord_cartesian(xlim = c(-0.7, 1)),
             nrow = 1,
             ncol = 2,
             labels = "AUTO")
