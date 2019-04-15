@@ -24,6 +24,8 @@ library(ropls)
 library(tidyverse)
 source(here("R","pcr.R"))
 source(here("R", "RMSEP.R"))
+# runif(1, 0, 1000)
+set.seed(690)
 ```
 
 Create "safe" "partial" version of opls() which returns NULL if it errors and never plots or prints results.

@@ -3,18 +3,15 @@ title: "PCA regression and PLS-DA models summary statistics"
 output: html_notebook
 ---
 
-- ~~compare p-values and RMSEP from PCA regression and PLS-DA permutation tests~~
-- ~~Get other summary stats from PLS-DA models (e.g. R2, Q2)~~
-
-- ~~Make a table~~
-  - ~~columns = Scenario, statistic, PCA regression, PLS-DA~~
-  - rows to add: **kappa coef?**, ~~number of models, number of significant components (mean ± sd)~~?
-
 ```{r message=FALSE}
 library(here)
 library(tidyverse)
 library(glue)
+
 source(here("R", "ropls_helpers.R"))
+source(here("R", "RMSEP.R"))
+# runif(1, 0, 1000)
+set.seed(464)
 ```
 
 # Read in models
