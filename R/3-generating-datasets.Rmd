@@ -14,8 +14,8 @@ It makes sense to make randomly generated datasets under my three scenarios **on
 
 **For all datasets:**
 
- - p (number of variables) = 25
- - N (number of observations) = 20
+ - n_vars (number of variables) = 25
+ - n_obs (number of observations) = 20
  - var (variation parameter, passed to mvrnorm) = 1
  - Number of groups = 2
  - Number of datasets generated = 100
@@ -42,10 +42,10 @@ It makes sense to make randomly generated datasets under my three scenarios **on
 set.seed(myseed)
 null <-
   map(1:100,
-      ~ sim_cat(N = 20, n_groups = 2) %>% 
-        sim_covar(p = 5, var = 1, cov = 0, name = "N") %>% 
-        sim_covar(p = 10, var = 1, cov = 0.5, name = "C1") %>% 
-        sim_covar(p = 10, var = 1, cov = 0.5, name = "C2")
+      ~ sim_cat(n_obs = 20, n_groups = 2) %>% 
+        sim_covar(n_vars = 5, var = 1, cov = 0, name = "N") %>% 
+        sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C1") %>% 
+        sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C2")
   ) %>%
   set_names(paste0("null_df_", 1:100))
 ```
@@ -66,11 +66,11 @@ null[[sample(1:100, 1)]] %>%
 set.seed(myseed)
 needle_in_haystack <-
   map(1:100,
-      ~ sim_cat(N = 20, n_groups = 2) %>% 
+      ~ sim_cat(n_obs = 20, n_groups = 2) %>% 
         group_by(group) %>% 
-        sim_discr(p = 5, var = 1, cov = 0, group_means = c(-1, 1), name = "D") %>% 
-        sim_covar(p = 10, var = 1, cov = 0.5, name = "C1") %>% 
-        sim_covar(p = 10, var = 1, cov = 0.5, name = "C2") %>% 
+        sim_discr(n_vars = 5, var = 1, cov = 0, group_means = c(-1, 1), name = "D") %>% 
+        sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C1") %>% 
+        sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C2") %>% 
         ungroup()
   ) %>%
   set_names(paste0("needle_in_haystack_", 1:100))
@@ -92,12 +92,12 @@ needle_in_haystack[[sample(1:100, 1)]] %>%
 set.seed(myseed)
 control <-
   map(1:100,
-      ~ sim_cat(N = 20, n_groups = 2) %>% 
+      ~ sim_cat(n_obs = 20, n_groups = 2) %>% 
         group_by(group) %>% 
-        sim_discr(p = 5, var = 1, cov = 0.5, group_means = c(-1, 1), name = "D1") %>% 
-        sim_discr(p = 5, var = 1, cov = 0.5, group_means = c(-1, 1), name = "D2") %>% 
-        sim_covar(p = 10, var = 1, cov = 0, name = "N") %>% 
-        sim_covar(p = 5, var = 1, cov = 0.5, name = "C") %>% 
+        sim_discr(n_vars = 5, var = 1, cov = 0.5, group_means = c(-1, 1), name = "D1") %>% 
+        sim_discr(n_vars = 5, var = 1, cov = 0.5, group_means = c(-1, 1), name = "D2") %>% 
+        sim_covar(n_vars = 10, var = 1, cov = 0, name = "N") %>% 
+        sim_covar(n_vars = 5, var = 1, cov = 0.5, name = "C") %>% 
         ungroup()
   ) %>%
   set_names(paste0("control_", 1:100))
