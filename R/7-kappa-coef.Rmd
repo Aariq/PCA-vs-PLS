@@ -5,8 +5,7 @@ output: html_notebook
 
 To Do:
 
-- Make PLS-DA and PCA use same criteria (distance cutoff)
-- Make function work with whatever number of axes there are in the model.
+- Do correlation tests only with PCs that are significant in linear model.
 
 ```{r}
 library(psych) # for cohen.kappa
@@ -84,60 +83,110 @@ Rather than using a cutoff of r = 0.5, I'll use a cutoff of r = 0.38 which is wh
 # Load data
 
 ```{r}
-control.pcas <- read_rds(here("data", "models", "control-pcr.rds")) %>% map("pca")
+control.pcas <- read_rds(here("data", "models", "control-pcr.rds")) #%>% map("pca")
 control.pls <- read_rds(here('data', 'models', 'control-pls.rds'))
 
-needle.pcas <- read_rds(here("data", "models", "needle-pcr.rds")) %>% map("pca")
+needle.pcas <- read_rds(here("data", "models", "needle-pcr.rds")) #%>% map("pca")
 needle.pls <- read_rds(here('data', 'models', 'needle-pls.rds'))
 ```
 
 
-# Functions
-
-`conf_df()` creates a confusion matrix for models produced by `opls()` by calculating correlation of variables to scores for up to two principal components. These correlations are mathematically related to loadings. Then, it creates a cutoff correlation which is equivalent to the $r$ you would get if $p = 0.05$ in a correlation test.  It then categorizes variables as discriminating or not based on this cutoff and their distance from 0 in "correlation space".
-
-`conf_pls()` creates a confusion matrix for PLS models produced by `opls()` by extracting VIP scores and assigning variables with VIP > 1 as discrminating.
-
-`calc_kappa()` takes the results of `conf_df()` or `conf_pls()` and calculates Cohen's Kappa based on a confusion matrix.
+Figure out which components to use
 
 ```{r}
-# opls.model <- pca.model <- control.pcas[[3]]
+test <- control.pcas[[1]]
+pcs <- test$lm %>%
+  broom::tidy() %>% 
+  filter(p.value < 0.05 & term != "(Intercept)") %>% 
+  .$term
 
-conf_df <- function(opls.model){
-  scores <- get_scores(opls.model)
-  data <- opls.model@suppLs$xModelMN
-  ncomp = opls.model@summaryDF$pre
+scores <- test$pca %>% get_scores() %>% select(pcs)
+  data <- test$pca@suppLs$xModelMN
+cor(scores, data)
+
+map(as.data.frame(data), ~cor.test(., scores$p1))
+```
+
+
+
+
+# Functions
+
+`conf_pcr()` creates a confusion matrix for PCA regression models.  It classifies a variable as being "important" if it is significantly correlated to any of the PCA axes that were significant predictors in the regression.
+
+`conf_pls()` creates a confusion matrics for PLS-DA models.  It classifies a variable as "impotant" if it is significantly correlated to any of the PLS axes.
+
+`conf_pls_vip()` creates a confusion matrix for PLS models produced by `opls()` by extracting VIP scores and assigning variables with VIP > 1 as discrminating.
+
+`calc_kappa()` takes the results of `conf_pcr()` or `conf_pls()` and calculates Cohen's Kappa based on a confusion matrix.
+
+```{r}
+# for PCA regression
+# pcr <- control.pcas[[5]]
+
+conf_pcr <- function(pcr){
+  # Separate PCA and regression parts
+  pca <- pcr$pca
+  reg <- pcr$lm
   
-  #if its a pls, get rid of the Y variable
-  if(opls.model@typeC == "PLS-DA"){
-    scores = scores[ , -2]
-  }
+  # Which PCs were significant in the regression?
+  pcs <- reg %>% 
+    broom::tidy() %>% 
+    filter(p.value < 0.05 & term != "(Intercept)") %>% 
+    .$term %>%
+    syms() #saves as expression for later unquoting with !!!
   
+  #get scores and data from PCA part of model
+  scores <- pca %>%
+    get_scores() %>%
+    select(!!!pcs)
+  
+  data <- test$pca@suppLs$xModelMN
+
   #figure out appropriate cutoff by solving for the r that gives p < 0.05 given n
-  
-  n = opls.model@descriptionMC[1,1] %>% as.numeric()
+  n = pca@descriptionMC[1,1] %>% as.numeric()
   t = qt(0.05, n)
   r = sqrt(-(t^2)/(-t^2 - n + 2)) #solved t stat calculation for r
   
-  if(ncomp == 1){
-    cor(scores[2], data) %>%
+  #create confusion matrix
+  #variables are detected as discriminating if they have significant correlation with significant PCs
+  cor(scores, data) %>%
     t() %>%
     as_tibble(rownames = "Variable") %>% 
-    # if corr > 0.38, then its "important" variable
-    mutate(detect_discr = ifelse(p1 > r, TRUE, FALSE),
-           is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE))
-  } else if(ncomp > 1){
+    mutate_if(is.numeric, funs(abs(.) > r)) %>% 
+    rowwise() %>% 
+    mutate(detect_discr = any(!!!pcs),
+           is_discr = str_detect(Variable, "D"))
+}
+
+```
+
+```{r}
+# pls <- control.pls[[1]]
+conf_pls <- function(pls){
+  #get scores and data
+  scores <- pls %>%
+    get_scores() %>% 
+    select(-y1, -sample) #just keep significant predictive axes columns
   
-  #if there is more than 1 component, just use the first two.
-    cor(scores[2:3], data) %>%
+  #get predictive axis names
+  predcomps <- colnames(scores) %>% syms()
+  
+  data <- test$pca@suppLs$xModelMN
+  
+  #figure out appropriate cutoff by solving for the r that gives p < 0.05 given n
+  
+  n = pls@descriptionMC[1,1] %>% as.numeric()
+  t = qt(0.05, n)
+  r = sqrt(-(t^2)/(-t^2 - n + 2)) #solved t stat calculation for r
+  
+  cor(scores, data) %>%
     t() %>%
     as_tibble(rownames = "Variable") %>% 
-    rowwise(.) %>% 
-    mutate(distance = sqrt(sum((c(p1, p2) - c(0, 0))^2))) %>% 
-    # if corr distance > 0.38, then its "important" variable
-    mutate(detect_discr = ifelse(distance > r, TRUE, FALSE),
-           is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE))
-  }
+    mutate_if(is.numeric, funs(abs(.) > r)) %>% 
+    rowwise() %>% 
+    mutate(detect_discr = any(!!!predcomps),
+           is_discr = str_detect(Variable, "D"))
 }
 ```
 
@@ -145,7 +194,7 @@ conf_df <- function(opls.model){
 ```{r}
 # opls.model <- pls.model <- control.pls[[3]]
 
-conf_pls <- function(pls.model){
+conf_pls_vip <- function(pls.model){
   get_VIP(pls.model) %>%
     mutate(detect_discr = ifelse(VIP > 1, TRUE, FALSE),
            is_discr = ifelse(str_detect(Variable, "D"), TRUE, FALSE))
@@ -175,7 +224,7 @@ calc_kappa <- function(confusion_df) {
 ```{r message=FALSE, warning=FALSE}
 control.pca.k <-
   control.pcas %>%
-  map(conf_df) %>%
+  map(conf_pcr) %>%
   map_df(calc_kappa, .id = "dataset") %>% 
   rename(pca.k = "kappa")
 ```
@@ -186,13 +235,13 @@ control.pca.k <-
 ```{r message=FALSE, warning=FALSE}
 control.pls.k <-
   control.pls %>% 
-  map(conf_df) %>% 
+  map(conf_pls) %>% 
   map_df(calc_kappa, .id = "dataset") %>% 
   rename(pls.k = "kappa")
 
 control.pls.VIP.k <-
   control.pls %>% 
-  map(conf_pls) %>% 
+  map(conf_pls_vip) %>% 
   map_df(calc_kappa, .id = "dataset") %>% 
   rename(pls.VIP.k = "kappa")
 ```
@@ -219,14 +268,17 @@ control.k.plotdata <-
 
 control.p <-
   ggplot(control.k.plotdata) +
-  geom_histogram(aes(x = `Cohen's Kappa`, fill = Method),
-                 position = "identity", alpha = 0.8,
-                 binwidth = 0.1) +
-  # geom_density(aes(x = `Cohen's Kappa`, fill = Method), alpha = 0.7, trim = TRUE) +
+  # geom_histogram(aes(x = `Cohen's Kappa`, fill = Method),
+  #                position = "identity", alpha = 0.8,
+  #                binwidth = 0.1) +
+  geom_density(aes(x = `Cohen's Kappa`, fill = Method, linetype = Method),
+               alpha = 0.5, trim = TRUE, adjust = 1.5) +
   scale_fill_discrete_qualitative(palette = "Dark 3") +
+  scale_linetype_manual(values = c(1,2,3)) +
   theme_bw() +
   labs(x = "Cohen's Kappa", y = "Frequency")
 control.p
+
 ```
 
 # Needle-in-a-haystack
@@ -242,7 +294,7 @@ control.p
 ```{r message=FALSE, warning=FALSE}
 needle.pca.k <-
   needle.pcas %>%
-  map(conf_df) %>%
+  map(conf_pcr) %>%
   map_df(calc_kappa, .id = "dataset") %>% 
   rename(pca.k = "kappa")
 ```
@@ -253,13 +305,13 @@ needle.pca.k <-
 ```{r message=FALSE, warning=FALSE}
 needle.pls.k <-
   needle.pls %>%
-  map(conf_df) %>%
+  map(conf_pls) %>%
   map_df(calc_kappa, .id = "dataset") %>% 
   rename(pls.k = "kappa")
 
 needle.pls.VIP.k <-
   needle.pls %>% 
-  map(conf_pls) %>% 
+  map(conf_pls_vip) %>% 
   map_df(calc_kappa, .id = "dataset") %>% 
   rename(pls.VIP.k = "kappa")
 ```
@@ -281,15 +333,18 @@ needle.k %>%
 needle.k.plotdata <-
   needle.k %>%
   gather(-dataset, key = "Method", value = "Cohen's Kappa") %>% 
-  mutate(Method = as.factor(Method) %>% fct_recode(PCA = "pca.k", `PLS-DA` = "pls.k"))
+  mutate(Method = as.factor(Method) %>% 
+           fct_recode(PCA = "pca.k", `PLS-DA` = "pls.k", `PCA-DA: VIP > 1` = "pls.VIP.k"))
 
 needle.p <-
   ggplot(needle.k.plotdata) +
-  geom_histogram(aes(x = `Cohen's Kappa`, fill = Method),
-                 position = "identity", alpha = 0.8,
-                 binwidth = 0.1) +
-  # geom_density(aes(x = `Cohen's Kappa`, fill = Method), alpha = 0.7, trim = TRUE) +
+  # geom_histogram(aes(x = `Cohen's Kappa`, fill = Method),
+  #                position = "identity", alpha = 0.8,
+  #                binwidth = 0.1) +
+  geom_density(aes(x = `Cohen's Kappa`, fill = Method, linetype = Method),
+               alpha = 0.5, trim = TRUE, adjust = 1.5) +
   scale_fill_discrete_qualitative(palette = "Dark 3") +
+  scale_linetype_manual(values = c(1,2,3)) +
   theme_bw() +
   labs(x = "Cohen's Kappa", y = "Frequency")
 needle.p
@@ -299,8 +354,8 @@ needle.p
 
 ```{r}
 panels <-
-  plot_grid(control.p + theme(legend.position = "none")+ coord_cartesian(xlim = c(-0.7, 1)),
-            needle.p + theme(legend.position = "none")+ coord_cartesian(xlim = c(-0.7, 1)),
+  plot_grid(control.p + theme(legend.position = "none")+ coord_cartesian(xlim = c(0, 1)),
+            needle.p + theme(legend.position = "none")+ coord_cartesian(xlim = c(0, 1)),
             nrow = 1,
             ncol = 2,
             labels = "AUTO")
