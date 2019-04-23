@@ -91,25 +91,6 @@ needle.pls <- read_rds(here('data', 'models', 'needle-pls.rds'))
 ```
 
 
-Figure out which components to use
-
-```{r}
-test <- control.pcas[[1]]
-pcs <- test$lm %>%
-  broom::tidy() %>% 
-  filter(p.value < 0.05 & term != "(Intercept)") %>% 
-  .$term
-
-scores <- test$pca %>% get_scores() %>% select(pcs)
-  data <- test$pca@suppLs$xModelMN
-cor(scores, data)
-
-map(as.data.frame(data), ~cor.test(., scores$p1))
-```
-
-
-
-
 # Functions
 
 `conf_pcr()` creates a confusion matrix for PCA regression models.  It classifies a variable as being "important" if it is significantly correlated to any of the PCA axes that were significant predictors in the regression.
@@ -264,7 +245,7 @@ control.k.plotdata <-
   control.k %>%
   gather(-dataset, key = "Method", value = "Cohen's Kappa") %>% 
   mutate(Method = as.factor(Method) %>%
-           fct_recode(PCA = "pca.k", `PLS-DA` = "pls.k", `PLS-DA VIP` = "pls.VIP.k"))
+           fct_recode(`PCA-DA` = "pca.k", `PLS-DA` = "pls.k", `PLS-DA VIP` = "pls.VIP.k"))
 
 control.p <-
   ggplot(control.k.plotdata) +
@@ -334,7 +315,7 @@ needle.k.plotdata <-
   needle.k %>%
   gather(-dataset, key = "Method", value = "Cohen's Kappa") %>% 
   mutate(Method = as.factor(Method) %>% 
-           fct_recode(PCA = "pca.k", `PLS-DA` = "pls.k", `PCA-DA: VIP > 1` = "pls.VIP.k"))
+           fct_recode(`PCA-DA` = "pca.k", `PLS-DA` = "pls.k", `PLS-DA: VIP > 1` = "pls.VIP.k"))
 
 needle.p <-
   ggplot(needle.k.plotdata) +
