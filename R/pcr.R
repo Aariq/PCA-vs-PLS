@@ -82,11 +82,11 @@ pca_RMSEP <- function(split, X_vars, Y_var) {
   mod_form <- as.formula(glue("{quo_name(Y)} ~ {glue_collapse(pcs, sep = '+')}"))
   
   #do glm on analysis data
-  m <- lm(mod_form, data = scores)
+  m <- glm(mod_form, family = "binomial", data = scores)
   
   #use glm to predict `group` for newdata
   scores.pred %>%
-    mutate(group.pred = predict(m, newdata = scores.pred)) %>%
+    mutate(group.pred = predict(m, newdata = scores.pred, type = "response")) %>%
     add_column(group.actual = assessment(split)[[quo_name(Y)]]) %>%
     mutate(sq_err = (group.actual - group.pred)^2) %>%
     summarize(RMSEP = sqrt(mean(sq_err))) %>%
@@ -119,18 +119,22 @@ pcreg <- function(data, X_vars, Y_var, CV = 7){
     data <-
       data %>% 
       mutate(!!Y := as.factor(!!Y)) %>% 
-      mutate(!!Y := as.numeric(!!Y))
+      mutate(!!Y := as.numeric(!!Y) - 1)
   } 
   
   if(is.factor(data[[quo_name(Y)]])){
     data <-
       data %>%
-      mutate(!!Y := as.numeric(!!Y))
+      mutate(!!Y := as.numeric(!!Y) - 1)
   }
-  if(!is.numeric(data[[quo_name(Y)]])){
-    stop("grouping variable must be character, factor, or numeric")
+  if(!is.integer(data[[quo_name(Y)]])){
+    stop("grouping variable must be character, factor, or integer")
   }
-
+  
+  if(any(!data[[quo_name(Y)]] %in% c(0,1))){
+    stop("grouping variable must be binary")
+  }
+  
   # Do PCA on X
   pca <- opls(select(data, !!X), plotL = FALSE, printL = FALSE)
   
@@ -144,7 +148,7 @@ pcreg <- function(data, X_vars, Y_var, CV = 7){
   mod_form <- as.formula(glue::glue("{quo_name(Y)} ~ {glue_collapse(pcs, sep = '+')}"))
   
   # Do regression
-  m <- lm(mod_form, data = scores)
+  m <- glm(mod_form, family = "binomial", data = scores)
   
   # Do CV
   df.cv <- rsample::vfold_cv(data, CV)
