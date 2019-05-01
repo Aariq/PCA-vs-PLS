@@ -151,7 +151,7 @@ control.pcr.try %>%
   unique()
 ```
 
-Two failed models due to convergence problems
+1 failed models due to convergence problems
 
 Save em!
 
@@ -217,7 +217,7 @@ Any errors?
 length(needle.pcr.try) - length(needle.pcr)
 ```
 
-zero failed models 
+3 failed models 
 ```{r}
 write_rds(needle.pcr, here("data", "models", "needle-pcr.rds"))
 ```
