@@ -38,6 +38,12 @@ This is annoying because of the data structure.  I'm sure there is a more effici
 pls.forced <- null.pls.forced
 pls <- null.pls
 pcr <- null.pcr
+
+pcr.test <- control.pcr[[1]]
+scores <- pcr.test$pca@scoreMN %>% as.data.frame()
+pcr.test$lm %>% lmtest::lrtest(data = scores) %>%  broom::tidy()
+```
+```{r}
 pls_pcr_summary <- function(pls, pls.forced, pcr) {
   pls.summary <-
     pls %>%
@@ -71,11 +77,11 @@ pls_pcr_summary <- function(pls, pls.forced, pcr) {
   
   pcr.summary <- 
     pcr %>% 
-    map_dfr(~broom::glance(.x$lm), .id = "dataset") %>% 
+    map_dfr(~.$mod.stats, .id = "dataset") %>% 
     mutate(RMSEP = map_dbl(pcr, "RMSEP"),
            R2X = map_dbl(pcr, ~.$pca@summaryDF$`R2X(cum)`),
            ncomp = map_dbl(pcr, ~.$pca@summaryDF$pre)) %>% 
-    select(dataset, R2Y = r.squared, p = p.value, RMSEP, R2X, ncomp) %>% 
+    select(dataset, R2Y, p = p.value, RMSEP, R2X, ncomp) %>% 
     summarize_if(is.numeric, funs(mean, sd)) %>%
     gather() %>% 
     separate(key, into = c("Statistic", "part")) %>% 
@@ -97,7 +103,11 @@ table1 <-
        needle = pls_pcr_summary(needle.pls, needle.pls.forced, needle.pcr)
   ) %>%
   bind_rows(.id = "Scenario")
-table1
+table1 <- table1 %>% 
+  mutate(Scenario = fct_relevel(Scenario, "null", "control", "needle"),
+         Statistic = fct_relevel(Statistic,
+                                 "n", "ncomp", "RMSEP", "R2X", "R2Y", "Q2", "pR2", "pQ2", "p")) %>% 
+  arrange(Scenario, Statistic)
 write_excel_csv(table1, here("figs", "table1.csv"))
 ```
 
