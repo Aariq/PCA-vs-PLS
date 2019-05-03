@@ -1,0 +1,53 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(car)
+library(lmtest)
+library(broom)
+beaver2
+```
+
+
+```{r}
+m <- glm(activ ~ temp, family = "binomial", data = beaver2)
+Anova(m)
+lrtest(m)
+
+m0 <- glm(activ ~ 1, family = "binomial", data = beaver2)
+
+```
+
+# Mcfadden R2
+
+```{r}
+1 - (logLik(m) / logLik(m0))
+```
+
+# Cox and Snell R2
+
+```{r}
+n = nrow(beaver2)
+1 - (exp(as.numeric(logLik(m0))) / exp(as.numeric(logLik(m)))) ^ (2/n)
+
+```
+woah, pretty different
+
+# Tjur R2
+Best according to https://statisticalhorizons.com/r2logistic
+
+>The definition is very simple. For each of the two categories of the dependent variable, calculate the mean of the predicted probabilities of an event. Then, take the difference between those two means. That’s it!
+
+
+```{r}
+yhat <- predict(m, type = "response")
+yhat
+
+yhat <- augment(m, type.predict = "response")
+yhat %>%
+  group_by(activ) %>% 
+  summarize(means = mean(.fitted)) %>% 
+  summarize(R2_tjur = diff(means))
+```
+

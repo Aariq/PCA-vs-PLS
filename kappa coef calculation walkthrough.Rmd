@@ -1,0 +1,186 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(tidyverse)
+library(ropls)
+library(chemhelper)
+```
+
+# Read in datasets and choose one
+
+```{r}
+# runif(1, 1, 1000)
+set.seed(605)
+needle <- read_rds(here("data", "needle.rds"))
+df <- needle[[runif(1, 0, 100)]]
+df
+```
+
+# Kappa for PCA logistic regressison
+## Do PCA
+
+```{r}
+pca <- opls(select(df, -group), printL = FALSE, plotL = FALSE)
+```
+
+## Get scores
+
+```{r}
+scores <- get_scores(pca)
+scores$group <- df$group
+scores
+```
+
+## Convert group to binary integer
+
+Now "a" = 0 and "b" = 1
+
+```{r}
+scores <-
+  scores %>% 
+  mutate(group = group %>% as.factor() %>% as.numeric() - 1)
+```
+
+## Do binomial GLM
+
+```{r}
+m <- glm(group ~ p1 + p2, family = "binomial", data = scores)
+car::Anova(m)
+```
+
+PCs 1 and 2 are both significant
+
+## Create confusion matrix
+
+### Correlation between scores and X data
+
+```{r}
+X <- df %>% select(-group)
+
+cor.df <- cor(X, select(scores, p1, p2)) %>%
+  #convert to data frame
+  as_tibble(rownames = "Variable")
+cor.df
+```
+
+### figure out apprpriate cutoff for Pearson's r
+
+```{r}
+  #figure out appropriate cutoff by solving for the r that gives p < 0.05 given n
+  n = pca@descriptionMC[1,1] %>% as.numeric()
+  t = qt(0.05, n)
+  r.max = sqrt(-(t^2)/(-t^2 - n + 2)) #solved t stat calculation for r
+  r.max
+```
+
+### Create logical vectors
+
+```{r}
+conf.df <- cor.df %>% 
+  #for each numeric column (PCs), find out if the absolute value of Pearson's r is significant
+  mutate_if(is.numeric, list(~abs(.) > r.max)) %>% 
+  #then, by row
+    rowwise() %>% 
+  #figure out if r is significant for any of the significant PCs
+    mutate(detect_discr = any(p1, p2),
+           # and convert variable labels to logical
+           is_discr = str_detect(Variable, "D"))
+conf.df
+```
+## Confusion matrix
+```{r}
+conf.df %>% select(detect_discr, is_discr) %>% table()
+```
+
+
+## Calculate kappa coefficient
+
+```{r}
+conf.df %>% 
+    select(detect_discr, is_discr) %>%
+    as.matrix() %>%
+    cohen.kappa() %>%
+    .$kappa %>% 
+    data_frame(kappa = .)
+```
+
+# Kappa coeficient for PLS-DA using correlation
+
+## Do PLS-DA
+
+```{r}
+pls <- opls(select(df, -group), df$group, printL = FALSE, plotL = FALSE)
+pls@modelDF
+```
+
+produced a model with two significant axes. But p2 is a lot worse than p1
+
+## Get scores
+
+```{r}
+scores <- pls %>%
+    get_scores() %>% 
+    select(-y1, -sample) #just keep significant predictive axes columns
+```
+
+## Correlation between X data and scores
+
+```{r}
+X <- df %>% select(-group)
+
+cor.df <- cor(X, select(scores, p1, p2)) %>%
+  #convert to data frame
+  as_tibble(rownames = "Variable")
+cor.df
+```
+
+## Do Confusion matrix
+
+```{r}
+conf.df <- cor.df %>% 
+  mutate_if(is.numeric, list(~abs(.) > r.max)) %>% 
+    rowwise() %>% 
+    mutate(detect_discr = any(p1, p2),
+           is_discr = str_detect(Variable, "D"))
+conf.df
+
+conf.df %>% select(detect_discr, is_discr) %>% table()
+```
+
+Looks like this leads to a lot of false positives
+
+## Calculate Kappa coefficient
+
+```{r}
+conf.df %>% 
+  select(detect_discr, is_discr) %>%
+  as.matrix() %>%
+  cohen.kappa() %>%
+  .$kappa %>% 
+  data_frame(kappa = .)
+
+conf.df %>% select(detect_discr, is_discr) %>% table()
+```
+
+
+# Calculate Cohen's Kappa for PLS-DA using VIP scores
+
+```{r}
+conf_df <- pls %>% 
+  get_VIP() %>% 
+  mutate(detect_discr = VIP > 1,
+         is_discr = str_detect(Variable, "D")) 
+
+conf_df %>% select(detect_discr, is_discr) %>% table()
+
+conf_df %>% 
+  select(detect_discr, is_discr) %>%
+  as.matrix() %>%
+  cohen.kappa() %>%
+  .$kappa %>% 
+  data_frame(kappa = .)
+```
+
+
