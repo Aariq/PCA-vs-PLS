@@ -29,6 +29,7 @@ needle.list <- read_rds(here::here("data", "needle.rds"))
 ```
 
 Sample one dataset as an example
+Note: the random number generator changed in R version 3.6 and will not result in the same plot
 
 ```{r}
 # set.seed(999)
@@ -53,19 +54,19 @@ null.cor <-
 null.cor.p <-
   ggplot(null.cor, aes(x = col, y = row, fill = cor)) +
   geom_tile() +
-  scale_fill_continuous_diverging(palette = "Blue-Red 3") +
-  labs(x = NULL, y = NULL, subtitle = '"Null"') +
+  scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-1,1)) +
+  labs(x = NULL, y = NULL, subtitle = '"Null"', fill = "r") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90), legend.position = "top")
+  theme(axis.text.x = element_text(angle = 90), legend.position = "right")
 ```
 
 
 ## PCA and PLS-DA for Null
 
 ```{r}
-null.pca <- opls(select(null, -group), plot = TRUE)
+null.pca <- opls(select(null, -group), plotL = FALSE)
 # null.pls <- opls(select(null, -group), null$group, plot = FALSE, permI = 500)
-null.pls <- opls(select(null, -group), null$group, plot = TRUE, permI = 500, predI = 2)
+null.pls <- opls(select(null, -group), null$group, plotL = FALSE, permI = 500, predI = 2)
 ```
 
 ## Create plots for Null
@@ -110,10 +111,10 @@ needle.cor <-
 needle.cor.p <-
   ggplot(needle.cor, aes(x = col, y = row, fill = cor)) +
   geom_tile() +
-  scale_fill_continuous_diverging(palette = "Blue-Red 3") +
-  labs(x = NULL, y = NULL, subtitle = '"Needle in a haystack"') +
+  scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-1,1)) +
+  labs(x = NULL, y = NULL, subtitle = '"Needle in a haystack"', fill = "r") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90), legend.position = "top")
+  theme(axis.text.x = element_text(angle = 90), legend.position = "right")
 ```
 
 ## PCA and PLS-DA for needle-in-a-haystack
@@ -169,8 +170,8 @@ control.cor <-
 control.cor.p <-
   ggplot(control.cor, aes(x = col, y = row, fill = cor)) +
   geom_tile() +
-  scale_fill_continuous_diverging(palette = "Blue-Red 3") +
-  labs(x = NULL, y = NULL, subtitle = '"Control"') +
+  scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-1,1)) +
+  labs(x = NULL, y = NULL, subtitle = '"Control"', fill = "r") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90), legend.position = "top")
 ```
@@ -229,6 +230,35 @@ fig1_new <-
             ncol = 3, nrow = 3,
             labels = "AUTO",
             align = "hv", axis = "bl")
+# fig1_new
 
 save_plot(here("figs", "fig1_new.png"), fig1_new, ncol = 3, nrow = 3)
 ```
+
+
+### another possibility
+
+```{r}
+top.row <- plot_grid(null.cor.p + theme(legend.position = "none", plot.subtitle = element_text(hjust = 0.5)),
+                     control.cor.p + theme(legend.position = "none", plot.subtitle = element_text(hjust = 0.5)),
+                     needle.cor.p + theme(legend.position = "none", plot.subtitle = element_text(hjust = 0.5)),
+                     nrow = 1,
+                     labels = c("A", "B", "C"))
+middle.row <- plot_grid(null.pca.p + theme(legend.position = "none") + labs(title = NULL),
+                        control.pca.p + theme(legend.position = "none") + labs(title = NULL),
+                        needle.pca.p + theme(legend.position = "none") + labs(title = NULL),
+                        nrow = 1,
+                        labels = c("D", "E", "F"))
+bottom.row <- plot_grid(null.pls.p + theme(legend.position = "none") + labs(title = NULL),
+                        control.pls.p + theme(legend.position = "none") + labs(title = NULL),
+                        needle.pls.p + theme(legend.position = "none") + labs(title = NULL),
+                        nrow = 1,
+                        labels = c("G", "H", "I"))
+color.bar <- get_legend(needle.cor.p)
+
+top <- align_plots(top.row, color.bar, align = "h", axis = "t")
+
+fig_alt <- plot_grid(top[[1]], middle.row, bottom.row, ncol = 1) %>% plot_grid(top[[2]], rel_widths = c(12, 1))
+save_plot(here("figs", "fig1_alt.png"), fig_alt, ncol = 3, nrow = 3)
+```
+
