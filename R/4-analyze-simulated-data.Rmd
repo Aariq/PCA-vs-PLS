@@ -11,7 +11,7 @@ To show that PLS-DA performs better than PCA at figuring out which variables are
 
 For each dataset:
 
-- Do PCA regression
+- Do PCA logistic regression
 - Do PLS-DA
 - Record how many PLS-DA's fail because even the first component is not significant, but filter out failing models
   
@@ -74,7 +74,7 @@ null.pcr.try %>%
   unique()
 ```
 
-1 failed because of non-convergence.
+3 failed because of non-convergence.
 
 Save em!
 
