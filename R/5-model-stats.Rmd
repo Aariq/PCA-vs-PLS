@@ -35,13 +35,12 @@ needle.pcr <- read_rds(here('data', 'models', 'needle-pcr.rds'))
 This is annoying because of the data structure.  I'm sure there is a more efficient way to do all this.
 
 ```{r}
-pls.forced <- null.pls.forced
-pls <- null.pls
-pcr <- null.pcr
-
-pcr.test <- control.pcr[[1]]
-scores <- pcr.test$pca@scoreMN %>% as.data.frame()
-pcr.test$lm %>% lmtest::lrtest(data = scores) %>%  broom::tidy()
+# pls.forced <- null.pls.forced
+# pls <- null.pls
+# pcr <- null.pcr
+# 
+# pcr.test <- control.pcr[[1]]
+# scores <- pcr.test$pca@scoreMN %>% as.data.frame()
 ```
 ```{r}
 pls_pcr_summary <- function(pls, pls.forced, pcr) {
@@ -91,7 +90,6 @@ pls_pcr_summary <- function(pls, pls.forced, pcr) {
     add_row(Statistic = "n", `PCA-DA` = length(pcr))
   return(full_join(pls.summary, pls.forced.summary) %>% full_join(pcr.summary))
 }
-
 ```
 
 ## Make table and write to .csv
@@ -109,5 +107,17 @@ table1 <- table1 %>%
                                  "n", "ncomp", "RMSEP", "R2X", "R2Y", "Q2", "pR2", "pQ2", "p")) %>% 
   arrange(Scenario, Statistic)
 write_excel_csv(table1, here("figs", "table1.csv"))
+```
+
+## Tests on statsitics
+I'm interested in what an ANOVA would tell me about differences in RMSEP among scenarios
+
+```{r}
+control.pls.rmsep <- map_dbl(control.pls,~plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7))
+control.pca.rmsep <- map_dbl(control.pcr, "RMSEP")
+needle.pls.rmsep <- map_dbl(needle.pls,~plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7))
+needle.pca.rmsep <- map_dbl(needle.pcr, "RMSEP")
+t.test(needle.pca.rmsep, needle.pls.rmsep)
+t.test(control.pls.rmsep, control.pca.rmsep)
 ```
 
