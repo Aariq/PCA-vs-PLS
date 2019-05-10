@@ -1,0 +1,47 @@
+---
+title: "Equations"
+author: "Eric Scott"
+date: "5/10/2019"
+output: word_document
+---
+$R^2_X(cum)$: "Cumulative SS of all the Xs explained by all extracted components".
+This is the same for PCA and PLS.
+There arent actual equations for these in the book, so this is my best shot:
+
+$$
+R^2_X = \sum_i 1- \frac{SS_i}{SS_{X}}???
+$$
+where *i* is each component?
+
+$R^2_Y(cum)$: "Cumulative SS of all the Ys explained by all extracted components"
+
+$$
+R^2_Y = \sum_i 1- \frac{SS_i}{SS_Y}???
+$$
+
+$Q^2(cum)$: "The fraction of the total variation of the Ys that can be predited by a component according to cross-validation"
+
+$$
+Q^2 = 1 - PRESS/SS_{total}
+$$
+Predicted Error Sum of Squares (PRESS) is squared differences between observed Y and predicted values when observations were kept out (because of cross-validation).
+$$
+PRESS = \sum_{i}\sum_{m}(Y_{im} - \hat{Y}_{im})^2
+$$
+So...
+$$
+Q^2(cum) = (1 - \prod(PRESS/SS)_a) \;\;\;\; [a = 1,...A]
+$$
+
+where $\prod(PRESS/SS)_a$ = the product of PRESS/SS for each individual component a.
+
+
+$p_{Q^2}$ and $p_{R^2}$:
+
+derived from perumtation test.
+
+Upper limit for p:
+
+$$
+p = \frac{1 + \#(Q^2_{p} \leq Q^2)}{N}
+$$
