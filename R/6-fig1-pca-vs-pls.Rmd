@@ -232,7 +232,7 @@ fig1_new <-
             align = "hv", axis = "bl")
 # fig1_new
 
-save_plot(here("figs", "fig1_new.png"), fig1_new, ncol = 3, nrow = 3)
+# save_plot(here("figs", "fig1_new.png"), fig1_new, ncol = 3, nrow = 3)
 ```
 
 
@@ -259,6 +259,6 @@ color.bar <- get_legend(needle.cor.p)
 top <- align_plots(top.row, color.bar, align = "h", axis = "t")
 
 fig_alt <- plot_grid(top[[1]], middle.row, bottom.row, ncol = 1) %>% plot_grid(top[[2]], rel_widths = c(12, 1))
-save_plot(here("figs", "fig1_alt.png"), fig_alt, ncol = 3, nrow = 3)
+save_plot(here("figs", "fig1_alt.png"), fig_alt, ncol = 3, nrow = 3, base_height = 3)
 ```
 

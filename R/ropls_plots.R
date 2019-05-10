@@ -23,18 +23,19 @@ plot_pca <- function(ropls_pca, group_var = NULL, annotate = c("caption", "subti
   if(is.null(group_var)){
     base <- ggplot(plotdata$scores, aes(x = p1, y = p2))
   } else {
-    base <- ggplot(plotdata$scores, aes(x = p1, y = p2, color = group_var))
+    base <- ggplot(plotdata$scores, aes(x = p1, y = p2, color = group_var, shape = group_var))
   }
   p <- base +
-    geom_point() +
-    stat_ellipse() +
+    geom_point(size = 2.5) +
+    stat_ellipse(aes(linetype = group_var)) +
     labs(x = paste0("PC1 (", plotdata$axis_stats$R2X[1] * 100, "%)"),
          y = paste0("PC2 (", plotdata$axis_stats$R2X[2] * 100, "%)")) +
     scale_colour_discrete("Group Membership") +
+    scale_linetype_manual(values = c(1,2)) +
     theme_bw() +
     labs(title = "PCA")
   stats <- latex2exp::TeX(
-    paste0("$R^2(cumulative) = ", plotdata$model_stats$`R2X(cum)`,
+    paste0("$R^2_X = ", plotdata$model_stats$`R2X(cum)`,
            "$ with ", plotdata$model_stats$pre, " PCs"))
 
   if(missing(annotate)){
@@ -66,12 +67,13 @@ plot_pca <- function(ropls_pca, group_var = NULL, annotate = c("caption", "subti
 #' }
 plot_plsda <- function(ropls_plsda, annotate = c("caption", "subtitle")){
   plotdata <- get_plotdata(ropls_plsda)
-  p <- ggplot(plotdata$scores, aes(x = p1, y = p2, color = y1)) +
-    geom_point() +
-    stat_ellipse() +
+  p <- ggplot(plotdata$scores, aes(x = p1, y = p2, color = y1, shape = y1)) +
+    geom_point(size = 2.5) +
+    stat_ellipse(aes(linetype = y1)) +
     labs(x = paste0("P1 (", plotdata$axis_stats$R2X[1] * 100, "%)"),
          y = paste0("P2 (", plotdata$axis_stats$R2X[2] * 100, "%)")) +
     scale_color_discrete("Group Membership") +
+    scale_linetype_manual(values = c(1,2)) +
     theme_bw() +
     labs(title = "PLS-DA")
   stats <- latex2exp::TeX(
