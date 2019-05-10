@@ -4,15 +4,19 @@ output: html_notebook
 ---
 ```{r}
 library(tidyverse)
+library(here)
 library(ropls)
 library(chemhelper)
+library(psych)
 ```
+
+Could check that VIP and correlation coefficient are correlated (for axis 1)
 
 # Read in datasets and choose one
 
 ```{r}
 # runif(1, 1, 1000)
-set.seed(605)
+# set.seed(605)
 needle <- read_rds(here("data", "needle.rds"))
 df <- needle[[runif(1, 0, 100)]]
 df
