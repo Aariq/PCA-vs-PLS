@@ -14,6 +14,18 @@ source(here("R", "ropls_plots.R"))
 source(here("R", "ropls_helpers.R"))
 ```
 
+```{r}
+library(pBrackets)
+bracketsGrob <- function(...){
+l <- list(...)
+e <- new.env()
+e$l <- l
+  grid:::recordGrob(  {
+    do.call(grid.brackets, l)
+  }, e)
+}
+```
+
 # To-Do:
 
 - Place a single copy of the correlation matrix legend in the top right or lower left of figure.
@@ -58,6 +70,29 @@ null.cor.p <-
   labs(x = NULL, y = NULL, subtitle = '"Null"', fill = "r") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90), legend.position = "right")
+
+b1 <- bracketsGrob(10/25, 0, 0.005, 0, h = 0.05)
+b2 <- bracketsGrob(20/25, 0, 10/25, 0, h = 0.05)
+b3 <- bracketsGrob(0.995, 0, 20/25, 0, h = 0.05)
+
+bracket_labels <- tibble(x = c(5.5, 15.5, 23), #where to put labels on x-axis
+                         y = rep(-1.75, 3), #how far below bracket to place labels
+                         label = c("C1", "C2", "N")) #labels for groups of variables
+
+null.cor.p <-
+  null.cor.p +
+  coord_cartesian(ylim = c(1,25), clip = "off") + #allows brackets to show up off plot
+  theme(
+    axis.text = element_blank(), #turns off axis labels
+    axis.ticks = element_blank(), #turns off axis ticks
+    plot.margin = unit(c(1,1,1.5,1), "lines") #padds margin to make room
+  ) +
+  annotation_custom(b1) +
+  annotation_custom(b2) +
+  annotation_custom(b3) +
+  geom_text(data = bracket_labels, inherit.aes = FALSE, aes(x=x, y=y, label = label))
+
+null.cor.p
 ```
 
 
@@ -115,6 +150,27 @@ needle.cor.p <-
   labs(x = NULL, y = NULL, subtitle = '"Needle in a haystack"', fill = "r") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90), legend.position = "right")
+
+b1 <- bracketsGrob(10/25, 0, 0.005, 0, h = 0.05)
+b2 <- bracketsGrob(20/25, 0, 10/25, 0, h = 0.05)
+b3 <- bracketsGrob(0.995, 0, 20/25, 0, h = 0.05)
+
+bracket_labels <- tibble(x = c(5.5, 15.5, 23), #where to put labels on x-axis
+                         y = rep(-1.75, 3), #how far below bracket to place labels
+                         label = c("C1", "C2", "D")) #labels for groups of variables
+
+needle.cor.p <-
+  needle.cor.p +
+  coord_cartesian(ylim = c(1,25), clip = "off") + #allows brackets to show up off plot
+  theme(
+    axis.text = element_blank(), #turns off axis labels
+    axis.ticks = element_blank(), #turns off axis ticks
+    plot.margin = unit(c(1,1,2,1), "lines") #pads margin to make room
+  ) +
+  annotation_custom(b1) +
+  annotation_custom(b2) +
+  annotation_custom(b3) +
+  geom_text(data = bracket_labels, inherit.aes = FALSE, aes(x=x, y=y, label = label))
 ```
 
 ## PCA and PLS-DA for needle-in-a-haystack
@@ -174,6 +230,28 @@ control.cor.p <-
   labs(x = NULL, y = NULL, subtitle = '"Control"', fill = "r") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90), legend.position = "top")
+
+b1 <- bracketsGrob(5/25, 0, 0.005, 0, h = 0.05)
+b2 <- bracketsGrob(10/25, 0, 5/25, 0, h = 0.05)
+b3 <- bracketsGrob(15/25, 0, 10/25, 0, h = 0.05)
+b4 <- bracketsGrob(0.995, 0, 15/25, 0, h = 0.05)
+
+bracket_labels <- tibble(x = c(3, 8, 13, 20.5), #where to put labels on x-axis
+                         y = rep(-1.75, 4), #how far below bracket to place labels
+                         label = c("C", "D1", "D2", "N")) #labels for groups of variables
+control.cor.p <-
+  control.cor.p +
+  coord_cartesian(ylim = c(1,25), clip = "off") + #allows brackets to show up off plot
+  theme(
+    axis.text = element_blank(), #turns off axis labels
+    axis.ticks = element_blank(), #turns off axis ticks
+    plot.margin = unit(c(1,1,1.5,1), "lines") #padds margin to make room
+  ) +
+  annotation_custom(b1) +
+  annotation_custom(b2) +
+  annotation_custom(b3) +
+  annotation_custom(b4) +
+  geom_text(data = bracket_labels, inherit.aes = FALSE, aes(x=x, y=y, label = label))
 ```
 
 ## PCA and PLS-DA for Control
