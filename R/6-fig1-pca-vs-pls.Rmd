@@ -15,6 +15,8 @@ source(here("R", "ropls_helpers.R"))
 ```
 
 ```{r}
+# Function to get brackets to play nicely with ggplot2. Taken from https://stackoverflow.com/questions/35633239/add-curly-braces-to-ggplot2-and-then-use-ggsave
+
 library(pBrackets)
 bracketsGrob <- function(...){
 l <- list(...)
@@ -25,11 +27,6 @@ e$l <- l
   }, e)
 }
 ```
-
-# To-Do:
-
-- Place a single copy of the correlation matrix legend in the top right or lower left of figure.
-- Get figures to align without making margins huge and wasting a lot of space
 
 # Read in datasets
 I'll read in the datasets from "Generating Datasets.Rmd" and pick individual datasets to make figures
@@ -71,6 +68,8 @@ null.cor.p <-
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90), legend.position = "right")
 
+# Replace axis labels with curly braces to improve readability:
+
 b1 <- bracketsGrob(10/25, 0, 0.005, 0, h = 0.05)
 b2 <- bracketsGrob(20/25, 0, 10/25, 0, h = 0.05)
 b3 <- bracketsGrob(0.995, 0, 20/25, 0, h = 0.05)
@@ -92,7 +91,7 @@ null.cor.p <-
   annotation_custom(b3) +
   geom_text(data = bracket_labels, inherit.aes = FALSE, aes(x=x, y=y, label = label))
 
-null.cor.p
+# null.cor.p
 ```
 
 
@@ -114,22 +113,8 @@ null.pca.p <-
 null.pls.p <-
   plot_plsda(null.pls, annotate = "subtitle") +
   scale_color_discrete_qualitative(palette = "Dark 3")
+```
 
-plot_grid(null.cor.p,
-          null.pca.p + theme(legend.position = "NULL"),
-          null.pls.p + theme(legend.position = "NULL"), nrow = 1, ncol = 3) 
-```
-```{r}
-# for lab meeting talk.  Delete before archiving
-plot_grid(null.cor.p + theme(legend.position = "right"),
-          NULL,
-          null.pca.p + theme(legend.position = "NULL"),
-          null.pls.p + theme(legend.position = "NULL"),
-          nrow = 2, ncol = 2,
-          rel_heights = c(0.7, 1)) %>% 
-save_plot(filename = here("figs", "null plot.png"), plot = .,
-          ncol = 2, nrow = 2, base_height = 3.5)
-```
 
 # Needle in a haystack
 
@@ -165,7 +150,7 @@ needle.cor.p <-
   theme(
     axis.text = element_blank(), #turns off axis labels
     axis.ticks = element_blank(), #turns off axis ticks
-    plot.margin = unit(c(1,1,2,1), "lines") #pads margin to make room
+    plot.margin = unit(c(1,1,1.5,1), "lines") #pads margin to make room
   ) +
   annotation_custom(b1) +
   annotation_custom(b2) +
@@ -192,24 +177,8 @@ needle.pca.p <-
 needle.pls.p <-
   plot_plsda(needle.pls, annotate = "subtitle") +
   scale_color_discrete_qualitative(palette = "Dark 3")
-
-plot_grid(needle.cor.p,
-          needle.pca.p + theme(legend.position = "NULL"),
-          needle.pls.p + theme(legend.position = "NULL"),
-          nrow = 1, ncol = 3)
 ```
-```{r}
-# for lab meeting talk.  Delete before archiving
 
-plot_grid(needle.cor.p + theme(legend.position = "right"),
-          NULL,
-          needle.pca.p + theme(legend.position = "NULL"),
-          needle.pls.p + theme(legend.position = "NULL"),
-          nrow = 2, ncol = 2,
-          rel_heights = c(0.7, 1)) %>% 
-save_plot(filename = here("figs", "needle plot.png"), plot = .,
-          ncol = 2, nrow = 2, base_height = 3.5)
-```
 
 # Control
 
@@ -271,72 +240,35 @@ control.pca.p <-
 control.pls.p <-
   plot_plsda(control.pls, annotate = "subtitle") +
   scale_color_discrete_qualitative(palette = "Dark 3")
-
-plot_grid(control.cor.p,
-          control.pca.p + theme(legend.position = "NULL"),
-          control.pls.p + theme(legend.position = "NULL"),
-          nrow = 1, ncol = 3)
 ```
-```{r}
-# for lab meeting talk.  Delete before archiving
 
-plot_grid(control.cor.p + theme(legend.position = "right"),
-          NULL,
-          control.pca.p + theme(legend.position = "NULL"),
-          control.pls.p + theme(legend.position = "NULL"),
-          nrow = 2, ncol = 2,
-          rel_heights = c(0.7, 1)) %>% 
-save_plot(filename = here("figs", "control plot.png"), plot = .,
-          ncol = 2, nrow = 2, base_height = 3.5)
-```
 
 # Make figure
 
 Put all the plots together to make a figure.
 
 ```{r}
-fig1_new <-
-  plot_grid(null.cor.p + theme(legend.position = "none"),
-            null.pca.p + theme(legend.position = "none") + labs(title = NULL),
-            null.pls.p + theme(legend.position = "none") + labs(title = NULL),
-            control.cor.p + theme(legend.position = "none"),
-            control.pca.p + theme(legend.position = "none") + labs(title = NULL),
-            control.pls.p + theme(legend.position = "none") + labs(title = NULL),
-            needle.cor.p + theme(legend.position = "none"),
-            needle.pca.p + theme(legend.position = "none") + labs(title = NULL),
-            needle.pls.p + theme(legend.position = "none") + labs(title = NULL),
-            ncol = 3, nrow = 3,
-            labels = "AUTO",
-            align = "hv", axis = "bl")
-# fig1_new
+fix_theme_cor <-
+  theme(legend.position = "none",
+        plot.subtitle = element_text(hjust = 0.5),
+        plot.margin = unit(c(0.5,0.5,1.5,0.5), "lines"))
 
-# save_plot(here("figs", "fig1_new.png"), fig1_new, ncol = 3, nrow = 3)
-```
+fix_theme_score <-
+  theme(legend.position = "none",
+        plot.margin = unit(c(0.5,0.5,0.5,0.5), "lines"))
 
+plot_grid(null.cor.p + fix_theme_cor,
+          control.cor.p + fix_theme_cor,
+          needle.cor.p + fix_theme_cor,
+          null.pca.p + fix_theme_score + labs(title = NULL),
+          control.pca.p + fix_theme_score + labs(title = NULL),
+          needle.pca.p + fix_theme_score + labs(title = NULL),
+          null.pls.p + fix_theme_score + labs(title = NULL),
+          control.pls.p + fix_theme_score + labs(title = NULL),
+          needle.pls.p + fix_theme_score + labs(title = NULL),
+          nrow = 3, ncol = 3, align = "v", axis = "l", labels = "AUTO", label_x = 0.05) %>% 
+  plot_grid(top[[2]], rel_widths = c(12,1)) %>% 
+  save_plot(here("figs", "fig1_alt.png"), ., ncol = 3, nrow = 3, base_height = 3)
 
-### another possibility
-
-```{r}
-top.row <- plot_grid(null.cor.p + theme(legend.position = "none", plot.subtitle = element_text(hjust = 0.5)),
-                     control.cor.p + theme(legend.position = "none", plot.subtitle = element_text(hjust = 0.5)),
-                     needle.cor.p + theme(legend.position = "none", plot.subtitle = element_text(hjust = 0.5)),
-                     nrow = 1,
-                     labels = c("A", "B", "C"))
-middle.row <- plot_grid(null.pca.p + theme(legend.position = "none") + labs(title = NULL),
-                        control.pca.p + theme(legend.position = "none") + labs(title = NULL),
-                        needle.pca.p + theme(legend.position = "none") + labs(title = NULL),
-                        nrow = 1,
-                        labels = c("D", "E", "F"))
-bottom.row <- plot_grid(null.pls.p + theme(legend.position = "none") + labs(title = NULL),
-                        control.pls.p + theme(legend.position = "none") + labs(title = NULL),
-                        needle.pls.p + theme(legend.position = "none") + labs(title = NULL),
-                        nrow = 1,
-                        labels = c("G", "H", "I"))
-color.bar <- get_legend(needle.cor.p)
-
-top <- align_plots(top.row, color.bar, align = "h", axis = "t")
-
-fig_alt <- plot_grid(top[[1]], middle.row, bottom.row, ncol = 1) %>% plot_grid(top[[2]], rel_widths = c(12, 1))
-save_plot(here("figs", "fig1_alt.png"), fig_alt, ncol = 3, nrow = 3, base_height = 3)
 ```
 
