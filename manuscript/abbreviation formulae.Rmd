@@ -1,0 +1,19 @@
+---
+title: "R Notebook"
+output:
+  word_document: default
+  html_notebook: default
+---
+$R^2_X$
+
+
+$R^2_Y$
+
+
+$Q^2$
+
+
+$p_{R^2_Y}$
+
+
+$p_{Q^2}$
