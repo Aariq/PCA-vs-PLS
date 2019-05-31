@@ -109,15 +109,26 @@ table1 <- table1 %>%
 write_excel_csv(table1, here("figs", "table1.csv"))
 ```
 
-## Tests on statsitics
-I'm interested in what an ANOVA would tell me about differences in RMSEP among scenarios
+## What % of p.values significant?
 
 ```{r}
-control.pls.rmsep <- map_dbl(control.pls,~plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7))
-control.pca.rmsep <- map_dbl(control.pcr, "RMSEP")
-needle.pls.rmsep <- map_dbl(needle.pls,~plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7))
-needle.pca.rmsep <- map_dbl(needle.pcr, "RMSEP")
-t.test(needle.pca.rmsep, needle.pls.rmsep)
-t.test(control.pls.rmsep, control.pca.rmsep)
+needle_pcr_stats<- map_df(needle.pcr, 'mod.stats')
+needle_pcr_stats %>% 
+  summarize_all(mean)
+
+needle_pcr_stats %>% 
+  count(p.value < 0.05)
+
+76/(76+21)
+
+control_pcr_stats <- map_df(control.pcr, 'mod.stats')
+control_pcr_stats %>% 
+  summarize_all(mean)
+
+control_pcr_stats %>% 
+  count(p.value < 0.05)
+
+#100%
 ```
+
 
