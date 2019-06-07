@@ -23,7 +23,7 @@ library(here)
 library(ropls)
 library(tidyverse)
 source(here("R","pcr.R"))
-source(here("R", "RMSEP.R"))
+# source(here("R", "RMSEP.R"))  #needed?
 # runif(1, 0, 1000)
 set.seed(690)
 ```
@@ -32,7 +32,7 @@ Create "safe" "partial" version of opls() which returns NULL if it errors and ne
 
 ```{r}
 safe_opls <- safely(partial(opls, printL = FALSE, plotL = FALSE), otherwise = NULL)
-safe_pcr <- safely(pcreg, otherwise = NULL)
+safe_pcr <- safely(pca_lr, otherwise = NULL)
 ```
 
 # Load Data
@@ -74,7 +74,7 @@ null.pcr.try %>%
   unique()
 ```
 
-3 failed because of non-convergence.
+zero failed because of non-convergence.
 
 Save em!
 
@@ -217,7 +217,8 @@ Any errors?
 length(needle.pcr.try) - length(needle.pcr)
 ```
 
-3 failed models 
+zero failed models 
+
 ```{r}
 write_rds(needle.pcr, here("data", "models", "needle-pcr.rds"))
 ```

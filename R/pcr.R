@@ -9,93 +9,7 @@ library(here)
 library(lmtest)
 source(here("R", "ropls_helpers.R"))
 
-#' Predict PC axis scores of new data from loadings
-#'
-#' @param pca_mod 
-#' @param .newdata 
-#' @param .scale 
-#'
-#' @return
-#' @export
-#'
-#' @examples
-mypredict <- function(pca_mod, .newdata, .scale = TRUE) {
-  #get loadings
-  load <-
-    get_loadings(pca_mod) %>%
-    gather(-Variable, key = axis, value = loading) %>%
-    spread(Variable, loading) %>% 
-    select(axis, colnames(.newdata))
-  
-  #scale newdata
-  if(.scale){
-    .newdata <- .newdata %>% mutate_all(~scale(.))
-  }
-  
-  #check that columns are the same
-  stopifnot(identical(colnames(.newdata), colnames(load %>% select(-axis))))
-  
-  #calc scores from loadings
-  #clunky, but works
-  pred.scores <-
-    load %>% 
-    group_by(axis) %>% 
-    group_map(~{
-      map2_dfc(.x = .newdata, .y = ., ~.x*.y) %>% rowSums(.) %>% as_tibble()
-    }) %>% 
-    mutate(sample = paste0("s", 1:nrow(.newdata))) %>% 
-    spread(axis, value)
-  
-  return(pred.scores)
-}
-
-
-
-#' Calculate RMSEP on rsplit object
-#'
-#' @param split 
-#' @param ... not used
-#' @import rsample
-#'
-#' @return
-#' @export
-#'
-#' @examples
-pca_RMSEP <- function(split, X_vars, Y_var) {
-  #do pca on analysis(data)
-  
-  X <- enquo(X_vars)
-  Y <- enquo(Y_var)
-  # Do PCA on X
-  pca <- opls(select(analysis(split), !!X), plotL = FALSE, printL = FALSE)
-  
-  # Get scores and bind with Y
-  scores <-
-    get_scores(pca) %>% 
-    add_column(!!Y := analysis(split)[[quo_name(Y)]])
-  
-  #predict pc axis scores on assessment data
-  scores.pred <- mypredict(pca, assessment(split) %>% select(!!X))
-  
-  # Make formula
-  npcs <- pca@summaryDF$pre
-  pcs <- glue("p{1:npcs}")
-  mod_form <- as.formula(glue("{quo_name(Y)} ~ {glue_collapse(pcs, sep = '+')}"))
-  
-  #do glm on analysis data
-  m <- glm(mod_form, family = "binomial", data = scores)
-  
-  #use glm to predict `group` for newdata
-  scores.pred %>%
-    mutate(group.pred = predict(m, newdata = scores.pred, type = "response")) %>%
-    add_column(group.actual = assessment(split)[[quo_name(Y)]]) %>%
-    mutate(sq_err = (group.actual - group.pred)^2) %>%
-    summarize(RMSEP = sqrt(mean(sq_err))) %>%
-    as.numeric()
-}
-
-
-#' Do PCA regression using ropls::opls() and gaussian glm.
+#' Do PCA logistic regression (PCA-LR) using ropls::opls() and logistic glm.
 #'
 #' @param X_vars 
 #' @param Y_var 
@@ -111,7 +25,7 @@ pca_RMSEP <- function(split, X_vars, Y_var) {
 #'
 #' @examples
 #' 
-pcreg <- function(data, X_vars, Y_var, CV = 7){
+pca_lr <- function(data, X_vars, Y_var, CV = 7){
   X <- enquo(X_vars)
   Y <- enquo(Y_var)
   
@@ -163,14 +77,7 @@ pcreg <- function(data, X_vars, Y_var, CV = 7){
                  as.numeric(),
                p.value = lik.test$`Pr(>Chisq)`[2])
   
-  # Do CV
-  df.cv <- rsample::vfold_cv(data, CV)
-  RMSEP <- df.cv %>%
-    mutate(RMSEP = map_dbl(.$splits, ~pca_RMSEP(., !!X, !!Y))) %>% 
-    summarize(RMSEP = mean(RMSEP)) %>%
-    as.numeric()
-  
-  return(list(pca = pca, scores = scores, glm = m, mod.stats = mod.stats, RMSEP = RMSEP))
+  return(list(pca = pca, scores = scores, glm = m, mod.stats = mod.stats, data = data))
 }
 
 
@@ -207,6 +114,6 @@ pcreg <- function(data, X_vars, Y_var, CV = 7){
 # test <-lrtest(m)
 # p.value <- test$`Pr(>Chisq)`[2]
 # # mutate(group = as.numeric(as.factor(group)))
-# m <- pcreg(X_vars = -group, Y_var = group, CV = 10, data = test.df)
+# m <- pca_lr(X_vars = -group, Y_var = group, CV = 10, data = test.df)
 # m
 
