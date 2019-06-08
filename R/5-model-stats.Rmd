@@ -136,7 +136,7 @@ needle_pcr_stats %>%
 needle_pcr_stats %>% 
   count(p.value < 0.05)
 
-76/(76+21)
+79/(79+21)
 
 control_pcr_stats <- map_df(control.pcr, 'mod.stats')
 control_pcr_stats %>% 
