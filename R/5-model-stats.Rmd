@@ -2,6 +2,10 @@
 title: "PCA regression and PLS-DA models summary statistics"
 output: html_notebook
 ---
+# TODO:
+- Fix RMSEP function so it deals with errors (in RMSEP.R)
+- Figure out how many models really fail during the RMSEP (I think it's just three, but I should check)
+- Re-output table and edit Numbers doc
 
 ```{r message=FALSE}
 library(here)
@@ -42,6 +46,11 @@ This is annoying because of the data structure.  I'm sure there is a more effici
 # pcr.test <- control.pcr[[1]]
 # scores <- pcr.test$pca@scoreMN %>% as.data.frame()
 ```
+
+```{r}
+safe_pca_lr_RMSEP <- possibly(pca_lr_RMSEP, NA)
+```
+
 ```{r}
 pls_pcr_summary <- function(pls, pls.forced, pcr) {
   pls.summary <-
@@ -77,11 +86,11 @@ pls_pcr_summary <- function(pls, pls.forced, pcr) {
   pcr.summary <- 
     pcr %>% 
     map_dfr(~.$mod.stats, .id = "dataset") %>% 
-    mutate(RMSEP = map_dbl(pcr, "RMSEP"),
+    mutate(RMSEP = map_dbl(pcr, ~safe_pca_lr_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7)),
            R2X = map_dbl(pcr, ~.$pca@summaryDF$`R2X(cum)`),
            ncomp = map_dbl(pcr, ~.$pca@summaryDF$pre)) %>% 
     select(dataset, R2Y, p = p.value, RMSEP, R2X, ncomp) %>% 
-    summarize_if(is.numeric, funs(mean, sd)) %>%
+    summarize_if(is.numeric, list(~mean(., na.rm = TRUE), ~sd(., na.rm = TRUE))) %>%
     gather() %>% 
     separate(key, into = c("Statistic", "part")) %>% 
     spread(key = part, value = value) %>% 
@@ -90,6 +99,14 @@ pls_pcr_summary <- function(pls, pls.forced, pcr) {
     add_row(Statistic = "n", `PCA-DA` = length(pcr))
   return(full_join(pls.summary, pls.forced.summary) %>% full_join(pcr.summary))
 }
+```
+```{r}
+
+# null.pcr %>%
+#   map_dfr("mod.stats", .id = "dataset") %>%
+#   mutate(RMSEP = map_dbl(null.pcr, ~safe_pca_lr_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7))) %>%
+#   summarize_if(is.numeric, list(~mean(., na.rm = TRUE), ~sd(., na.rm = TRUE)))
+# #   
 ```
 
 ## Make table and write to .csv
