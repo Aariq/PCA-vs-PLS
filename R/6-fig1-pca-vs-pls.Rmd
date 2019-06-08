@@ -3,6 +3,11 @@ title: "PCA vs. PLS-DA"
 author: "Eric R. Scott"
 output: html_notebook
 ---
+
+TODO:
+- For PCA plots, have subtitlte show R2Y an p-value instead of R2X.  
+- Maybe move more things to ropls_plots.R
+
 ```{r message=FALSE, warning=FALSE}
 library(tidyverse)
 library(ropls) #for opls(), which does pca and pls-da
@@ -12,6 +17,9 @@ library(here)
 library(colorspace)
 source(here("R", "ropls_plots.R"))
 source(here("R", "ropls_helpers.R"))
+source(here("R", "pcr.R"))
+library(glue)
+library(latex2exp)
 ```
 
 ```{r}
@@ -98,7 +106,9 @@ null.cor.p <-
 ## PCA and PLS-DA for Null
 
 ```{r}
-null.pca <- opls(select(null, -group), plotL = FALSE)
+# null.pca <- opls(select(null, -group), plotL = FALSE)
+null.pcalr <- pca_lr(null, -group, group, CV = 7)
+null.pca <- null.pcalr$pca
 # null.pls <- opls(select(null, -group), null$group, plot = FALSE, permI = 500)
 null.pls <- opls(select(null, -group), null$group, plotL = FALSE, permI = 500, predI = 2)
 ```
@@ -108,7 +118,11 @@ null.pls <- opls(select(null, -group), null$group, plotL = FALSE, permI = 500, p
 ```{r message=FALSE, warning=FALSE}
 null.pca.p <-
   plot_pca(null.pca, null$group, annotate = "subtitle") +
+  labs(title = NULL,
+       subtitle =TeX(glue("$R^2_Y = {round(null.pcalr$mod.stats$R2Y, 3)}$; $p = {round(null.pcalr$mod.stats$p.value, 3)}$"))) +
   scale_color_discrete_qualitative(palette = "Dark 3")
+
+
 
 null.pls.p <-
   plot_plsda(null.pls, annotate = "subtitle") +
@@ -163,7 +177,9 @@ needle.cor.p <-
 The PCA score plot still shows no real separation because the discriminating variables do not contribute much to the total covariation in the data.  The PLS-DA plot shows very strong separation, despite the differences between the groups being only due to 5 out of 25 variables.  The PLS-DA model performs well, with high R^2^ and Q^2^ values
 
 ```{r include=FALSE}
-needle.pca <- opls(select(needle, -group), plot = FALSE)
+# needle.pca <- opls(select(needle, -group), plot = FALSE)
+needle.pcalr <- pca_lr(needle, -group, group, CV = 7)
+needle.pca <- needle.pcalr$pca
 needle.pls <- opls(select(needle, -group), needle$group, plot = FALSE, predI = 2, permI = 500)
 ```
 
@@ -172,6 +188,8 @@ needle.pls <- opls(select(needle, -group), needle$group, plot = FALSE, predI = 2
 ```{r message=FALSE, warning=FALSE}
 needle.pca.p <-
   plot_pca(needle.pca, needle$group, annotate = "subtitle") +
+  labs(title = NULL,
+       subtitle =TeX(glue("$R^2_Y = {round(needle.pcalr$mod.stats$R2Y, 3)}$; $p = {round(needle.pcalr$mod.stats$p.value, 3)}$"))) +
   scale_color_discrete_qualitative(palette = "Dark 3")
 
 needle.pls.p <-
@@ -226,7 +244,9 @@ control.cor.p <-
 ## PCA and PLS-DA for Control
 
 ```{r include=FALSE}
-control.pca <- opls(select(control, -group), plot = FALSE)
+# control.pca <- opls(select(control, -group), plot = FALSE)
+control.pcalr <- pca_lr(control, -group, group, CV = 7)
+control.pca <- control.pcalr$pca
 control.pls <- opls(select(control, -group), control$group, plot = FALSE, predI = 2, permI = 500)
 ```
 
@@ -235,6 +255,8 @@ control.pls <- opls(select(control, -group), control$group, plot = FALSE, predI 
 ```{r message=FALSE, warning=FALSE}
 control.pca.p <-
   plot_pca(control.pca, control$group, annotate = "subtitle") +
+  labs(title = NULL,
+       subtitle =TeX(glue("$R^2_Y = 0.999$; $p < 0.001$"))) +
   scale_color_discrete_qualitative(palette = "Dark 3")
 
 control.pls.p <-
@@ -257,17 +279,19 @@ fix_theme_score <-
   theme(legend.position = "none",
         plot.margin = unit(c(0.5,0.5,0.5,0.5), "lines"))
 
+color.bar <- get_legend(needle.cor.p)
+
 plot_grid(null.cor.p + fix_theme_cor,
           control.cor.p + fix_theme_cor,
           needle.cor.p + fix_theme_cor,
-          null.pca.p + fix_theme_score + labs(title = NULL),
-          control.pca.p + fix_theme_score + labs(title = NULL),
-          needle.pca.p + fix_theme_score + labs(title = NULL),
+          null.pca.p + fix_theme_score,
+          control.pca.p + fix_theme_score,
+          needle.pca.p + fix_theme_score,
           null.pls.p + fix_theme_score + labs(title = NULL),
           control.pls.p + fix_theme_score + labs(title = NULL),
           needle.pls.p + fix_theme_score + labs(title = NULL),
           nrow = 3, ncol = 3, align = "v", axis = "l", labels = "AUTO", label_x = 0.05) %>% 
-  plot_grid(top[[2]], rel_widths = c(12,1)) %>% 
+  plot_grid(color.bar, align = "h", axis = "t", rel_widths = c(12,1)) %>%
   save_plot(here("figs", "fig1_alt.png"), ., ncol = 3, nrow = 3, base_height = 3)
 
 ```
