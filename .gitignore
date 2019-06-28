@@ -3,7 +3,7 @@
 .RData
 .Ruserdata
 *.icloud
-data/muir/wc5
+data/muir/*
 *.numbers
 *.pdf
 manuscript
