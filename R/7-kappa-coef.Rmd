@@ -251,15 +251,12 @@ control.k.plotdata <-
 
 control.p <-
   ggplot(control.k.plotdata) +
-  # geom_histogram(aes(x = `Cohen's Kappa`, fill = Method),
-  #                position = "identity", alpha = 0.8,
-  #                binwidth = 0.1) +
   geom_density(aes(x = `Cohen's Kappa`, fill = Method, linetype = Method),
                alpha = 0.5, trim = TRUE, adjust = 1.5) +
   scale_fill_discrete_qualitative(palette = "Dark 3") +
   scale_linetype_manual(values = c(1,2,3)) +
   theme_bw() +
-  labs(x = "Cohen's Kappa", y = "Frequency")
+  labs(x = "Cohen's Kappa", y = "Frequency", title = '"Control"')
 control.p
 
 ```
@@ -321,15 +318,12 @@ needle.k.plotdata <-
 
 needle.p <-
   ggplot(needle.k.plotdata) +
-  # geom_histogram(aes(x = `Cohen's Kappa`, fill = Method),
-  #                position = "identity", alpha = 0.8,
-  #                binwidth = 0.1) +
   geom_density(aes(x = `Cohen's Kappa`, fill = Method, linetype = Method),
                alpha = 0.5, trim = TRUE, adjust = 1.5) +
   scale_fill_discrete_qualitative(palette = "Dark 3") +
   scale_linetype_manual(values = c(1,2,3)) +
   theme_bw() +
-  labs(x = "Cohen's Kappa", y = "Frequency")
+  labs(x = "Cohen's Kappa", y = "Frequency", title = '"Needle in a Haystack"')
 needle.p
 ```
 
@@ -346,7 +340,7 @@ fig2 <-
   plot_grid(panels, get_legend(control.p),
             rel_widths = c(1, 0.15))
 fig2
-save_plot(here("figs", "fig2.png"), fig2, ncol = 2)
+save_plot(here("figs", "kappa.png"), fig2, ncol = 2)
 ```
 
 Cohen's Kappa for PCA and PLS-DA important variables under control (a) and needle-in-a-haystack (b) scenarios.
