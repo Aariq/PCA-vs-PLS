@@ -21,7 +21,7 @@ tomato.1 <-
 
 # download climate data and join
 
-r <- getData("worldclim",var = "bio", res = 5, path = here("data"))
+r <- getData("worldclim",var = "bio", res = 5, path = here("data", "muir"))
 r <- r[[c(1,12)]]
 names(r) <- c("temp","precip")
 
