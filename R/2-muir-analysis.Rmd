@@ -1,5 +1,6 @@
 ---
 title: "Re-analysis of Muir et al. data"
+author: "Eric R. Scott"
 output: 
   html_notebook:
     code_folding: hide
@@ -127,11 +128,12 @@ plsr2.temp <-
   opls(tomato.filtered %>% dplyr::select(lma.leaflet:Rdark), tomato.filtered$temp, plotL = FALSE, permI = 1000)
 
 ```
-Write outputs to table
+
+View outputs in a table
+
 ```{r}
 bind_rows("Precipitation ~ leaf traits" = plsr2.precip@summaryDF, "Temperature ~ leaf traits" = plsr2.temp@summaryDF, .id = "Model") %>% 
-  select(-RMSEE, -pre, -ort) %>% 
-  write_csv(here("figs", "muir plsr results.csv"))
+  select(-RMSEE, -pre, -ort)
 ```
 
 # Compare Loadings
@@ -139,7 +141,7 @@ bind_rows("Precipitation ~ leaf traits" = plsr2.precip@summaryDF, "Temperature ~
 Table of PCA loadings and PLS axis loadings.
 
 ```{r}
-precip.pls.loadings <- get_loadings(plsr2.precip) %>% rename(`Precipitation PLS Loadings` = p1)
+precip.pls.loadings <- get_loadings(plsr2.precip) %>% rename(`Precipitation PLS` = p1)
 precip.pls.vip <- get_VIP(plsr2.precip) %>% rename(`Precipitation VIP` = VIP)
 temp.pls.loadings <- get_loadings(plsr2.temp) %>% rename(`Temperature PLS` = p1)
 temp.pls.vip <- get_VIP(plsr2.temp) %>% rename(`Temperature VIP` = VIP)
@@ -154,8 +156,8 @@ loading.table <-
   mutate_if(is.numeric, ~round(., 3))
 
 loading.table
-write_csv(loading.table, here("figs", "loading table.csv"))
-
+write_csv(select(loading.table, PC1, `Precipitation PLS`, `Temperature PLS`),
+          here("figs", "muir loading table.csv"))
 ```
 
 It looks like maybe the Temperature PLS axis loadings are more similar to PC1, which makes sense because only the PCA regression for temperature was significant.
@@ -173,7 +175,7 @@ cor.test(tomato.filtered$temp, tomato.filtered$precip)
 ```
 
 
-Intermediat RMSEE. OK R2Y and Q2.  No p-value with this method.
+Intermediate RMSEE. OK R2Y and Q2.  No p-value with this method.
 
 ```{r}
 plsr.both <- 
@@ -185,4 +187,5 @@ getLoadingMN(plsr.both)
 
 plsr.both@cMN
 ```
-P1 is related to temperature, P2 is related to precipitation.  Can do separate PLS for each var.
+
+P1 is related to temperature, P2 is related to precipitation.  This supports doing separate PLS for precipitation and temperature
