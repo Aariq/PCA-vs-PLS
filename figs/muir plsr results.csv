@@ -1,3 +1,0 @@
-Model,R2X(cum),R2Y(cum),Q2(cum),pR2Y,pQ2
-Precipitation ~ leaf traits,0.199,0.421,0.336,0.001,0.001
-Temperature ~ leaf traits,0.265,0.407,0.346,0.001,0.001
