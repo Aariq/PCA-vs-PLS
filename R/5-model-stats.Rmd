@@ -1,11 +1,9 @@
 ---
 title: "PCA regression and PLS-DA models summary statistics"
+author: "Eric R. Scott"
 output: html_notebook
 ---
-# TODO:
-- Fix RMSEP function so it deals with errors (in RMSEP.R)
-- Figure out how many models really fail during the RMSEP (I think it's just three, but I should check)
-- Re-output table and edit Numbers doc
+**IMPORTANT:** These datasets were generated under R version 3.5.3.  The random number generator in R was updated in version 3.6.0.  For this to be fully reproducible, run with version < 3.6.0 or use `RNGversion("3.5.3")`. 
 
 ```{r message=FALSE}
 library(here)
@@ -19,6 +17,7 @@ set.seed(464)
 ```
 
 # Read in models
+These were output by "4-analyze-simulated-data.Rmd"
 
 ```{r}
 control.pls <- read_rds(here('data', 'models', 'control-pls.rds'))
@@ -36,23 +35,16 @@ needle.pcr <- read_rds(here('data', 'models', 'needle-pcr.rds'))
 # Get Summary Stats
 ## Function for getting summary stats
 
-This is annoying because of the data structure.  I'm sure there is a more efficient way to do all this.
-
-```{r}
-# pls.forced <- null.pls.forced
-# pls <- null.pls
-# pcr <- null.pcr
-# 
-# pcr.test <- control.pcr[[1]]
-# scores <- pcr.test$pca@scoreMN %>% as.data.frame()
-```
+Create a "safe" version of my RMSEP function that returns `NA` if it errors.
 
 ```{r}
 safe_pca_lr_RMSEP <- possibly(pca_lr_RMSEP, NA)
 ```
 
+Create functions to run RMSEP and return all the model statistics in a tidy dataframe.  This is annoying because of the data structure output by `opls()`.
+
 ```{r}
-pls_pcr_summary <- function(pls, pls.forced, pcr) {
+pls_pcr_summary <- function(pcr, pls, pls.forced) {
   pls.summary <-
     pls %>%
     # do RMSEP on successful models and store in summaryDF 
@@ -94,28 +86,21 @@ pls_pcr_summary <- function(pls, pls.forced, pcr) {
     gather() %>% 
     separate(key, into = c("Statistic", "part")) %>% 
     spread(key = part, value = value) %>% 
-    mutate(`PCA-DA` = glue("{round(mean, 3)} ± {round(sd, 3)}")) %>% 
+    mutate(`PCA-LR` = glue("{round(mean, 3)} ± {round(sd, 3)}")) %>% 
     select(-mean, -sd) %>% 
-    add_row(Statistic = "n", `PCA-DA` = length(pcr))
-  return(full_join(pls.summary, pls.forced.summary) %>% full_join(pcr.summary))
+    add_row(Statistic = "n", `PCA-LR` = length(pcr))
+  return(full_join(pcr.summary, pls.summary) %>% full_join(pls.forced.summary))
 }
 ```
-```{r}
 
-# null.pcr %>%
-#   map_dfr("mod.stats", .id = "dataset") %>%
-#   mutate(RMSEP = map_dbl(null.pcr, ~safe_pca_lr_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7))) %>%
-#   summarize_if(is.numeric, list(~mean(., na.rm = TRUE), ~sd(., na.rm = TRUE)))
-# #   
-```
 
 ## Make table and write to .csv
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 table1 <-
-  list(control = pls_pcr_summary(control.pls, control.pls.forced, control.pcr),
-       null = pls_pcr_summary(null.pls, null.pls.forced, null.pcr),
-       needle = pls_pcr_summary(needle.pls, needle.pls.forced, needle.pcr)
+  list(control = pls_pcr_summary(control.pcr, control.pls, control.pls.forced),
+       null = pls_pcr_summary(null.pcr, null.pls, null.pls.forced),
+       needle = pls_pcr_summary(needle.pcr, needle.pls, needle.pls.forced)
   ) %>%
   bind_rows(.id = "Scenario")
 table1 <- table1 %>% 
@@ -123,7 +108,7 @@ table1 <- table1 %>%
          Statistic = fct_relevel(Statistic,
                                  "n", "ncomp", "RMSEP", "R2X", "R2Y", "Q2", "pR2", "pQ2", "p")) %>% 
   arrange(Scenario, Statistic)
-write_excel_csv(table1, here("figs", "table1.csv"))
+write_excel_csv(table1, here("figs", "model statistics table.csv"))
 ```
 
 ## What % of p.values significant?

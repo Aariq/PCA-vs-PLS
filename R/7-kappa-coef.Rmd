@@ -1,13 +1,13 @@
 ---
 title: "Confusion Matrix Calculations"
+author: "Eric R. Scott"
 output: html_notebook
 ---
+This notebook is a heuristic explanation of confusion matrices and Cohen's Kappa coefficient with my simulated data scenarios in mind, followed by analysis of the "control" and "needle in a haystack" data scenarios.  This notebook also outputs figure 3.
 
-To Do:
+**IMPORTANT:** These datasets were generated under R version 3.5.3.  The random number generator in R was updated in version 3.6.0.  For this to be fully reproducible, run with version < 3.6.0 or use `RNGversion("3.5.3")`. 
 
-- Do correlation tests only with PCs that are significant in linear model.
-
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(psych) # for cohen.kappa
 library(tidyverse)
 library(ropls)
@@ -17,7 +17,6 @@ library(colorspace)
 source(here("R", "ropls_helpers.R"))
 ```
 
-This notebook is an exploratory look at confusion matrices and Cohen's Kappa coefficient with my simulated data scenarios in mind.  Analysis of the data happens in "Simulated Data Analysis.Rmd"
 
 # Confusion Matrixes
 
@@ -72,13 +71,13 @@ K = (0.8333333 - pe)/(1-pe)
 K
 ```
 
-# Applying to PLS-DA and PCA
+# Applying to PLS-DA and PCA-LR
 
-In order to apply this to PLS-DA, I'll use the common cuttoff of VIP > 1 to indicate whether a variable is discriminating or not.  The name of the variable contains information on whether it was meant to be discriminating or not, so I can then create a confusion matrix and calculate K
+There are multiple ways to decide what a "discriminating" variable is for PCA-LR.  I've decided to choose discriminating variables as those that are significantly correlated with any of the principal components that were significant in the logistic regression part of PCA-LR.
 
-It's more difficult to decide how to do this for PCA since there are several ways to go about it.  Often correlation plots are used which plot loadings of the first two PCs with a circle representing a correlation coefficient cutoff, usually of 0.5.  Variables with correlations greater than 0.5 are considered significantly correlated with either PC1, PC2 or both, depending on the location of the variable in loading space.
+For PLS-DA, I'll use the same criteria as well as VIP > 1.
 
-Rather than using a cutoff of r = 0.5, I'll use a cutoff of r = 0.38 which is what would be significant with n = 20 observations
+The name of the variable contains information on whether it was meant to be discriminating or not, so I can then create a confusion matrix and calculate K
 
 # Load data
 
@@ -89,7 +88,6 @@ control.pls <- read_rds(here('data', 'models', 'control-pls.rds'))
 needle.pcas <- read_rds(here("data", "models", "needle-pcr.rds")) #%>% map("pca")
 needle.pls <- read_rds(here('data', 'models', 'needle-pls.rds'))
 ```
-
 
 # Functions
 
@@ -102,9 +100,6 @@ needle.pls <- read_rds(here('data', 'models', 'needle-pls.rds'))
 `calc_kappa()` takes the results of `conf_pcr()` or `conf_pls()` and calculates Cohen's Kappa based on a confusion matrix.
 
 ```{r}
-# for PCA regression
-# pcr <- control.pcas[[3]]
-
 conf_pcr <- function(pcr){
   # Separate PCA and regression parts
   pca <- pcr$pca
@@ -144,8 +139,6 @@ conf_pcr <- function(pcr){
 ```
 
 ```{r}
-# pls <- control.pls[[24]]
-# pls@modelDF
 conf_pls <- function(pls){
   #get scores and data
   scores <- pls %>%
@@ -173,10 +166,7 @@ conf_pls <- function(pls){
 }
 ```
 
-
 ```{r}
-# opls.model <- pls.model <- control.pls[[3]]
-
 conf_pls_vip <- function(pls.model){
   get_VIP(pls.model) %>%
     mutate(detect_discr = ifelse(VIP > 1, TRUE, FALSE),
@@ -196,11 +186,8 @@ calc_kappa <- function(confusion_df) {
 ```
 
 
-## Control
-### Calculate Cohen's Kappa
-
-- For PCA, I'm defining an "important" variable as one with a correlation to PC1 > 0.38 or  < -0.38
-- For PLS, an "important" variable is one with a VIP score > 1
+# Control
+## Calculate Cohen's Kappa
 
 **PCA kappas**
 
@@ -240,7 +227,7 @@ control.k %>%
   summarise_if(is.numeric, .funs = funs(mean, sd))
 ```
 
-### Build Plot
+## Build Plot
 
 ```{r}
 control.k.plotdata <-
@@ -258,7 +245,6 @@ control.p <-
   theme_bw() +
   labs(x = "Cohen's Kappa", y = "Frequency", title = '"Control"')
 control.p
-
 ```
 
 # Needle-in-a-haystack
@@ -266,8 +252,6 @@ control.p
 
 ## Calculate Cohen's Kappa
 
-- For PCA, I'm defining an "important" variable as one with a correlation to PC1 > 0.5 or  < -0.5
-- For PLS, an "important" variable is one with a VIP score > 1
 
 **PCA kappas**
 
@@ -307,7 +291,7 @@ needle.k %>%
   summarize_if(is.numeric, funs(mean, sd))
 ```
 
-### Build plot
+## Build plot
 
 ```{r}
 needle.k.plotdata <-
