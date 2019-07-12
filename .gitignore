@@ -7,3 +7,4 @@ data/muir/*
 *.numbers
 *.pdf
 manuscript
+*.nb.html
