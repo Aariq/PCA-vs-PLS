@@ -4,9 +4,9 @@ author: "Eric R. Scott"
 output: html_notebook
 ---
 
-TODO:
-- For PCA plots, have subtitlte show R2Y an p-value instead of R2X.  
-- Maybe move more things to ropls_plots.R
+This generates figure 2 showing the correlation structure and results from PCA-LR and PLS-DA for example datasets from the three scenarios.
+
+**IMPORTANT:** These datasets were generated under R version 3.5.3.  The random number generator in R was updated in version 3.6.0.  For this to be fully reproducible, run with version < 3.6.0 or use `RNGversion("3.5.3")`.
 
 ```{r message=FALSE, warning=FALSE}
 library(tidyverse)
@@ -37,7 +37,7 @@ e$l <- l
 ```
 
 # Read in datasets
-I'll read in the datasets from "Generating Datasets.Rmd" and pick individual datasets to make figures
+I'll read in the datasets from "3-generating-datasets.Rmd" and pick individual datasets to make figures
 
 ```{r}
 null.list <- read_rds(here::here("data", "null.rds"))
@@ -46,10 +46,8 @@ needle.list <- read_rds(here::here("data", "needle.rds"))
 ```
 
 Sample one dataset as an example
-Note: the random number generator changed in R version 3.6 and will not result in the same plot
 
 ```{r}
-# set.seed(999)
 set.seed(888)
 null <- sample(null.list, 1)[[1]]
 control <- sample(control.list, 1)[[1]]
@@ -106,10 +104,8 @@ null.cor.p <-
 ## PCA and PLS-DA for Null
 
 ```{r}
-# null.pca <- opls(select(null, -group), plotL = FALSE)
 null.pcalr <- pca_lr(null, -group, group, CV = 7)
 null.pca <- null.pcalr$pca
-# null.pls <- opls(select(null, -group), null$group, plot = FALSE, permI = 500)
 null.pls <- opls(select(null, -group), null$group, plotL = FALSE, permI = 500, predI = 2)
 ```
 
@@ -121,8 +117,6 @@ null.pca.p <-
   labs(title = NULL,
        subtitle =TeX(glue("$R^2_Y = {round(null.pcalr$mod.stats$R2Y, 3)}$; $p = {round(null.pcalr$mod.stats$p.value, 3)}$"))) +
   scale_color_discrete_qualitative(palette = "Dark 3")
-
-
 
 null.pls.p <-
   plot_plsda(null.pls, annotate = "subtitle") +
@@ -177,7 +171,6 @@ needle.cor.p <-
 The PCA score plot still shows no real separation because the discriminating variables do not contribute much to the total covariation in the data.  The PLS-DA plot shows very strong separation, despite the differences between the groups being only due to 5 out of 25 variables.  The PLS-DA model performs well, with high R^2^ and Q^2^ values
 
 ```{r include=FALSE}
-# needle.pca <- opls(select(needle, -group), plot = FALSE)
 needle.pcalr <- pca_lr(needle, -group, group, CV = 7)
 needle.pca <- needle.pcalr$pca
 needle.pls <- opls(select(needle, -group), needle$group, plot = FALSE, predI = 2, permI = 500)
@@ -244,7 +237,6 @@ control.cor.p <-
 ## PCA and PLS-DA for Control
 
 ```{r include=FALSE}
-# control.pca <- opls(select(control, -group), plot = FALSE)
 control.pcalr <- pca_lr(control, -group, group, CV = 7)
 control.pca <- control.pcalr$pca
 control.pls <- opls(select(control, -group), control$group, plot = FALSE, predI = 2, permI = 500)
@@ -293,6 +285,5 @@ plot_grid(null.cor.p + fix_theme_cor,
           nrow = 3, ncol = 3, align = "v", axis = "l", labels = "AUTO", label_x = 0.05) %>% 
   plot_grid(color.bar, align = "h", axis = "t", rel_widths = c(12,1)) %>%
   save_plot(here("figs", "three-scenarios.png"), ., ncol = 3, nrow = 3, base_height = 3)
-
 ```
 
