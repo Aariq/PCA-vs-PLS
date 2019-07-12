@@ -1,3 +1,7 @@
+library(ropls)
+library(tibble)
+library(dplyr)
+
 #' Get VIP scores from PLS and OPLS models created by `ropls::opls()`
 #'
 #' Provides a wrapper for \code{\link{getVipVn}} from the \link{ropls} package that returns a tibble rather than a named numeric vector.

@@ -1,3 +1,6 @@
+library(latex2exp)
+library(ggplot2)
+
 #to appease R CMD check
 p1 <- p2 <- o1 <- y1 <- NULL
 
