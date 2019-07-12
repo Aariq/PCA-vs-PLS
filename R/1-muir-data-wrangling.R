@@ -1,4 +1,7 @@
-#Wrangling data from Muir et al.
+# Wrangling data from Muir et al.
+# Outputs tomatoes.rds which includes the trait data and weather data used in further analyses.
+# To fully reproduce this, you'll need to download the data from https://doi.org/10.5061/dryad.1r8c2 and unzip the contents into "data/muir/".  Only the files "data.csv" and "TableS1.csv" are needed.
+
 library(raster)
 library(tidyverse)
 library(here)
@@ -37,5 +40,5 @@ tomato.2 <-
   add_column(temp = weather$temp, precip = weather$precip)
 
 # Write to RDS
-write_rds(tomato.2, here::here("data", "muir", "tomatoes.rds"))
+write_rds(tomato.2, here::here("data", "tomatoes.rds"))
 
