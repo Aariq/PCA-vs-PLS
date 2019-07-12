@@ -1,0 +1,37 @@
+R version 3.5.3 (2019-03-11)
+Platform: x86_64-apple-darwin15.6.0 (64-bit)
+Running under: macOS Mojave 10.14.5
+
+Matrix products: default
+BLAS: /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBLAS.dylib
+LAPACK: /Library/Frameworks/R.framework/Versions/3.5/Resources/lib/libRlapack.dylib
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] psych_1.8.12     latex2exp_0.4.0  cowplot_0.9.4    ggfortify_0.4.6  lmtest_0.9-36   
+ [6] zoo_1.8-4        rsample_0.0.4    rlang_0.3.4      holodeck_0.2.0   iheatmapr_0.4.3 
+[11] ggrepel_0.8.0    colorspace_1.4-1 glue_1.3.1       ropls_1.12.0     here_0.1        
+[16] forcats_0.4.0    stringr_1.4.0    dplyr_0.8.0.1    purrr_0.3.2      readr_1.3.1     
+[21] tidyr_0.8.3      tibble_2.1.1     ggplot2_3.2.0    tidyverse_1.2.1  raster_2.8-19   
+[26] sp_1.3-1        
+
+loaded via a namespace (and not attached):
+ [1] Rcpp_1.0.1          lubridate_1.7.4     lattice_0.20-38     assertthat_0.2.1   
+ [5] rprojroot_1.3-2     packrat_0.5.0       digest_0.6.19       R6_2.4.0           
+ [9] cellranger_1.1.0    plyr_1.8.4          backports_1.1.4     stats4_3.5.3       
+[13] httr_1.4.0          pillar_1.3.1        lazyeval_0.2.2      readxl_1.3.0       
+[17] rstudioapi_0.10     S4Vectors_0.20.1    foreign_0.8-71      htmlwidgets_1.3    
+[21] munsell_0.5.0       broom_0.5.1         compiler_3.5.3      modelr_0.1.4       
+[25] xfun_0.7            pkgconfig_2.0.2     BiocGenerics_0.28.0 mnormt_1.5-5       
+[29] htmltools_0.3.6     tidyselect_0.2.5    gridExtra_2.3       codetools_0.2-16   
+[33] crayon_1.3.4        withr_2.1.2         MASS_7.3-51.1       grid_3.5.3         
+[37] nlme_3.1-137        jsonlite_1.6        gtable_0.3.0        magrittr_1.5       
+[41] scales_1.0.0        cli_1.1.0           stringi_1.4.3       xml2_1.2.0         
+[45] fastcluster_1.1.25  generics_0.0.2      RColorBrewer_1.1-2  tools_3.5.3        
+[49] Biobase_2.42.0      hms_0.4.2           parallel_3.5.3      rvest_0.3.3        
+[53] knitr_1.23          haven_2.1.0        
