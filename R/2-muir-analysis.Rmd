@@ -22,7 +22,7 @@ source(here("R", "ropls_helpers.R"))
 I'm going to remove the outlier species, *S. juglandifolium* for the sake of this analysis
 
 ```{r}
-tomato <- read_rds(here("data", "muir", "tomatoes.rds"))
+tomato <- read_rds(here("data", "tomatoes.rds"))
 
 #remove S.juglandifolium
 tomato.filtered <-
