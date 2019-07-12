@@ -1,5 +1,6 @@
 ---
 title: "Simulating Datasets"
+author: "Eric R. Scott"
 output: html_notebook
 ---
 ```{r message=FALSE, warning=FALSE}
@@ -9,6 +10,9 @@ library(tidyverse)
 myseed <- 258
 ```
 
+**IMPORTANT:** These datasets were generated under R version 3.5.3.  The random number generator in R was updated in version 3.6.0.  For this to be fully reproducible, run with version < 3.6.0 or use `RNGversion("3.5.3")`. 
+
+**NOTE:** This script is relatively slow.  It could probably be sped up with the `furrr` package which adds parallelization support to `map()` and other functions from the `purrr` package.
 
 It makes sense to make randomly generated datasets under my three scenarios **once** and then save them as .RDS files.  Then, I can do comparisons of PCA and PLS-DA, pick individual datasets to make figures out of, etc. using these saved files.
 
@@ -111,7 +115,6 @@ control[[sample(1:100, 1)]] %>%
   cor() %>% 
   iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
 ```
-
 
 # Save 'em
 
