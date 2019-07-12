@@ -1,19 +1,20 @@
 ---
 title: "Simulated data analysis"
+author: "Eric R. Scott"
 output: 
   html_notebook: 
     toc: yes
     toc_float: yes
 ---
 
-# Goal
-To show that PLS-DA performs better than PCA at figuring out which variables are most responsible for group separation.  I do this using VIP scores from PLS-DA and correlations with PC1 for PCA followed by a calculation of Cohen's Kappa.  For now, I'm only doing this with two of the data scenarios where the variables either contribute to group separation or don't: the positive control, and the needle-in-a-haystack.
+**IMPORTANT:** These datasets were generated under R version 3.5.3.  The random number generator in R was updated in version 3.6.0.  For this to be fully reproducible, run with version < 3.6.0 or use `RNGversion("3.5.3")`. 
 
-For each dataset:
+# Overview
+For each simulated dataset in each of the three scenarios:
 
 - Do PCA logistic regression
 - Do PLS-DA
-- Record how many PLS-DA's fail because even the first component is not significant, but filter out failing models
+- Store results
   
 
 # Packages and Functions
@@ -28,7 +29,7 @@ source(here("R","pcr.R"))
 set.seed(690)
 ```
 
-Create "safe" "partial" version of opls() which returns NULL if it errors and never plots or prints results.
+Create "safe" "partial" version of `opls()` which returns `NULL` if it errors and never plots or prints results.
 
 ```{r}
 safe_opls <- safely(partial(opls, printL = FALSE, plotL = FALSE), otherwise = NULL)
@@ -44,16 +45,11 @@ control <- read_rds(here("data", "control.rds"))
 ```
 
 
-# Run Analyses
+# Null
 
-For each scenario, run PCA and PLS-DA on all datasets.  Record errors, and calculate summary statistics on the models that are successfullly built
-
-## Null
-
-### Null PCAs
+## Null PCAs
 
 ```{r}
-#try with my PCR function instead
 null.pcr.try <- 
   null %>% 
   map(~safe_pcr(.x, -group, group, CV = 7))
@@ -74,15 +70,13 @@ null.pcr.try %>%
   unique()
 ```
 
-zero failed because of non-convergence.
-
 Save em!
 
 ```{r}
 write_rds(null.pcr, here("data", "models", "null-pcr.rds"))
 ```
 
-### Null PLSs
+## Null PLSs
 
 ```{r}
 null.pls.try <-
@@ -124,11 +118,11 @@ write_rds(null.pls, here("data", "models", "null-pls.rds"))
 write_rds(null.pls.force, here("data", "models", "null-pls-force.rds"))
 ```
 
-## Control
+# Control
 
-### Control PCAs
+## Control PCAs
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 # map the pca function to all datasets
 control.pcr.try <-
   map(control,
@@ -139,6 +133,8 @@ control.pcr <-
   map("result") %>% 
   discard(is.null)
 ```
+
+This gives a bunch of convergence warnings, but it's just because fitted values are perfectly 0 or 1, which is safe to ignore (I believe).
 
 How many errors? 
 
@@ -151,7 +147,7 @@ control.pcr.try %>%
   unique()
 ```
 
-1 failed models due to convergence problems
+1 failed model due to convergence problems
 
 Save em!
 
@@ -160,7 +156,7 @@ write_rds(control.pcr, here("data", "models", "control-pcr.rds"))
 ```
 
 
-### Control PLS-DAs
+## Control PLS-DAs
 
 ```{r}
 control.pls.try <-
@@ -195,11 +191,11 @@ write_rds(control.pls, here("data", "models", "control-pls.rds"))
 write_rds(control.pls.force, here("data", "models", "control-pls-force.rds"))
 ```
 
-## Needle in a haystack
+# Needle in a haystack
 
-### Needle PCAs
+## Needle PCAs
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 needle.pcr.try <-
   map(needle,
       ~safe_pcr(.x, -group, group, CV = 7))
@@ -223,7 +219,7 @@ zero failed models
 write_rds(needle.pcr, here("data", "models", "needle-pcr.rds"))
 ```
 
-### Needle PLS-DAs
+## Needle PLS-DAs
 
 ```{r}
 needle.pls.try <-
@@ -252,12 +248,14 @@ length(needle.pls.try) - length(needle.pls)
 
 zero errors
 
+Save 'em!
+
 ```{r}
 write_rds(needle.pls, here("data", "models", "needle-pls.rds"))
 write_rds(needle.pls.force, here("data", "models", "needle-pls-force.rds"))
 ```
 
 ```{r}
-BRRR::skrrrahh(18)
+# BRRR::skrrrahh(18) #plays a rapper adlib when script is done running :)
 ```
 
