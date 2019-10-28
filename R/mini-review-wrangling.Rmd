@@ -1,0 +1,88 @@
+---
+title: "Mini-review"
+author: "Eric R. Scott"
+date: "2019-10-28"
+output: 
+  html_notebook: 
+    highlight: kate
+    theme: yeti
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+*Last compiled: `r Sys.Date()`*
+
+```{r packages, include=FALSE}
+library(tidyverse)
+library(here)
+library(googlesheets4)
+library(googledrive)
+library(rcrossref)
+```
+
+# Purpose
+
+To pull my mini review table from google sheets, get full citations from DOIs in URLs, extract the year, and re-upload.
+
+# Get sheet
+
+```{r}
+review_id <- drive_get(id = "1W5ChtX-bKpJJL8-znfeCWFeuenM7btjL9XUD2nxDxnE")
+sheets_get(review_id)
+sheets_sheets(review_id)
+df <- read_sheet(review_id, "Mini-review")
+df
+```
+
+# Get DOIs
+
+```{r}
+df2 <- 
+  df %>%
+  mutate(doi = str_extract(URL, "10\\..+"))
+```
+
+
+# Get citations
+
+```{r}
+safe_cr_cn <- possibly(cr_cn, NA)
+
+df3 <- 
+  df2 %>% 
+  mutate(citation = safe_cr_cn(doi, format = "text", style = "apa"))
+df4 <- df3 %>% unnest(citation)
+```
+
+# Get publication year
+
+```{r}
+df5 <-
+  df4 %>%
+  mutate(year = str_extract(citation, ("\\d{4}")))
+```
+
+# Clean up columns
+
+```{r}
+df6 <- 
+  df5 %>% 
+  select(URL, citation,  year, Journal, `Uses PLS?`, `Uses PCA?`, `Other multivariate methods?`, `Question/use of methods`, `Notes`)
+df6
+```
+
+
+# Write to csv to copy in
+
+`googlesheets4` doesn't currently have any write functions and `drive_update()` will replace the whole file rather than just the sheet I'm working on.
+
+```{r}
+write_csv(df6, here("data", "mini-review.csv"), na = " ")
+```
+
+
