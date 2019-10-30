@@ -39,50 +39,156 @@ df <- read_sheet(review_id, "Mini-review")
 df
 ```
 
-# Get DOIs
+# Add citation and year from URL
+This only needed to be run once.  I ran it, and uploaded the citations back to google drive.
+
+## Get DOIs
 
 ```{r}
-df2 <- 
-  df %>%
-  mutate(doi = str_extract(URL, "10\\..+"))
+# df2 <- 
+#   df %>%
+#   mutate(doi = str_extract(url, "10\\..+"))
 ```
 
 
-# Get citations
+## Get citations
 
 ```{r}
-safe_cr_cn <- possibly(cr_cn, NA)
-
-df3 <- 
-  df2 %>% 
-  mutate(citation = safe_cr_cn(doi, format = "text", style = "apa"))
-df4 <- df3 %>% unnest(citation)
+# safe_cr_cn <- possibly(cr_cn, NA)
+# 
+# df3 <-
+#   df2 %>%
+#   mutate(citation = safe_cr_cn(doi, format = "text", style = "apa"))
+# df4 <- df3 %>% unnest(citation)
 ```
 
-# Get publication year
+## Get publication year
 
 ```{r}
-df5 <-
-  df4 %>%
-  mutate(year = str_extract(citation, ("\\d{4}")))
+# df5 <-
+#   df4 %>%
+#   mutate(year = str_extract(citation, ("\\d{4}")))
 ```
 
-# Clean up columns
+## Clean up columns
 
 ```{r}
-df6 <- 
-  df5 %>% 
-  select(URL, citation,  year, Journal, `Uses PLS?`, `Uses PCA?`, `Other multivariate methods?`, `Question/use of methods`, `Notes`)
-df6
+# df6 <- 
+#   df5 %>% 
+#   select(url, citation,  year, journal, pls_use, pca_use, pca_use_2, other_methods, description, notes)
+# View(df6)
 ```
 
 
-# Write to csv to copy in
+## Write to csv to copy in
 
 `googlesheets4` doesn't currently have any write functions and `drive_update()` will replace the whole file rather than just the sheet I'm working on.
 
 ```{r}
-write_csv(df6, here("data", "mini-review.csv"), na = " ")
+# write_excel_csv(df6, here("data", "mini-review.csv"), na = " ")
 ```
+
+
+# Create supplementary and summary tables
+
+## Read in completed version
+Skip all the wrangling above, filter by year, write to .csv
+
+```{r}
+df7 <-
+  df %>% 
+  filter(year == 2018) %>% 
+  filter(!is.na(pls_use) | !is.na(pca_use_2)) %>% #remove studies that use neither PLS nor PCA
+  select(-pca_use) %>% #use the pca_use_2 coding
+  rename(pca_use = pca_use_2) %>% 
+  mutate(pca_use = str_replace_all(pca_use, "variable in", "PC(s) used in"))
+write_excel_csv(df7, here("data", "mini-review.csv"), na = " ")
+```
+
+
+## How many papers total and broken down by journal?
+```{r}
+nrow(df7)
+count(df7, journal)
+```
+
+## how many papers use only PCA, only PLS, or both
+
+```{r}
+df7 %>% 
+  summarize(just_PCA = sum(!is.na(pca_use) & is.na(pls_use)), 
+            just_PLS = sum(!is.na(pls_use) & is.na(pca_use)),
+            Both = sum(!is.na(pca_use) & !is.na(pls_use)))
+```
+
+
+
+## How is PLS used?
+
+```{r}
+pls_use <-
+  df7 %>%
+  filter(!is.na(pls_use)) %>% 
+  count(pls_use) %>%
+  rename("Use" = pls_use,
+         "Number of uses" = n)
+pls_use
+```
+
+## How is PCA used?
+
+```{r}
+pca_use <-
+  df7 %>%
+  filter(!is.na(pca_use)) %>%
+  separate_rows(pca_use, sep = ", ") %>%
+  mutate(
+    pca_use = fct_lump_min(pca_use, min = 2, other_level = "other") %>%
+      fct_collapse(
+        "PC(s) used in other model" = c("other", "PC(s) used in complex model")
+      ) %>%
+      fct_infreq() %>%
+      fct_relevel(
+        "PC(s) used in other model",
+        "unknown",
+        "variable selection",
+        after = Inf
+      ) %>% 
+      fct_relevel("PCA space used to create distance-based variable", "variable selection", after = 2)
+  ) %>%
+  count(pca_use) %>%
+  rename("Use" = pca_use,
+         "Number of uses" = n) 
+pca_use
+
+# How many total PCR?
+pca_use %>% 
+  mutate(PCR = ifelse(str_detect(Use, "PC\\(s\\)"), `Number of uses`, 0)) %>%
+  pull(PCR) %>%
+  sum()
+```
+Maybe combine and make a table?
+```{r}
+bind_rows(pls_use, pca_use) %>% write_csv(here("figs", "review-table.csv"))
+```
+
+
+## How often are other multivariate methods used?
+
+```{r}
+df7 %>% 
+  filter(!is.na(other_supervised)) %>% count()
+```
+## How manuy uses of RDA, PERMANOVA, etc.
+
+```{r}
+df7 %>% 
+  # filter(!is.na(pca_use_2) & (!is.na(pls_use) | !is.na(other_supervised))) %>%
+  filter(!is.na(other_supervised)) %>% 
+  separate_rows(other_supervised, sep = ", ") %>% 
+  count(other_supervised) %>% 
+  arrange(desc(n))
+```
+
 
 
