@@ -48,6 +48,7 @@ needle.list <- read_rds(here::here("data", "needle.rds"))
 Sample one dataset as an example
 
 ```{r}
+RNGversion("3.5.0")
 set.seed(888)
 null <- sample(null.list, 1)[[1]]
 control <- sample(control.list, 1)[[1]]
@@ -115,7 +116,7 @@ null.pls <- opls(select(null, -group), null$group, plotL = FALSE, permI = 500, p
 null.pca.p <-
   plot_pca(null.pca, null$group, annotate = "subtitle") +
   labs(title = NULL,
-       subtitle =TeX(glue("$R^2_Y = {round(null.pcalr$mod.stats$R2Y, 3)}$; $p = {round(null.pcalr$mod.stats$p.value, 3)}$"))) +
+       subtitle =TeX(glue("$R^2_Y = {signif(null.pcalr$mod.stats$R2Y, 2)}$; $p = {signif(null.pcalr$mod.stats$p.value, 2)}$"))) +
   scale_color_discrete_qualitative(palette = "Dark 3")
 
 null.pls.p <-
@@ -182,7 +183,7 @@ needle.pls <- opls(select(needle, -group), needle$group, plot = FALSE, predI = 2
 needle.pca.p <-
   plot_pca(needle.pca, needle$group, annotate = "subtitle") +
   labs(title = NULL,
-       subtitle =TeX(glue("$R^2_Y = {round(needle.pcalr$mod.stats$R2Y, 3)}$; $p = {round(needle.pcalr$mod.stats$p.value, 3)}$"))) +
+       subtitle =TeX(glue("$R^2_Y = {signif(needle.pcalr$mod.stats$R2Y, 2)}$; $p = {signif(needle.pcalr$mod.stats$p.value, 2)}$"))) +
   scale_color_discrete_qualitative(palette = "Dark 3")
 
 needle.pls.p <-
@@ -248,7 +249,7 @@ control.pls <- opls(select(control, -group), control$group, plot = FALSE, predI 
 control.pca.p <-
   plot_pca(control.pca, control$group, annotate = "subtitle") +
   labs(title = NULL,
-       subtitle =TeX(glue("$R^2_Y = 0.999$; $p < 0.001$"))) +
+       subtitle =TeX(glue("$R^2_Y = 0.99$; $p < 0.001$"))) +
   scale_color_discrete_qualitative(palette = "Dark 3")
 
 control.pls.p <-
@@ -282,8 +283,9 @@ plot_grid(null.cor.p + fix_theme_cor,
           null.pls.p + fix_theme_score + labs(title = NULL),
           control.pls.p + fix_theme_score + labs(title = NULL),
           needle.pls.p + fix_theme_score + labs(title = NULL),
-          nrow = 3, ncol = 3, align = "v", axis = "l", labels = "AUTO", label_x = 0.05) %>% 
+          nrow = 3, ncol = 3, align = "v", axis = "l", labels = glue::glue("({letters[1:9]})"), label_x = 0.05) %>% 
   plot_grid(color.bar, align = "h", axis = "t", rel_widths = c(12,1)) %>%
-  save_plot(here("figs", "three-scenarios.png"), ., ncol = 3, nrow = 3, base_height = 3)
+  save_plot(here("figs", "three-scenarios.png"), ., ncol = 3, nrow = 3, base_height = 2.8, base_asp = 1.2)
+  # save_plot(here("figs", "three-scenarios.png"), ., base_width = 6.61, base_asp = 1)
 ```
 

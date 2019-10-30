@@ -80,9 +80,9 @@ plot_plsda <- function(ropls_plsda, annotate = c("caption", "subtitle")){
     theme_bw() +
     labs(title = "PLS-DA")
   stats <- latex2exp::TeX(
-    paste0("$R^{2}_{Y} = ", plotdata$model_stats$`R2Y(cum)`, "$; ",
-           "$Q^{2} = ", plotdata$model_stats$`Q2(cum)`, "$; ",
-           "$p_{Q^{2}} = ", plotdata$model_stats$pQ2, "$"))
+    paste0("$R^{2}_{Y} = ", signif(plotdata$model_stats$`R2Y(cum)`, 2), "$; ",
+           "$Q^{2} = ", signif(plotdata$model_stats$`Q2(cum)`, 2), "$; ",
+           "$p_{Q^{2}} = ", signif(plotdata$model_stats$pQ2, 2), "$"))
 
   if(missing(annotate)){
     annotate = "caption"
