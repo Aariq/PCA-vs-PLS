@@ -319,12 +319,13 @@ panels <-
             needle.p + theme(legend.position = "none")+ coord_cartesian(xlim = c(-0.5, 1)),
             nrow = 1,
             ncol = 2,
-            labels = "AUTO")
+            labels = glue::glue("({c('a', 'b')})"))
 fig2 <-
   plot_grid(panels, get_legend(control.p),
             rel_widths = c(1, 0.15))
 fig2
 save_plot(here("figs", "kappa.png"), fig2, ncol = 2)
+save_plot(here("figs", "figure3.eps"), fig2, ncol = 2)
 ```
 
 Cohen's Kappa for PCA and PLS-DA important variables under control (a) and needle-in-a-haystack (b) scenarios.
