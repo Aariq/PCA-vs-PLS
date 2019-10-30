@@ -274,18 +274,22 @@ fix_theme_score <-
 
 color.bar <- get_legend(needle.cor.p)
 
-plot_grid(null.cor.p + fix_theme_cor,
-          control.cor.p + fix_theme_cor,
-          needle.cor.p + fix_theme_cor,
-          null.pca.p + fix_theme_score,
-          control.pca.p + fix_theme_score,
-          needle.pca.p + fix_theme_score,
-          null.pls.p + fix_theme_score + labs(title = NULL),
-          control.pls.p + fix_theme_score + labs(title = NULL),
-          needle.pls.p + fix_theme_score + labs(title = NULL),
-          nrow = 3, ncol = 3, align = "v", axis = "l", labels = glue::glue("({letters[1:9]})"), label_x = 0.05) %>% 
-  plot_grid(color.bar, align = "h", axis = "t", rel_widths = c(12,1)) %>%
+three_scenarios <- 
+  plot_grid(null.cor.p + fix_theme_cor,
+            control.cor.p + fix_theme_cor,
+            needle.cor.p + fix_theme_cor,
+            null.pca.p + fix_theme_score,
+            control.pca.p + fix_theme_score,
+            needle.pca.p + fix_theme_score,
+            null.pls.p + fix_theme_score + labs(title = NULL),
+            control.pls.p + fix_theme_score + labs(title = NULL),
+            needle.pls.p + fix_theme_score + labs(title = NULL),
+            nrow = 3, ncol = 3, align = "v", axis = "l", labels = glue::glue("({letters[1:9]})"), label_x = 0.05) %>% 
+  plot_grid(color.bar, align = "h", axis = "t", rel_widths = c(12,1)) 
+
+three_scenarios %>%
   save_plot(here("figs", "three-scenarios.png"), ., ncol = 3, nrow = 3, base_height = 2.8, base_asp = 1.2)
-  # save_plot(here("figs", "three-scenarios.png"), ., base_width = 6.61, base_asp = 1)
+three_scenarios %>%
+  save_plot(here("figs", "three-scenarios.eps"), ., ncol = 3, nrow = 3, base_height = 2.8, base_asp = 1.2)
 ```
 
