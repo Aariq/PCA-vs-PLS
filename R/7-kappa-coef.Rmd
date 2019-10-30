@@ -324,8 +324,8 @@ fig2 <-
   plot_grid(panels, get_legend(control.p),
             rel_widths = c(1, 0.15))
 fig2
-save_plot(here("figs", "kappa.png"), fig2, ncol = 2)
-save_plot(here("figs", "figure3.eps"), fig2, ncol = 2)
+save_plot(here("figs", "kappa.png"), fig2, ncol = 2, base_asp = 1.2)
+save_plot(here("figs", "figure3.svg"), fig2, ncol = 2, base_asp = 1.2)
 ```
 
 Cohen's Kappa for PCA and PLS-DA important variables under control (a) and needle-in-a-haystack (b) scenarios.
