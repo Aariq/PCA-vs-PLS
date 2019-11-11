@@ -92,17 +92,15 @@ This only needed to be run once.  I ran it, and uploaded the citations back to g
 # Create supplementary and summary tables
 
 ## Read in completed version
-Skip all the wrangling above, filter by year, write to .csv
+Skip all the wrangling above, filter by year, write to .csv as a supplementary table
 
 ```{r}
 df7 <-
   df %>% 
   filter(year == 2018) %>% 
-  filter(!is.na(pls_use) | !is.na(pca_use_2)) %>% #remove studies that use neither PLS nor PCA
-  select(-pca_use) %>% #use the pca_use_2 coding
-  rename(pca_use = pca_use_2) %>% 
-  mutate(pca_use = str_replace_all(pca_use, "variable in", "PC(s) used in"))
-write_excel_csv(df7, here("data", "mini-review.csv"), na = " ")
+  filter(!is.na(pls_use) | !is.na(pca_use)) %>% #remove studies that use neither PLS nor PCA
+  select(-pca_use_old)
+write_excel_csv(df7, here("data", "TableS1.csv"), na = " ")
 ```
 
 
@@ -129,48 +127,71 @@ df7 %>%
 pls_use <-
   df7 %>%
   filter(!is.na(pls_use)) %>% 
+  mutate(pls_use = fct_infreq(pls_use)) %>% 
   count(pls_use) %>%
   rename("Use" = pls_use,
-         "Number of uses" = n)
+         "Number of publications" = n)
 pls_use
 ```
 
 ## How is PCA used?
 
+PCA use level 1
+
 ```{r}
 pca_use <-
-  df7 %>%
-  filter(!is.na(pca_use)) %>%
-  separate_rows(pca_use, sep = ", ") %>%
-  mutate(
-    pca_use = fct_lump_min(pca_use, min = 2, other_level = "other") %>%
-      fct_collapse(
-        "PC(s) used in other model" = c("other", "PC(s) used in complex model")
-      ) %>%
-      fct_infreq() %>%
-      fct_relevel(
-        "PC(s) used in other model",
-        "unknown",
-        "variable selection",
-        after = Inf
-      ) %>% 
-      fct_relevel("PCA space used to create distance-based variable", "variable selection", after = 2)
-  ) %>%
-  count(pca_use) %>%
+  df7 %>% 
+  filter(!is.na(pca_use)) %>% 
+  mutate(pca_use = fct_infreq(pca_use) %>% fct_relevel("PCs used as variables", after = Inf)) %>% 
+  group_by(pca_use) %>% 
+  count() %>% 
   rename("Use" = pca_use,
-         "Number of uses" = n) 
+         "Number of publications" = n)
 pca_use
+```
 
-# How many total PCR?
-pca_use %>% 
-  mutate(PCR = ifelse(str_detect(Use, "PC\\(s\\)"), `Number of uses`, 0)) %>%
-  pull(PCR) %>%
-  sum()
-```
-Maybe combine and make a table?
+If PCs are used as variables, how are they used?
+
 ```{r}
-bind_rows(pls_use, pca_use) %>% write_csv(here("figs", "review-table.csv"))
+pc_variable_use <-
+  df7 %>% 
+  filter(!is.na(pc_variable_use)) %>% 
+  mutate(pc_variable_use = fct_infreq(pc_variable_use) %>% 
+           fct_relevel("Interest in relationships with raw variables",
+                       after = Inf)) %>% 
+  group_by(pc_variable_use) %>% 
+  count() %>% 
+  rename("Use" = pc_variable_use,
+         "Number of publications" = n)
+
+pc_variable_use
+#check that all pc uses accounted for
+sum(pc_variable_use[2]) == pca_use[4, 2]
 ```
+
+If the authors are interested in doing a supervised type test, is there a more appropriate supervised drop-in replacement for what they did?
+
+```{r}
+supervised_alt <-
+  df7 %>% 
+  filter(!is.na(supervised_alt)) %>% 
+  mutate(supervised_alt = fct_relevel(supervised_alt, "yes", "no", "maybe")) %>% 
+  group_by(supervised_alt) %>% 
+  count()  %>% 
+  rename("Use" = supervised_alt,
+         "Number of publications" = n)
+supervised_alt
+#checm that all accounted for
+sum(supervised_alt[2]) == pc_variable_use[3, 2]
+```
+
+
+Combine, export, do some editing in Excel or Numbers for publication 
+
+```{r}
+bind_rows(pls_use, pca_use, pc_variable_use, supervised_alt) %>% write_csv(here("figs", "review-table-rough.csv"))
+```
+
 
 
 ## How often are other multivariate methods used?
