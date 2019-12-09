@@ -4,8 +4,7 @@
 .Ruserdata
 *.icloud
 data/muir/*
-!data/muir
-!data/muir/README.txt
+!data/muir/.keep
 *.numbers
 *.pdf
 manuscript
