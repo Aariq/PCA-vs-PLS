@@ -157,7 +157,7 @@ loading.table <-
 
 loading.table
 write_csv(select(loading.table, PC1, `Precipitation PLS`, `Temperature PLS`),
-          here("figs", "muir loading table.csv"))
+          here("out", "muir loading table.csv"))
 ```
 
 It looks like maybe the Temperature PLS axis loadings are more similar to PC1, which makes sense because only the PCA regression for temperature was significant.
