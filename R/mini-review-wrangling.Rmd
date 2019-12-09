@@ -39,53 +39,13 @@ df <- read_sheet(review_id, "Mini-review")
 df
 ```
 
-# Add citation and year from URL
-This only needed to be run once.  I ran it, and uploaded the citations back to google drive.
-
-## Get DOIs
-
-```{r}
-# df2 <- 
-#   df %>%
-#   mutate(doi = str_extract(url, "10\\..+"))
-```
-
-
-## Get citations
-
-```{r}
-# safe_cr_cn <- possibly(cr_cn, NA)
-# 
-# df3 <-
-#   df2 %>%
-#   mutate(citation = safe_cr_cn(doi, format = "text", style = "apa"))
-# df4 <- df3 %>% unnest(citation)
-```
-
-## Get publication year
-
-```{r}
-# df5 <-
-#   df4 %>%
-#   mutate(year = str_extract(citation, ("\\d{4}")))
-```
-
-## Clean up columns
-
-```{r}
-# df6 <- 
-#   df5 %>% 
-#   select(url, citation,  year, journal, pls_use, pca_use, pca_use_2, other_methods, description, notes)
-# View(df6)
-```
-
 
 ## Write to csv to copy in
 
 `googlesheets4` doesn't currently have any write functions and `drive_update()` will replace the whole file rather than just the sheet I'm working on.
 
 ```{r}
-# write_excel_csv(df6, here("data", "mini-review.csv"), na = " ")
+df <- read_csv(here("data", "mini-review.csv"))
 ```
 
 
@@ -100,7 +60,7 @@ df7 <-
   filter(year == 2018) %>% 
   filter(!is.na(pls_use) | !is.na(pca_use)) %>% #remove studies that use neither PLS nor PCA
   select(-pca_use_old)
-write_excel_csv(df7, here("data", "TableS1.csv"), na = " ")
+write_excel_csv(df7, here("out", "TableS1.csv"), na = " ")
 ```
 
 
@@ -189,7 +149,7 @@ sum(supervised_alt[2]) == pc_variable_use[3, 2]
 Combine, export, do some editing in Excel or Numbers for publication 
 
 ```{r}
-bind_rows(pls_use, pca_use, pc_variable_use, supervised_alt) %>% write_csv(here("figs", "review-table-rough.csv"))
+bind_rows(pls_use, pca_use, pc_variable_use, supervised_alt) %>% write_csv(here("out", "review-table-rough.csv"))
 ```
 
 
@@ -209,6 +169,16 @@ df7 %>%
   separate_rows(other_supervised, sep = ", ") %>% 
   count(other_supervised) %>% 
   arrange(desc(n))
+```
+
+## How is PERMANOVA and PCA used together?
+```{r}
+df7 %>% 
+  # filter(!is.na(pca_use_2) & (!is.na(pls_use) | !is.na(other_supervised))) %>%
+  filter(!is.na(other_supervised)) %>% 
+  separate_rows(other_supervised, sep = ", ") %>% 
+  filter(other_supervised == "PERMANOVA") %>% 
+  write_excel_csv(here("data", "subset.csv"))
 ```
 
 

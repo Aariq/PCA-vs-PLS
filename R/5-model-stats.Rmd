@@ -108,7 +108,7 @@ table1 <- table1 %>%
          Statistic = fct_relevel(Statistic,
                                  "n", "ncomp", "RMSEP", "R2X", "R2Y", "Q2", "pR2", "pQ2", "p")) %>% 
   arrange(Scenario, Statistic)
-write_excel_csv(table1, here("figs", "model statistics table.csv"))
+write_excel_csv(table1, here("out", "model statistics table.csv"))
 ```
 
 ## What % of p.values significant?

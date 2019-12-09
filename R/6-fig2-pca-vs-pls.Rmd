@@ -288,8 +288,8 @@ three_scenarios <-
   plot_grid(color.bar, align = "h", axis = "t", rel_widths = c(12,1)) 
 
 three_scenarios %>%
-  save_plot(here("figs", "three-scenarios.png"), ., ncol = 3, nrow = 3, base_height = 2.8, base_asp = 1.2)
+  save_plot(here("out", "three-scenarios.png"), ., ncol = 3, nrow = 3, base_height = 2.8, base_asp = 1.2)
 three_scenarios %>%
-  save_plot(here("figs", "three-scenarios.eps"), ., ncol = 3, nrow = 3, base_height = 2.8, base_asp = 1.2)
+  save_plot(here("out", "three-scenarios.eps"), ., ncol = 3, nrow = 3, base_height = 2.8, base_asp = 1.2)
 ```
 
