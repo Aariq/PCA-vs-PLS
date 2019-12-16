@@ -234,7 +234,7 @@ control.k.plotdata <-
   control.k %>%
   gather(-dataset, key = "Method", value = "Cohen's Kappa") %>% 
   mutate(Method = as.factor(Method) %>%
-           fct_recode(`PCA-DA` = "pca.k", `PLS-DA` = "pls.k", `PLS-DA VIP` = "pls.VIP.k"))
+           fct_recode(`PCA-LR` = "pca.k", `PLS-DA` = "pls.k", `PLS-DA VIP` = "pls.VIP.k"))
 
 control.p <-
   ggplot(control.k.plotdata) +
@@ -298,7 +298,7 @@ needle.k.plotdata <-
   needle.k %>%
   gather(-dataset, key = "Method", value = "Cohen's Kappa") %>% 
   mutate(Method = as.factor(Method) %>% 
-           fct_recode(`PCA-DA` = "pca.k", `PLS-DA` = "pls.k", `PLS-DA: VIP > 1` = "pls.VIP.k"))
+           fct_recode(`PCA-LR` = "pca.k", `PLS-DA` = "pls.k", `PLS-DA: VIP > 1` = "pls.VIP.k"))
 
 needle.p <-
   ggplot(needle.k.plotdata) +
@@ -326,6 +326,7 @@ fig2 <-
 fig2
 save_plot(here("out", "kappa.png"), fig2, ncol = 2, base_asp = 1.2)
 save_plot(here("out", "figure3.svg"), fig2, ncol = 2, base_asp = 1.2)
+save_plot(here("out", "figure3.pdf"), fig2, ncol = 2, base_asp = 1.2)
 ```
 
 Cohen's Kappa for PCA and PLS-DA important variables under control (a) and needle-in-a-haystack (b) scenarios.

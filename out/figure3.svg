@@ -147,7 +147,7 @@
 <rect x='562.90' y='133.53' width='15.86' height='15.86' style='stroke-width: 1.07; stroke-dasharray: 5.69,5.69; stroke-linecap: square; stroke-linejoin: miter; fill: #50A315; fill-opacity: 0.50;' clip-path='url(#cpMC4wMHw2NDEuMDl8MjY3LjEyfDAuMDA=)' />
 <rect x='562.19' y='150.10' width='17.28' height='17.28' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' clip-path='url(#cpMC4wMHw2NDEuMDl8MjY3LjEyfDAuMDA=)' />
 <rect x='562.90' y='150.81' width='15.86' height='15.86' style='stroke-width: 1.07; stroke-dasharray: 1.42,4.27; stroke-linecap: square; stroke-linejoin: miter; fill: #009ADE; fill-opacity: 0.50;' clip-path='url(#cpMC4wMHw2NDEuMDl8MjY3LjEyfDAuMDA=)' />
-<g clip-path='url(#cpMC4wMHw2NDEuMDl8MjY3LjEyfDAuMDA=)'><text x='584.95' y='127.40' style='font-size: 8.80px; font-family: Arial;' textLength='34.00px' lengthAdjust='spacingAndGlyphs'>PCA-DA</text></g>
+<g clip-path='url(#cpMC4wMHw2NDEuMDl8MjY3LjEyfDAuMDA=)'><text x='584.95' y='127.40' style='font-size: 8.80px; font-family: Arial;' textLength='33.01px' lengthAdjust='spacingAndGlyphs'>PCA-LR</text></g>
 <g clip-path='url(#cpMC4wMHw2NDEuMDl8MjY3LjEyfDAuMDA=)'><text x='584.95' y='144.68' style='font-size: 8.80px; font-family: Arial;' textLength='32.51px' lengthAdjust='spacingAndGlyphs'>PLS-DA</text></g>
 <g clip-path='url(#cpMC4wMHw2NDEuMDl8MjY3LjEyfDAuMDA=)'><text x='584.95' y='161.96' style='font-size: 8.80px; font-family: Arial;' textLength='49.52px' lengthAdjust='spacingAndGlyphs'>PLS-DA VIP</text></g>
 </svg>
