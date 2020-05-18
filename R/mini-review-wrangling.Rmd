@@ -39,24 +39,55 @@ df <- read_sheet(review_id, "Mini-review")
 df
 ```
 
+# Get Citations from DOI
 
-## Write to csv to copy in
-
-`googlesheets4` doesn't currently have any write functions and `drive_update()` will replace the whole file rather than just the sheet I'm working on.
+For any rows without citations, extract DOI, use it to get citation, add publication year.
 
 ```{r}
-df <- read_csv(here("data", "mini-review.csv"))
+df2 <-
+  df %>%
+  mutate(doi = str_extract(url, "10\\..+"))
+
+#check for duplicate rows
+if(any(duplicated(df2$doi))) stop("Merge duplicates manually")
+
+
+```
+
+```{r}
+safe_cr_cn <- possibly(cr_cn, NA)
+
+df3 <- 
+  df2 %>% 
+  mutate(citation = ifelse(is.na(citation),
+                           safe_cr_cn(doi, format = "text", style = "apa"),
+                           citation)) %>%
+  unnest(citation) %>% 
+  mutate(year = ifelse(is.na(year),
+                       str_extract(citation, "\\d{4}"),
+                       year)) %>% 
+  select(-doi)
+head(df3)
+```
+
+## Write "raw" data locally and update google sheet.
+
+```{r}
+write_csv(df3, here("data", "mini-review.csv"))
+```
+```{r}
+write_sheet(df3, "1W5ChtX-bKpJJL8-znfeCWFeuenM7btjL9XUD2nxDxnE", sheet = "out")
 ```
 
 
 # Create supplementary and summary tables
 
 ## Read in completed version
-Skip all the wrangling above, filter by year, write to .csv as a supplementary table
+Filter by year, write to .csv as a supplementary table
 
 ```{r}
 df7 <-
-  df %>% 
+  df3 %>% 
   filter(year == 2018) %>% 
   filter(!is.na(pls_use) | !is.na(pca_use)) %>% #remove studies that use neither PLS nor PCA
   select(-pca_use_old)
@@ -65,6 +96,7 @@ write_excel_csv(df7, here("out", "TableS1.csv"), na = " ")
 
 
 ## How many papers total and broken down by journal?
+
 ```{r}
 nrow(df7)
 count(df7, journal)
@@ -172,6 +204,7 @@ df7 %>%
 ```
 
 ## How is PERMANOVA and PCA used together?
+
 ```{r}
 df7 %>% 
   # filter(!is.na(pca_use_2) & (!is.na(pls_use) | !is.na(other_supervised))) %>%
