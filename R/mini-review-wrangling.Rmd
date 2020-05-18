@@ -25,6 +25,23 @@ library(googledrive)
 library(rcrossref)
 ```
 
+# Mini-review methods
+
+Journals searched:
+
+- [Ecological Monographs](https://esajournals.onlinelibrary.wiley.com/journal/15577015)
+- [Ecology](https://esajournals.onlinelibrary.wiley.com/journal/19399170)
+- [Ecology Letters](https://onlinelibrary.wiley.com/journal/14610248)
+- [Journal of Ecology](https://besjournals.onlinelibrary.wiley.com/journal/13652745)
+- [Oecologia](https://www.springer.com/journal/442/)
+- [Oikos](https://onlinelibrary.wiley.com/toc/16000706/current)
+
+
+Search terms:
+
+- first round:  PCA OR PLS OR "principal component" OR "partial least squares" OR "partial least square"
+- second round: RDA or "redundancy analysis"
+
 # Purpose
 
 To pull my mini review table from google sheets, get full citations from DOIs in URLs, extract the year, and re-upload.
@@ -49,9 +66,7 @@ df2 <-
   mutate(doi = str_extract(url, "10\\..+"))
 
 #check for duplicate rows
-if(any(duplicated(df2$doi))) stop("Merge duplicates manually")
-
-
+any(duplicated(df2$doi))
 ```
 
 ```{r}
