@@ -51,7 +51,7 @@ pca_lr <- function(data, X_vars, Y_var, CV = 7){
   }
   
   # Do PCA on X
-  pca <- opls(select(data, !!X), plotL = FALSE, printL = FALSE)
+  pca <- opls(select(data, !!X), info.txtC = "none", fig.pdfC = "none")
   
   # Get scores and bind with Y
   scores <- get_scores(pca) %>% 
