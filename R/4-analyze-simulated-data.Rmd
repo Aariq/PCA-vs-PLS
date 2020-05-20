@@ -175,14 +175,7 @@ control.pls.try <-
 control.pls <-
   control.pls.try %>% 
   future_map("result") %>% 
-  discard(is.null) 
-
-# with one component forced (the average)
-control.pls.force <-
-  future_map(control,
-      ~ safe_opls(select(., -group), .$group, predI = 1, permI = 500)) %>% 
-  future_map("result") %>% 
-  discard(is.null) 
+  discard(is.null)
 ```
 
 How many failed models?
@@ -192,6 +185,22 @@ length(control.pls.try) - length(control.pls)
 ```
 
 zero failed models
+
+How many components on average?
+
+```{r}
+future_map_dbl(control.pls, ~ getSummaryDF(.x)$pre) %>% mean()
+```
+
+```{r}
+# with one component forced (the average)
+control.pls.force <-
+  future_map(control,
+      ~ safe_opls(select(., -group), .$group, predI = 1, permI = 500)) %>% 
+  future_map("result") %>% 
+  discard(is.null) 
+```
+
 
 Save em!
 
@@ -335,8 +344,16 @@ herring.pls.try %>%
 
 406/500 error because there are no significantly predictive components.  PLS is not fooled by the red herring!
 
+```{r}
+#force one component
+herring.pls.force <-
+  future_map(herring,
+      ~ safe_opls(select(., -group), .$group, predI = 1, permI = 500))
+```
+
 Write em!
 
 ```{r}
 write_rds(herring.pls, here("data", "models", "herring-pls.rds"))
+write_rds(herring.pls.force, here("data", "models", "herring-pls-force.rds"))
 ```
