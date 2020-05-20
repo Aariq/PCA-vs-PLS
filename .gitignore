@@ -10,4 +10,4 @@ data/muir/*
 manuscript
 *.nb.html
 data/models
-!data/models/ .keep
+!data/models/.keep
