@@ -492,6 +492,13 @@
       "Repository": "CRAN",
       "Hash": "726671f634529d470545f9fd1a9d1869"
     },
+    "holodeck": {
+      "Package": "holodeck",
+      "Version": "0.2.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "4a878a792baa95426012ccc08e416fd0"
+    },
     "htmltools": {
       "Package": "htmltools",
       "Version": "0.4.0",

@@ -7,12 +7,14 @@ output: html_notebook
 library(iheatmapr)
 library(holodeck)
 library(tidyverse)
+library(here)
+library(furrr)
 myseed <- 258
 ```
 
-**IMPORTANT:** These datasets were generated under R version 3.5.3.  The random number generator in R was updated in version 3.6.0.  For this to be fully reproducible, run with version < 3.6.0 or use `RNGversion("3.5.3")`. 
+**IMPORTANT:** These datasets were generated under R version 3.6.1.  The random number generator in R was updated in version 3.6.0.  For this to be fully reproducible, run with version > 3.6.0.
 
-**NOTE:** This script is relatively slow.  It could probably be sped up with the `furrr` package which adds parallelization support to `map()` and other functions from the `purrr` package.
+**NOTE:** This script used the `furrr` package which adds parallelization support to `map()` and other functions from the `purrr` package.  If your machine doesn't support parallelization, or you run into problems, you can replace `future_map()` with `map()`.
 
 It makes sense to make randomly generated datasets under my three scenarios **once** and then save them as .RDS files.  Then, I can do comparisons of PCA and PLS-DA, pick individual datasets to make figures out of, etc. using these saved files.
 
@@ -40,12 +42,18 @@ It makes sense to make randomly generated datasets under my three scenarios **on
     - 10 variables with cov = 0
     - 10 variables with cov = 0.2 (weakly covarying, but not discriminating.  Something for axis2 to pick up on?)
 
+# Set up parallelization
+
+```{r include=FALSE}
+plan(multiprocess)
+```
+
 # 1. NULL
 
 ```{r}
 set.seed(myseed)
 null <-
-  map(1:100,
+  future_map(1:100,
       ~ sim_cat(n_obs = 20, n_groups = 2) %>% 
         sim_covar(n_vars = 5, var = 1, cov = 0, name = "N") %>% 
         sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C1") %>% 
@@ -69,7 +77,7 @@ null[[sample(1:100, 1)]] %>%
 ```{r}
 set.seed(myseed)
 needle_in_haystack <-
-  map(1:100,
+  future_map(1:100,
       ~ sim_cat(n_obs = 20, n_groups = 2) %>% 
         group_by(group) %>% 
         sim_discr(n_vars = 5, var = 1, cov = 0, group_means = c(-1, 1), name = "D") %>% 
@@ -95,7 +103,7 @@ needle_in_haystack[[sample(1:100, 1)]] %>%
 ```{r}
 set.seed(myseed)
 control <-
-  map(1:100,
+  future_map(1:100,
       ~ sim_cat(n_obs = 20, n_groups = 2) %>% 
         group_by(group) %>% 
         sim_discr(n_vars = 5, var = 1, cov = 0.5, group_means = c(-1, 1), name = "D1") %>% 
@@ -119,10 +127,8 @@ control[[sample(1:100, 1)]] %>%
 # Save 'em
 
 ```{r}
-library(here)
 write_rds(null, here("data", "null.rds"))
 write_rds(needle_in_haystack, here("data", "needle.rds"))
-write_rds(red_herring, here("data", "red herring.rds"))
 write_rds(control, here("data", "control.rds"))
 ```
 
