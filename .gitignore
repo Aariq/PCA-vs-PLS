@@ -9,5 +9,5 @@ data/muir/*
 *.pdf
 manuscript
 *.nb.html
-data/models
+data/models/*
 !data/models/.keep
