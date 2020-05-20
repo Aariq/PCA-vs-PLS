@@ -23,6 +23,9 @@ library(here)
 library(googlesheets4)
 library(googledrive)
 library(rcrossref)
+#for venn diagram
+library(ggforce)
+library(limma)
 ```
 
 # Mini-review methods
@@ -52,13 +55,12 @@ To pull my mini review table from google sheets, get full citations from DOIs in
 review_id <- drive_get(id = "1W5ChtX-bKpJJL8-znfeCWFeuenM7btjL9XUD2nxDxnE")
 sheets_get(review_id)
 sheets_sheets(review_id)
-df <- read_sheet(review_id, "Mini-review")
-df
+df <- read_sheet(review_id, "Mini-review", col_types = "ccnccccccccccc")
 ```
 
 # Get Citations from DOI
 
-For any rows without citations, extract DOI, use it to get citation, add publication year.
+Extract the DOI from the URL
 
 ```{r}
 df2 <-
@@ -69,62 +71,103 @@ df2 <-
 any(duplicated(df2$doi))
 ```
 
+Get citations and year for any entries without them
+
 ```{r}
 safe_cr_cn <- possibly(cr_cn, NA)
-
 df3 <- 
   df2 %>% 
   mutate(citation = ifelse(is.na(citation),
                            safe_cr_cn(doi, format = "text", style = "apa"),
-                           citation)) %>%
+                           citation))
+
+df4 <- 
+  df3 %>% 
   unnest(citation) %>% 
   mutate(year = ifelse(is.na(year),
                        str_extract(citation, "\\d{4}"),
                        year)) %>% 
-  select(-doi)
-head(df3)
+  select(-doi, -pca_use_old)
+head(df4)
 ```
 
 ## Write "raw" data locally and update google sheet.
 
 ```{r}
-write_csv(df3, here("data", "mini-review.csv"))
+write_csv(df4, here::here("data", "mini-review.csv"))
 ```
 ```{r}
-write_sheet(df3, "1W5ChtX-bKpJJL8-znfeCWFeuenM7btjL9XUD2nxDxnE", sheet = "out")
+write_sheet(df4, "1W5ChtX-bKpJJL8-znfeCWFeuenM7btjL9XUD2nxDxnE", sheet = "out")
 ```
 
 
 # Create supplementary and summary tables
 
-## Read in completed version
 Filter by year, write to .csv as a supplementary table
 
 ```{r}
-df7 <-
-  df3 %>% 
+df_supp <-
+  df4 %>% 
   filter(year == 2018) %>% 
-  filter(!is.na(pls_use) | !is.na(pca_use)) %>% #remove studies that use neither PLS nor PCA
-  select(-pca_use_old)
-write_excel_csv(df7, here("out", "TableS1.csv"), na = " ")
+  #remove studies that don't use at least one of the three methods.
+  filter_at(vars(pls_use, rda_use, pca_use), any_vars(!is.na(.)))
+  
+write_excel_csv(df_supp, here("out", "TableS1.csv"), na = " ")
 ```
 
+# Explore and create Table
 
 ## How many papers total and broken down by journal?
 
 ```{r}
-nrow(df7)
-count(df7, journal)
+nrow(df_supp)
+count(df_supp, journal)
 ```
 
-## how many papers use only PCA, only PLS, or both
+## how many papers use only PCA, only PLS, only RDA, or both
+Venn diagram??
 
 ```{r}
-df7 %>% 
+df_supp %>% 
   summarize(just_PCA = sum(!is.na(pca_use) & is.na(pls_use)), 
             just_PLS = sum(!is.na(pls_use) & is.na(pca_use)),
             Both = sum(!is.na(pca_use) & !is.na(pls_use)))
 ```
+
+```{r}
+df_venn <- 
+  df_supp %>%
+  select(pca_use, rda_use, pls_use) %>% 
+  mutate_all(~ifelse(is.na(.), 0, 1))
+
+vennCounts(df_venn) %>% vennDiagram()
+```
+
+Prettier version:
+
+
+```{r}
+vdc <- vennCounts(df_venn)
+vdc
+df.venn <- data.frame(x = c(0, 0.866, -0.866),
+                      y = c(1, -0.5, -0.5),
+                      labels = c('PLS', 'RDA', 'PCA'))
+```
+
+
+```{r}
+class(vdc) <- 'matrix'
+df.vdc <- as.data.frame(vdc)[-1,] %>%
+  mutate(x = c(0, 1.2, 0.8, -1.2, -0.8, 0, 0),
+         y = c(1.2, -0.6, 0.5, -0.6, 0.5, -1, 0))
+
+ggplot(df.venn, aes(x0 = x, y0 = y, r = 1.5, fill = labels)) +
+    geom_circle(alpha = .3, size = 1, colour = 'grey') +
+      coord_fixed() +
+  annotate("text", x = df.vdc$x, y = df.vdc$y, label = df.vdc$Counts, size = 5) +
+        theme_void()
+```
+
 
 
 
@@ -132,7 +175,7 @@ df7 %>%
 
 ```{r}
 pls_use <-
-  df7 %>%
+  df_supp %>%
   filter(!is.na(pls_use)) %>% 
   mutate(pls_use = fct_infreq(pls_use)) %>% 
   count(pls_use) %>%
@@ -141,13 +184,26 @@ pls_use <-
 pls_use
 ```
 
+## How is RDA used?
+
+```{r}
+rda_use <-
+  df_supp %>%
+  filter(!is.na(rda_use)) %>% 
+  mutate(rda_use = fct_infreq(rda_use)) %>% 
+  count(rda_use) %>%
+  rename("Use" = rda_use,
+         "Number of publications" = n)
+rda_use
+```
+
 ## How is PCA used?
 
 PCA use level 1
 
 ```{r}
 pca_use <-
-  df7 %>% 
+  df_supp %>% 
   filter(!is.na(pca_use)) %>% 
   mutate(pca_use = fct_infreq(pca_use) %>% fct_relevel("PCs used as variables", after = Inf)) %>% 
   group_by(pca_use) %>% 
@@ -161,7 +217,7 @@ If PCs are used as variables, how are they used?
 
 ```{r}
 pc_variable_use <-
-  df7 %>% 
+  df_supp %>% 
   filter(!is.na(pc_variable_use)) %>% 
   mutate(pc_variable_use = fct_infreq(pc_variable_use) %>% 
            fct_relevel("Interest in relationships with raw variables",
@@ -176,11 +232,14 @@ pc_variable_use
 sum(pc_variable_use[2]) == pca_use[4, 2]
 ```
 
+
+
+
 If the authors are interested in doing a supervised type test, is there a more appropriate supervised drop-in replacement for what they did?
 
 ```{r}
 supervised_alt <-
-  df7 %>% 
+  df_supp %>% 
   filter(!is.na(supervised_alt)) %>% 
   mutate(supervised_alt = fct_relevel(supervised_alt, "yes", "no", "maybe")) %>% 
   group_by(supervised_alt) %>% 
@@ -196,7 +255,8 @@ sum(supervised_alt[2]) == pc_variable_use[3, 2]
 Combine, export, do some editing in Excel or Numbers for publication 
 
 ```{r}
-bind_rows(pls_use, pca_use, pc_variable_use, supervised_alt) %>% write_csv(here("out", "review-table-rough.csv"))
+bind_rows(pls_use, rda_use, pca_use, pc_variable_use, supervised_alt) %>%
+  write_csv(here("out", "review-table-rough.csv"))
 ```
 
 
@@ -204,14 +264,13 @@ bind_rows(pls_use, pca_use, pc_variable_use, supervised_alt) %>% write_csv(here(
 ## How often are other multivariate methods used?
 
 ```{r}
-df7 %>% 
+df_supp %>% 
   filter(!is.na(other_supervised)) %>% count()
 ```
-## How manuy uses of RDA, PERMANOVA, etc.
+## How manuy uses of each "other" supervised method, etc.
 
 ```{r}
-df7 %>% 
-  # filter(!is.na(pca_use_2) & (!is.na(pls_use) | !is.na(other_supervised))) %>%
+df_supp %>% 
   filter(!is.na(other_supervised)) %>% 
   separate_rows(other_supervised, sep = ", ") %>% 
   count(other_supervised) %>% 
@@ -221,12 +280,10 @@ df7 %>%
 ## How is PERMANOVA and PCA used together?
 
 ```{r}
-df7 %>% 
-  # filter(!is.na(pca_use_2) & (!is.na(pls_use) | !is.na(other_supervised))) %>%
+df_supp %>% 
   filter(!is.na(other_supervised)) %>% 
   separate_rows(other_supervised, sep = ", ") %>% 
-  filter(other_supervised == "PERMANOVA") %>% 
-  write_excel_csv(here("data", "subset.csv"))
+  filter(other_supervised == "PERMANOVA") 
 ```
 
 
