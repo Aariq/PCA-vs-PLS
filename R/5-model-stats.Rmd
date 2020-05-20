@@ -3,7 +3,6 @@ title: "PCA regression and PLS-DA models summary statistics"
 author: "Eric R. Scott"
 output: html_notebook
 ---
-**IMPORTANT:** These datasets were generated under R version 3.5.3.  The random number generator in R was updated in version 3.6.0.  For this to be fully reproducible, run with version < 3.6.0 or use `RNGversion("3.5.3")`. 
 
 ```{r message=FALSE}
 library(here)
@@ -12,7 +11,7 @@ library(glue)
 
 source(here("R", "ropls_helpers.R"))
 source(here("R", "RMSEP.R"))
-# runif(1, 0, 1000)
+
 set.seed(464)
 ```
 

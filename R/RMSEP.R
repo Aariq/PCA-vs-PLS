@@ -2,6 +2,7 @@ library(ggfortify)
 library(rlang)
 library(rsample)
 library(ropls)
+library(furrr)
 
 
 safe_opls <- purrr::possibly(ropls::opls, NA)
@@ -61,7 +62,7 @@ plsda_RMSEP <- function(plsda, X_vars, Y_var, CV = 7){
   df.cv <- rsample::vfold_cv(data, CV)
   
   #map MSEP calculation on each fold/split
-  purrr::map_dbl(df.cv$splits, ~.plsda_MSEP(., !!X_vars, !!Y_var, ncomp)) %>%
+  furrr::future_map_dbl(df.cv$splits, ~.plsda_MSEP(., !!X_vars, !!Y_var, ncomp)) %>%
     #average over folds
     mean() %>% 
     # take square root
@@ -183,7 +184,7 @@ pca_lr_RMSEP <- function(pca_lr, X_vars, Y_var, CV = 7){
   df.cv <- rsample::vfold_cv(data, CV)
   
   #map MSEP calculation on each fold/split
-  map_dbl(df.cv$splits, ~.pca_MSEP(., !!X_vars, !!Y_var, ncomp)) %>%
+  future_map_dbl(df.cv$splits, ~.pca_MSEP(., !!X_vars, !!Y_var, ncomp)) %>%
     #average over folds
     mean(., na.rm = TRUE) %>% 
     # take square root
