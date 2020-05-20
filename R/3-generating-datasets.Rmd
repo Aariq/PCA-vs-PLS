@@ -26,109 +26,146 @@ It makes sense to make randomly generated datasets under my three scenarios **on
  - Number of groups = 2
  - Number of datasets generated = 100
  
-**Scenarios:**
-
-1. **NULL**
+**New Scenarios:**
+1. NULL
+    - no discriminating variables
+    - 25 variables with cov = 0
+    
+2. Correlated variables are not predictive ("red herring")
     - no discriminating variables
     - 5 variables with cov = 0
-    - two groups of 10 variables with cov = 0.5
-  
-2. **Needle in a haystack**
-    - 5 variables that discriminate between groups with a difference in means of 2, cov = 0
-    - two groups of 10 variables with cov = 0.5
-  
-4. **Control**
-    - 5 variables that discriminate between groups with difference in means of 2, cov = 0.5
-    - 10 variables with cov = 0
-    - 10 variables with cov = 0.2 (weakly covarying, but not discriminating.  Something for axis2 to pick up on?)
+    - 10 variables with cov = 0.5 (axis 1)
+    - 10 variables with cov = 0.2 (axis 2)
 
-# Set up parallelization
+3. Correlated variables are predictive ("control")
+    - 5 variables with cov = 0
+    - 10 variables that discriminate between groups with difference in means of 2 and cov = 0.5 (axis 1)
+    - 10 variables with cov = 0.2 (but not discriminating) (axis 2)
+    
+4. Predictive variables are not correlated ("needle in a haystack")
+    - 5 variables that discriminate between groups with a difference in means of 2, cov = 0
+    - 10 variables with cov = 0.5
+    - 10 variables with cov = 0.2
+
+
+# Simulate Data
+
+Set up parallelization
 
 ```{r include=FALSE}
 plan(multiprocess)
 ```
 
-# 1. NULL
+## 1. NULL
 
 ```{r}
 set.seed(myseed)
 null <-
-  future_map(1:100,
+  future_map(1:500,
       ~ sim_cat(n_obs = 20, n_groups = 2) %>% 
-        sim_covar(n_vars = 5, var = 1, cov = 0, name = "N") %>% 
-        sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C1") %>% 
-        sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C2")
+        sim_covar(n_vars = 25, var = 1, cov = 0, name = "N")
   ) %>%
-  set_names(paste0("null_df_", 1:100))
+  set_names(paste0("null_df_", 1:500))
 ```
 
 Inspect one:
 
 ```{r}
 set.seed(myseed)
-null[[sample(1:100, 1)]] %>%
+null[[sample(1:500, 1)]] %>%
   dplyr::select(-group) %>% 
   cor() %>% 
   iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
 ```
 
-# 2. Needle in a haystack
+## 2. Correlated variables are not predictive ("red herring")
+    
+```{r}
+set.seed(myseed)
+
+herring <- 
+  future_map(1:500,
+             ~sim_cat(n_obs = 20, n_groups = 2) %>% 
+               sim_covar(n_vars = 5, var = 1, cov = 0, name = "N") %>% 
+               sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C1") %>% 
+               sim_covar(n_vars = 10, var = 1, cov = 0.2, name = "C2")
+  ) %>% 
+  set_names(paste0("herring_df_", 1:500))
+
+```
+
+Inspect one:
 
 ```{r}
 set.seed(myseed)
-needle_in_haystack <-
-  future_map(1:100,
+herring[[sample(1:500, 1)]] %>%
+  dplyr::select(-group) %>% 
+  cor() %>% 
+  iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
+```
+
+## 3. Correlated variables are predictive ("control")
+
+```{r}
+set.seed(myseed)
+
+control <- 
+  future_map(1:500,
+             ~sim_cat(n_obs = 20, n_groups = 2) %>% 
+               sim_covar(n_vars = 5, var = 1, cov = 0, name = "N") %>% 
+               group_by(group) %>% 
+               sim_discr(n_vars = 10, var = 1, cov = 0.5, group_means = c(-1, 1), name = "D1") %>% 
+               sim_discr(n_vars = 10, var = 1, cov = 0.2, group_means = c(-1, 1), name = "D2") %>% 
+               ungroup()
+  ) %>% 
+  set_names(paste0("control_df_", 1:500))
+```
+
+Inspect one:
+
+```{r}
+set.seed(myseed)
+control[[sample(1:500, 1)]] %>%
+  dplyr::select(-group) %>% 
+  cor() %>% 
+  iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
+```
+
+## 4. Predictive variables are not correlated ("needle in a haystack")
+   - 5 variables that discriminate between groups with a difference in means of 2, cov = 0
+    - 10 variables with cov = 0.5
+    - 10 variables with cov = 0.2
+
+Needle:
+
+```{r}
+set.seed(myseed)
+needle <-
+  future_map(1:500,
       ~ sim_cat(n_obs = 20, n_groups = 2) %>% 
+        sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C1") %>% 
+        sim_covar(n_vars = 10, var = 1, cov = 0.2, name = "C2") %>% 
         group_by(group) %>% 
         sim_discr(n_vars = 5, var = 1, cov = 0, group_means = c(-1, 1), name = "D") %>% 
-        sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C1") %>% 
-        sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C2") %>% 
         ungroup()
   ) %>%
-  set_names(paste0("needle_in_haystack_", 1:100))
+  set_names(paste0("needle_in_haystack_", 1:500))
 ```
 
 Inspect one:
 
 ```{r}
-needle_in_haystack[[sample(1:100, 1)]] %>%
+needle[[sample(1:500, 1)]] %>%
   dplyr::select(-group) %>% 
   cor() %>% 
   iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
 ```
 
-
-# 3. Control
-
-```{r}
-set.seed(myseed)
-control <-
-  future_map(1:100,
-      ~ sim_cat(n_obs = 20, n_groups = 2) %>% 
-        group_by(group) %>% 
-        sim_discr(n_vars = 5, var = 1, cov = 0.5, group_means = c(-1, 1), name = "D1") %>% 
-        sim_discr(n_vars = 5, var = 1, cov = 0.5, group_means = c(-1, 1), name = "D2") %>% 
-        sim_covar(n_vars = 10, var = 1, cov = 0, name = "N") %>% 
-        sim_covar(n_vars = 5, var = 1, cov = 0.5, name = "C") %>% 
-        ungroup()
-  ) %>%
-  set_names(paste0("control_", 1:100))
-```
-
-Inspect one:
-
-```{r}
-control[[sample(1:100, 1)]] %>%
-  dplyr::select(-group) %>% 
-  cor() %>% 
-  iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
-```
-
-# Save 'em
 
 ```{r}
 write_rds(null, here("data", "null.rds"))
-write_rds(needle_in_haystack, here("data", "needle.rds"))
+write_rds(needle, here("data", "needle.rds"))
 write_rds(control, here("data", "control.rds"))
+write_rds(herring, here("data", "red_herring.rds"))
 ```
 
