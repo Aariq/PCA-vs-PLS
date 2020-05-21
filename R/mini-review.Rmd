@@ -103,6 +103,7 @@ write_sheet(df4, "1W5ChtX-bKpJJL8-znfeCWFeuenM7btjL9XUD2nxDxnE", sheet = "out")
 
 # Create supplementary and summary tables
 
+
 Filter by year, write to .csv as a supplementary table
 
 ```{r}
@@ -117,22 +118,46 @@ write_excel_csv(df_supp, here("out", "TableS1.csv"), na = " ")
 
 # Explore and create Table
 
+To skip the wrangling above and just re-run these analyses:
+
+```{r}
+df_supp <- read_csv(here::here("out", "TableS1.csv"))
+```
+
 ## How many papers total and broken down by journal?
 
 ```{r}
+df_supp
 nrow(df_supp)
 count(df_supp, journal)
 ```
 
-## how many papers use only PCA, only PLS, only RDA, or both
-Venn diagram??
+## how many papers use each method
 
 ```{r}
 df_supp %>% 
-  summarize(just_PCA = sum(!is.na(pca_use) & is.na(pls_use)), 
-            just_PLS = sum(!is.na(pls_use) & is.na(pca_use)),
-            Both = sum(!is.na(pca_use) & !is.na(pls_use)))
+  summarize(PCA = sum(!is.na(pca_use)), 
+            PLS = sum(!is.na(pls_use)),
+            RDA = sum(!is.na(rda_use)))
 ```
+
+
+All unsupervised vs. all supervised (in numbers of publications)
+
+```{r}
+df_supp %>% 
+  summarize(unsupervised = sum(!is.na(pca_use) | !is.na(other_unsupervised)),
+            supervised = sum(!is.na(pls_use) | !is.na(rda_use) | !is.na(other_supervised)))
+```
+
+All unsupervised vs. all supervised (in numbers of applications.  That is, counting each method)
+
+```{r}
+df_supp %>% 
+  summarize(unsupervised = sum(!is.na(pca_use), !is.na(other_unsupervised)),
+            supervised = sum(!is.na(pls_use), !is.na(rda_use), !is.na(other_supervised)))
+```
+
 
 ```{r}
 df_venn <- 
@@ -247,8 +272,6 @@ supervised_alt <-
   rename("Use" = supervised_alt,
          "Number of publications" = n)
 supervised_alt
-#checm that all accounted for
-sum(supervised_alt[2]) == pc_variable_use[3, 2]
 ```
 
 
