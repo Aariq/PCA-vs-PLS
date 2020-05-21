@@ -8,11 +8,19 @@ output: html_notebook
 library(here)
 library(tidyverse)
 library(glue)
+library(furrr)
+library(rlang)
 
 source(here("R", "ropls_helpers.R"))
 source(here("R", "RMSEP.R"))
 
 set.seed(464)
+```
+
+Setup parallelization with furrr
+
+```{r include=FALSE}
+plan(multiprocess)
 ```
 
 # Read in models
@@ -28,108 +36,80 @@ null.pcr <- read_rds(here('data', 'models', 'null-pcr.rds'))
 needle.pls <- read_rds(here('data', 'models', 'needle-pls.rds'))
 needle.pls.forced <- read_rds(here('data', 'models', 'needle-pls-force.rds'))
 needle.pcr <- read_rds(here('data', 'models', 'needle-pcr.rds'))
+herring.pls <- read_rds(here('data', 'models', 'herring-pls.rds'))
+herring.pls.forced <- read_rds(here('data', 'models', 'herring-pls-force.rds'))
+herring.pcr <- read_rds(here('data', 'models', 'herring-pcr.rds'))
 ```
 
 
 # Get Summary Stats
-## Function for getting summary stats
-
-Create a "safe" version of my RMSEP function that returns `NA` if it errors.
 
 ```{r}
-safe_pca_lr_RMSEP <- possibly(pca_lr_RMSEP, NA)
-```
+null.pls.summary <- pls.summary(null.pls)
+null.pls.forced.summary <- pls.summary(null.pls.forced)
+null.pcr.summary <- pcr.summary(null.pcr)
 
-Create functions to run RMSEP and return all the model statistics in a tidy dataframe.  This is annoying because of the data structure output by `opls()`.
-
-```{r}
-pls_pcr_summary <- function(pcr, pls, pls.forced) {
-  pls.summary <-
-    pls %>%
-    # do RMSEP on successful models and store in summaryDF 
-    map(~.x@summaryDF %>%
-          mutate(RMSEP = plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7))) %>% 
-    bind_rows(.id = "dataset") %>% 
-    select(dataset, Q2 = `Q2(cum)`, R2Y = `R2Y(cum)`, R2X = `R2X(cum)`, pR2 = pR2Y, pQ2 = pQ2, RMSEP, ncomp = pre) %>% 
-    summarize_if(is.numeric, funs(mean, sd)) %>% 
-    gather() %>% 
-    separate(key, into = c("Statistic", "part")) %>% 
-    spread(key = part, value = value) %>% 
-    mutate(`PLS-DA` = glue("{round(mean, 3)} ± {round(sd, 3)}")) %>% 
-    select(-sd, -mean) %>% 
-    add_row(Statistic = "n", `PLS-DA` = length(pls))
-  
-  pls.forced.summary <-
-    pls.forced %>% 
-    # do RMSEP on successful models and store in summaryDF 
-    map(~.x@summaryDF %>%
-          mutate(RMSEP = plsda_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7))) %>% 
-    bind_rows(.id = "dataset") %>% 
-    select(dataset, Q2 = `Q2(cum)`, R2Y = `R2Y(cum)`, R2X = `R2X(cum)`, pR2 = pR2Y, pQ2 = pQ2, RMSEP, ncomp = pre) %>% 
-    summarize_if(is.numeric, funs(mean, sd)) %>% 
-    gather() %>% 
-    separate(key, into = c("Statistic", "part")) %>% 
-    spread(key = part, value = value) %>% 
-    mutate("PLS-DA (ncomp forced)" = glue("{round(mean, 3)} ± {round(sd, 3)}")) %>% 
-    select(-sd, -mean) %>% 
-    add_row(Statistic = "n", "PLS-DA (ncomp forced)" = length(pls.forced))
-  
-  pcr.summary <- 
-    pcr %>% 
-    map_dfr(~.$mod.stats, .id = "dataset") %>% 
-    mutate(RMSEP = map_dbl(pcr, ~safe_pca_lr_RMSEP(.x, X_vars = -group, Y_var = group, CV = 7)),
-           R2X = map_dbl(pcr, ~.$pca@summaryDF$`R2X(cum)`),
-           ncomp = map_dbl(pcr, ~.$pca@summaryDF$pre)) %>% 
-    select(dataset, R2Y, p = p.value, RMSEP, R2X, ncomp) %>% 
-    summarize_if(is.numeric, list(~mean(., na.rm = TRUE), ~sd(., na.rm = TRUE))) %>%
-    gather() %>% 
-    separate(key, into = c("Statistic", "part")) %>% 
-    spread(key = part, value = value) %>% 
-    mutate(`PCA-LR` = glue("{round(mean, 3)} ± {round(sd, 3)}")) %>% 
-    select(-mean, -sd) %>% 
-    add_row(Statistic = "n", `PCA-LR` = length(pcr))
-  return(full_join(pcr.summary, pls.summary) %>% full_join(pls.forced.summary))
-}
+null.summary <-
+  full_join(null.pls.summary, null.pls.forced.summary, by = "Statistic") %>%
+  full_join(null.pcr.summary, by = "Statistic")
 ```
 
 
-## Make table and write to .csv
+```{r}
+control.pls.summary <- pls.summary(control.pls)
+control.pls.forced.summary <- pls.summary(control.pls.forced)
+control.pcr.summary <- pcr.summary(control.pcr)
+
+control.summary <-
+  full_join(control.pls.summary, control.pls.forced.summary, by = "Statistic") %>%
+  full_join(control.pcr.summary, by = "Statistic")
+```
+
 
 ```{r message=FALSE, warning=FALSE}
-table1 <-
-  list(control = pls_pcr_summary(control.pcr, control.pls, control.pls.forced),
-       null = pls_pcr_summary(null.pcr, null.pls, null.pls.forced),
-       needle = pls_pcr_summary(needle.pcr, needle.pls, needle.pls.forced)
-  ) %>%
-  bind_rows(.id = "Scenario")
-table1 <- table1 %>% 
-  mutate(Scenario = fct_relevel(Scenario, "null", "control", "needle"),
-         Statistic = fct_relevel(Statistic,
-                                 "n", "ncomp", "RMSEP", "R2X", "R2Y", "Q2", "pR2", "pQ2", "p")) %>% 
-  arrange(Scenario, Statistic)
-write_excel_csv(table1, here("out", "model statistics table.csv"))
-```
+needle.pls.summary <- pls.summary(needle.pls)
+needle.pls.forced.summary <- pls.summary(needle.pls.forced)
+needle.pcr.summary <- pcr.summary(needle.pcr)
 
-## What % of p.values significant?
+needle.summary <-
+  full_join(needle.pls.summary, needle.pls.forced.summary, by = "Statistic") %>%
+  full_join(needle.pcr.summary, by = "Statistic")
+```
+I did something wrong because now 100% of the PCA-LR are significant.
 
 ```{r}
-needle_pcr_stats<- map_df(needle.pcr, 'mod.stats')
-needle_pcr_stats %>% 
-  summarize_all(mean)
+herring.pls.summary <- pls.summary(herring.pls)
+herring.pls.forced.summary <- pls.summary(herring.pls.forced)
+herring.pcr.summary <- pcr.summary(herring.pcr)
 
-needle_pcr_stats %>% 
-  count(p.value < 0.05)
-
-79/(79+21)
-
-control_pcr_stats <- map_df(control.pcr, 'mod.stats')
-control_pcr_stats %>% 
-  summarize_all(mean)
-
-control_pcr_stats %>% 
-  count(p.value < 0.05)
-
-#100%
+herring.summary <-
+  full_join(herring.pls.summary, herring.pls.forced.summary, by = "Statistic") %>% 
+  full_join(herring.pcr.summary, by = "Statistic")
 ```
+
+herring.pls.forced is structured wrong.
+
+
+```{r}
+table1 <-
+  list(control = control.summary,
+       null = null.summary,
+       needle = needle.summary,
+       herring = herring.summary
+  ) %>%
+  bind_rows(.id = "Scenario")
+```
+
+
+```{r}
+table1 <- table1 %>% 
+  # mutate(Scenario = fct_relevel(Scenario, "null", "control", "herring", "needle"),
+  #        Statistic = fct_relevel(Statistic,
+  #                                "n", "ncomp", "RMSEP", "R2X", "R2Y", "Q2", "pR2", "pQ2", "p")) %>% 
+  arrange(Scenario, Statistic)
+# write_excel_csv(table1, here("out", "model statistics table.csv"))
+```
+
+
 
 
