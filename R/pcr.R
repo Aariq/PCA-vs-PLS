@@ -14,7 +14,9 @@ source(here("R", "ropls_helpers.R"))
 #' @param X_vars 
 #' @param Y_var 
 #' @param data 
-#' 
+#' @param reg_pcs how many pricipal components to use in the regression portion?
+#'   Either an integer or "max" to use all PCs retained by PCA as predictors
+#' @param ... other arguments passed to opls()
 #' @import glue
 #' @import rlang
 #' @import ropls
@@ -25,10 +27,10 @@ source(here("R", "ropls_helpers.R"))
 #'
 #' @examples
 #' 
-pca_lr <- function(data, X_vars, Y_var, CV = 7){
+pca_lr <- function(data, X_vars, Y_var, reg_pcs = "max", CV = 7, ...){
   X <- enquo(X_vars)
   Y <- enquo(Y_var)
-  
+
   #check if Y_var is factor or numeric
   if(is.character(data[[quo_name(Y)]])){
     data <-
@@ -51,20 +53,32 @@ pca_lr <- function(data, X_vars, Y_var, CV = 7){
   }
   
   # Do PCA on X
-  pca <- opls(select(data, !!X), info.txtC = "none", fig.pdfC = "none")
+  pca <- opls(select(data, !!X), info.txtC = "none", fig.pdfC = "none", ...)
   
   # Get scores and bind with Y
   scores <- get_scores(pca) %>% 
     add_column(!!Y := data[[quo_name(Y)]])
   
+  
   # Make formula
+  
   npcs <- pca@summaryDF$pre
-  pcs <- glue("p{1:npcs}")
+  if (reg_pcs == "max") {
+    pcs <- glue("p{1:npcs}")
+  } else {
+    if (reg_pcs > npcs) {
+      warn(glue("Only {npcs} PCs were retained.  Using all PCs as predictors."))
+      pcs <- glue("p{1:npcs}")
+    } else {
+      pcs <- glue("p{1:reg_pcs}")
+    }
+  }
+  
   mod_form <- as.formula(glue::glue("{quo_name(Y)} ~ {glue_collapse(pcs, sep = '+')}"))
   
   # Do regression
-  m <- glm(mod_form, family = "binomial", data = scores)
-  m0 <- glm(group ~ 1, family = "binomial", data = scores)
+  m <- glm(mod_form, family = binomial, data = scores)
+  m0 <- glm(group ~ 1, family = binomial, data = scores)
   # get p-value and calc R2Y
   lik.test <- lrtest(m, m0)
 
@@ -72,10 +86,9 @@ pca_lr <- function(data, X_vars, Y_var, CV = 7){
     # mutate(R2Y = 1 - (deviance/null.deviance)) %>% 
     add_column(R2Y = broom::augment(m, type.predict = "response") %>% 
                  group_by(group) %>% 
-                 summarize(means = mean(.fitted)) %>%
-                 summarize(R2_tjur = diff(means)) %>%
-                 as.numeric() %>% 
-                 ungroup(),
+                 summarize(means = mean(.fitted), .groups = "drop_last") %>%
+                 summarize(R2_tjur = diff(means), .groups = "drop_last") %>%
+                 as.numeric(),
                p.value = lik.test$`Pr(>Chisq)`[2])
   
   return(list(pca = pca, scores = scores, glm = m, mod.stats = mod.stats, data = data))

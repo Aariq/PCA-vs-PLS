@@ -6,7 +6,7 @@ output: html_notebook
 
 This generates figure 2 showing the correlation structure and results from PCA-LR and PLS-DA for example datasets from the three scenarios.
 
-**IMPORTANT:** These datasets were generated under R version 3.5.3.  The random number generator in R was updated in version 3.6.0.  For this to be fully reproducible, run with version < 3.6.0 or use `RNGversion("3.5.3")`.
+**IMPORTANT:** The random number generator in R was updated in version 3.6.0.  For this to be fully reproducible, run with version > 3.6.0
 
 ```{r message=FALSE, warning=FALSE}
 library(tidyverse)
@@ -43,16 +43,17 @@ I'll read in the datasets from "3-generating-datasets.Rmd" and pick individual d
 null.list <- read_rds(here::here("data", "null.rds"))
 control.list <- read_rds(here::here("data", "control.rds"))
 needle.list <- read_rds(here::here("data", "needle.rds"))
+herring.list <- read_rds(here::here("data", "red_herring.rds"))
 ```
 
 Sample one dataset as an example
 
 ```{r}
-RNGversion("3.5.0")
-set.seed(888)
+set.seed(719)
 null <- sample(null.list, 1)[[1]]
-control <- sample(control.list, 1)[[1]]
 needle <- sample(needle.list, 1)[[1]]
+control <- sample(control.list, 1)[[1]]
+herring <- sample(herring.list, 1)[[1]]
 ```
 
 # Null
@@ -73,17 +74,12 @@ null.cor.p <-
   scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-1,1)) +
   labs(x = NULL, y = NULL, subtitle = '"Null"', fill = "r") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90), legend.position = "right")
+  theme(legend.position = "right")
 
 # Replace axis labels with curly braces to improve readability:
+b <- bracketsGrob(0.995, 0, 0.005, 0, h = 0.05)
 
-b1 <- bracketsGrob(10/25, 0, 0.005, 0, h = 0.05)
-b2 <- bracketsGrob(20/25, 0, 10/25, 0, h = 0.05)
-b3 <- bracketsGrob(0.995, 0, 20/25, 0, h = 0.05)
-
-bracket_labels <- tibble(x = c(5.5, 15.5, 23), #where to put labels on x-axis
-                         y = rep(-1.75, 3), #how far below bracket to place labels
-                         label = c("C1", "C2", "N")) #labels for groups of variables
+bracket_labels <- tibble(x = 13, y = -1.75, label = "N")
 
 null.cor.p <-
   null.cor.p +
@@ -93,12 +89,10 @@ null.cor.p <-
     axis.ticks = element_blank(), #turns off axis ticks
     plot.margin = unit(c(1,1,1.5,1), "lines") #padds margin to make room
   ) +
-  annotation_custom(b1) +
-  annotation_custom(b2) +
-  annotation_custom(b3) +
+  annotation_custom(b) +
   geom_text(data = bracket_labels, inherit.aes = FALSE, aes(x=x, y=y, label = label))
 
-# null.cor.p
+null.cor.p
 ```
 
 
@@ -107,7 +101,7 @@ null.cor.p <-
 ```{r}
 null.pcalr <- pca_lr(null, -group, group, CV = 7)
 null.pca <- null.pcalr$pca
-null.pls <- opls(select(null, -group), null$group, plotL = FALSE, permI = 500, predI = 2)
+null.pls <- opls(select(null, -group), null$group, fig.pdfC = "none", permI = 500, predI = 2)
 ```
 
 ## Create plots for Null
@@ -122,6 +116,8 @@ null.pca.p <-
 null.pls.p <-
   plot_plsda(null.pls, annotate = "subtitle") +
   scale_color_discrete_qualitative(palette = "Dark 3")
+null.pca.p
+null.pls.p
 ```
 
 
@@ -143,7 +139,7 @@ needle.cor.p <-
   scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-1,1)) +
   labs(x = NULL, y = NULL, subtitle = '"Needle in a haystack"', fill = "r") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90), legend.position = "right")
+  theme(legend.position = "right")
 
 b1 <- bracketsGrob(10/25, 0, 0.005, 0, h = 0.05)
 b2 <- bracketsGrob(20/25, 0, 10/25, 0, h = 0.05)
@@ -165,6 +161,7 @@ needle.cor.p <-
   annotation_custom(b2) +
   annotation_custom(b3) +
   geom_text(data = bracket_labels, inherit.aes = FALSE, aes(x=x, y=y, label = label))
+needle.cor.p
 ```
 
 ## PCA and PLS-DA for needle-in-a-haystack
@@ -174,7 +171,7 @@ The PCA score plot still shows no real separation because the discriminating var
 ```{r include=FALSE}
 needle.pcalr <- pca_lr(needle, -group, group, CV = 7)
 needle.pca <- needle.pcalr$pca
-needle.pls <- opls(select(needle, -group), needle$group, plot = FALSE, predI = 2, permI = 500)
+needle.pls <- opls(select(needle, -group), needle$group, fig.pdfC = "none", predI = 2, permI = 500)
 ```
 
 ## Plots for needle-in-a-haystack
@@ -189,6 +186,8 @@ needle.pca.p <-
 needle.pls.p <-
   plot_plsda(needle.pls, annotate = "subtitle") +
   scale_color_discrete_qualitative(palette = "Dark 3")
+needle.pca.p
+needle.pls.p
 ```
 
 
@@ -209,17 +208,15 @@ control.cor.p <-
   geom_tile() +
   scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-1,1)) +
   labs(x = NULL, y = NULL, subtitle = '"Control"', fill = "r") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90), legend.position = "top")
+  theme_minimal()
 
-b1 <- bracketsGrob(5/25, 0, 0.005, 0, h = 0.05)
-b2 <- bracketsGrob(10/25, 0, 5/25, 0, h = 0.05)
-b3 <- bracketsGrob(15/25, 0, 10/25, 0, h = 0.05)
-b4 <- bracketsGrob(0.995, 0, 15/25, 0, h = 0.05)
+b1 <- bracketsGrob(10/25, 0, 0.005, 0, h = 0.05)
+b2 <- bracketsGrob(20/25, 0, 10/25, 0, h = 0.05)
+b3 <- bracketsGrob(0.995, 0, 20/25, 0, h = 0.05)
 
-bracket_labels <- tibble(x = c(3, 8, 13, 20.5), #where to put labels on x-axis
-                         y = rep(-1.75, 4), #how far below bracket to place labels
-                         label = c("C", "D1", "D2", "N")) #labels for groups of variables
+bracket_labels <- tibble(x = c(5.5, 15.5, 23), #where to put labels on x-axis
+                         y = rep(-1.75, 3), #how far below bracket to place labels
+                         label = c("D1", "D2", "N")) #labels for groups of variables
 control.cor.p <-
   control.cor.p +
   coord_cartesian(ylim = c(1,25), clip = "off") + #allows brackets to show up off plot
@@ -231,16 +228,17 @@ control.cor.p <-
   annotation_custom(b1) +
   annotation_custom(b2) +
   annotation_custom(b3) +
-  annotation_custom(b4) +
   geom_text(data = bracket_labels, inherit.aes = FALSE, aes(x=x, y=y, label = label))
+control.cor.p
 ```
 
 ## PCA and PLS-DA for Control
 
 ```{r include=FALSE}
-control.pcalr <- pca_lr(control, -group, group, CV = 7)
+control.pcalr <- pca_lr(control, -group, group,  CV = 7, predI = 2) 
+#force second axis so there is something to plot.
 control.pca <- control.pcalr$pca
-control.pls <- opls(select(control, -group), control$group, plot = FALSE, predI = 2, permI = 500)
+control.pls <- opls(select(control, -group), control$group, fig.pdfC = "none", predI = 2, permI = 500)
 ```
 
 ## Plots for Control
@@ -255,12 +253,77 @@ control.pca.p <-
 control.pls.p <-
   plot_plsda(control.pls, annotate = "subtitle") +
   scale_color_discrete_qualitative(palette = "Dark 3")
+control.pca.p
+control.pls.p
+```
+# Red Herring
+
+## Correlation heatmap for Red Herring
+
+```{r}
+herring.cor <-
+  herring %>% 
+  select(-group) %>% 
+  cor() %>%
+  as_tibble(rownames = "row") %>% 
+  gather(-row, key = col, value = cor)
+
+herring.cor.p <-
+  ggplot(herring.cor, aes(x = col, y = row, fill = cor)) +
+  geom_tile() +
+  scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-1,1)) +
+  labs(x = NULL, y = NULL, subtitle = '"Red Herring"', fill = "r") +
+  theme_minimal()
+
+b1 <- bracketsGrob(10/25, 0, 0.005, 0, h = 0.05)
+b2 <- bracketsGrob(20/25, 0, 10/25, 0, h = 0.05)
+b3 <- bracketsGrob(0.995, 0, 20/25, 0, h = 0.05)
+
+bracket_labels <- tibble(x = c(5.5, 15.5, 23), #where to put labels on x-axis
+                         y = rep(-1.75, 3), #how far below bracket to place labels
+                         label = c("C1", "C2", "N")) #labels for groups of variables
+herring.cor.p <-
+  herring.cor.p +
+  coord_cartesian(ylim = c(1,25), clip = "off") + #allows brackets to show up off plot
+  theme(
+    axis.text = element_blank(), #turns off axis labels
+    axis.ticks = element_blank(), #turns off axis ticks
+    plot.margin = unit(c(1,1,1.5,1), "lines") #padds margin to make room
+  ) +
+  annotation_custom(b1) +
+  annotation_custom(b2) +
+  annotation_custom(b3) +
+  geom_text(data = bracket_labels, inherit.aes = FALSE, aes(x=x, y=y, label = label))
+herring.cor.p
+```
+## PCA and PLS-DA for Red Herring
+
+```{r}
+herring.pcalr <- pca_lr(herring, -group, group, CV = 7)
+herring.pca <- herring.pcalr$pca
+herring.pls <- opls(select(herring, -group), null$group, fig.pdfC = "none", permI = 500, predI = 2)
 ```
 
+## Create plots for Null
+
+```{r message=FALSE, warning=FALSE}
+herring.pca.p <-
+  plot_pca(herring.pca, null$group, annotate = "subtitle") +
+  labs(title = NULL,
+       subtitle =TeX(glue("$R^2_Y = {signif(herring.pcalr$mod.stats$R2Y, 2)}$; $p = {signif(herring.pcalr$mod.stats$p.value, 2)}$"))) +
+  scale_color_discrete_qualitative(palette = "Dark 3")
+
+herring.pls.p <-
+  plot_plsda(herring.pls, annotate = "subtitle") +
+  scale_color_discrete_qualitative(palette = "Dark 3")
+herring.pca.p
+herring.pls.p
+```
 
 # Make figure
 
-Put all the plots together to make a figure.
+## Three Scenarios
+Put Null, Control, and Needle together to make a figure.
 
 ```{r}
 fix_theme_cor <-
@@ -291,5 +354,30 @@ three_scenarios %>%
   save_plot(here("out", "three-scenarios.png"), ., ncol = 3, nrow = 3, base_height = 2.8, base_asp = 1.2)
 three_scenarios %>%
   save_plot(here("out", "three-scenarios.eps"), ., ncol = 3, nrow = 3, base_height = 2.8, base_asp = 1.2)
+```
+
+
+## Four Scenarios
+
+Make a plot with all four scenarios
+```{r}
+four_scenarios <- 
+  plot_grid(null.cor.p + fix_theme_cor,
+            control.cor.p + fix_theme_cor,
+            needle.cor.p + fix_theme_cor,
+            herring.cor.p + fix_theme_cor,
+            null.pca.p + fix_theme_score,
+            control.pca.p + fix_theme_score,
+            needle.pca.p + fix_theme_score,
+            herring.pca.p + fix_theme_score,
+            null.pls.p + fix_theme_score + labs(title = NULL),
+            control.pls.p + fix_theme_score + labs(title = NULL),
+            needle.pls.p + fix_theme_score + labs(title = NULL),
+            herring.pls.p + fix_theme_score + labs(title = NULL),
+            nrow = 3, ncol = 4, align = "v", axis = "l", labels = glue::glue("({letters[1:12]})"), label_x = 0.05) %>% 
+  plot_grid(color.bar, align = "h", axis = "t", rel_widths = c(12,1)) 
+
+four_scenarios %>%
+  save_plot(here("out", "four-scenarios.png"), ., ncol = 4, nrow = 3, base_height = 2.8, base_asp = 1.2)
 ```
 
