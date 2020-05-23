@@ -44,7 +44,7 @@ herring.pcr <- read_rds(here('data', 'models', 'herring-pcr.rds'))
 
 # Get Summary Stats
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 null.pls.summary <- pls.summary(null.pls)
 null.pls.forced.summary <- pls.summary(null.pls.forced)
 null.pcr.summary <- pcr.summary(null.pcr)
@@ -52,10 +52,11 @@ null.pcr.summary <- pcr.summary(null.pcr)
 null.summary <-
   full_join(null.pls.summary, null.pls.forced.summary, by = "Statistic") %>%
   full_join(null.pcr.summary, by = "Statistic")
+write_excel_csv(null.summary, here("out", "null summary.csv"))
 ```
 
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 control.pls.summary <- pls.summary(control.pls)
 control.pls.forced.summary <- pls.summary(control.pls.forced)
 control.pcr.summary <- pcr.summary(control.pcr)
@@ -63,6 +64,7 @@ control.pcr.summary <- pcr.summary(control.pcr)
 control.summary <-
   full_join(control.pls.summary, control.pls.forced.summary, by = "Statistic") %>%
   full_join(control.pcr.summary, by = "Statistic")
+write_excel_csv(control.summary, here("out", "control summary.csv"))
 ```
 
 
@@ -74,8 +76,10 @@ needle.pcr.summary <- pcr.summary(needle.pcr)
 needle.summary <-
   full_join(needle.pls.summary, needle.pls.forced.summary, by = "Statistic") %>%
   full_join(needle.pcr.summary, by = "Statistic")
+write_excel_csv(needle.summary, here("out", "needle summary.csv"))
 ```
-I did something wrong because now 100% of the PCA-LR are significant.
+
+Did I do something wrong because now 80% of the PCA-LR are significant?  Check manuscript and see if its close to the same.  These datasets should not be that different than the original.  Consider making "needle" smaller (~ 3 variables)
 
 ```{r}
 herring.pls.summary <- pls.summary(herring.pls)
@@ -87,7 +91,9 @@ herring.summary <-
   full_join(herring.pcr.summary, by = "Statistic")
 ```
 
-herring.pls.forced is structured wrong.
+```{r}
+write_excel_csv(herring.summary, here("out", "herring summary.csv"))
+```
 
 
 ```{r}

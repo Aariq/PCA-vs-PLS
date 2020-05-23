@@ -74,7 +74,8 @@ pca_lr <- function(data, X_vars, Y_var, CV = 7){
                  group_by(group) %>% 
                  summarize(means = mean(.fitted)) %>%
                  summarize(R2_tjur = diff(means)) %>%
-                 as.numeric(),
+                 as.numeric() %>% 
+                 ungroup(),
                p.value = lik.test$`Pr(>Chisq)`[2])
   
   return(list(pca = pca, scores = scores, glm = m, mod.stats = mod.stats, data = data))

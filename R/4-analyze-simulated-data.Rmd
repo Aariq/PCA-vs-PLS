@@ -112,7 +112,7 @@ Any errors?
 length(null.pls.try) - length(null.pls)
 ```
 
-398/500 models failed.  Why?
+389/500 models failed.  Why?
 
 ```{r}
 null.pls.try %>% 
@@ -156,7 +156,7 @@ control.pcr.try %>%
   unique()
 ```
 
-No errors.
+1 error in PCA
 
 Save em!
 
@@ -342,13 +342,15 @@ herring.pls.try %>%
   unique()
 ```
 
-406/500 error because there are no significantly predictive components.  PLS is not fooled by the red herring!
+427/500 error because there are no significantly predictive components.  PLS is not fooled by the red herring!
 
 ```{r}
 #force one component
 herring.pls.force <-
   future_map(herring,
-      ~ safe_opls(select(., -group), .$group, predI = 1, permI = 500))
+      ~ safe_opls(select(., -group), .$group, predI = 1, permI = 500)) %>% 
+  future_map("result") %>% 
+  discard(is.null)
 ```
 
 Write em!
