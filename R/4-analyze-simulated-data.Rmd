@@ -99,7 +99,7 @@ null.pls <-
 # with one component forced
 null.pls.force <-
   null %>% 
-  future_map(~ safe_opls(select(., -group), .$group, predI = 1, permI = 500)) %>% 
+  future_map(~ safe_opls(select(., -group), .$group, predI = 5, permI = 500)) %>% 
   future_map("result") %>% 
   discard(is.null)
 ```
@@ -346,7 +346,7 @@ herring.pls.try %>%
 #force one component
 herring.pls.force <-
   future_map(herring,
-      ~ safe_opls(select(., -group), .$group, predI = 1, permI = 500)) %>% 
+      ~ safe_opls(select(., -group), .$group, predI = 3, permI = 500)) %>% 
   future_map("result") %>% 
   discard(is.null)
 ```

@@ -89,11 +89,9 @@ herring.pcr.summary <- pcr.summary(herring.pcr)
 herring.summary <-
   full_join(herring.pls.summary, herring.pls.forced.summary, by = "Statistic") %>% 
   full_join(herring.pcr.summary, by = "Statistic")
-```
-
-```{r}
 write_excel_csv(herring.summary, here("out", "herring summary.csv"))
 ```
+
 
 
 ```{r}
