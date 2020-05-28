@@ -29,26 +29,29 @@ tomato <- read_rds(here("data", "tomatoes.rds"))
 tomato.filtered <-
   tomato %>% 
   filter(Spe != "jug") %>% 
-  mutate(temp = temp * 0.1)
+  mutate(temp = temp * 0.1) %>% 
+  filter(complete.cases(.))
 ```
 
 
 # PCA
 
 ```{r}
-tom.pca2 <- opls(tomato.filtered %>% dplyr::select(lma.leaflet:Rdark), plotL = FALSE)
+X <-tomato.filtered %>% dplyr::select(lma.leaflet:Rdark)
+tom.pca <- opls(X, plotL = FALSE)
 ```
 
 ## Score plot:
 
 ```{r}
-tom.pca2.data <- get_plotdata(tom.pca2)
-ggplot(tom.pca2.data$scores, aes(x = p1, y = p2)) +
-  geom_point(aes(fill = tomato.filtered$temp), shape = 21, size = 2) +
-  scale_color_continuous_sequential("YlOrRd", aesthetics = "fill",
-                                    name = "Temperature (ºC)") +
-  labs(x = glue("PC1 ({tom.pca2.data$axis_stats[1,1] * 100}%)"),
-       y = glue("PC2 ({tom.pca2.data$axis_stats[2,1] * 100}%)")) +
+tom.pca.data <- get_plotdata(tom.pca)
+
+ggplot(tom.pca.data$scores, aes(x = p1, y = p2)) +
+  geom_point(aes(fill = tomato.filtered$precip), shape = 21, size = 2) +
+  scale_fill_viridis_c() +
+  labs(x = glue("PC1 ({tom.pca.data$axis_stats[1,1] * 100}%)"),
+       y = glue("PC2 ({tom.pca.data$axis_stats[2,1] * 100}%)"),
+       fill = "Annual Precipitation (mm)") +
   theme_bw()
 ```
 
@@ -57,10 +60,10 @@ ggplot(tom.pca2.data$scores, aes(x = p1, y = p2)) +
 PC1 is the leaf economics spectrum
 
 ```{r}
-pca.scores <- get_scores(tom.pca2)
+pca.scores <- get_scores(tom.pca)
 
 pca.data <-
-  tom.pca2@suppLs$xModelMN %>%
+  tom.pca@suppLs$xModelMN %>%
   as_tibble()
 
 pca.cor.dat <-
@@ -76,116 +79,106 @@ pca.cor.dat <-
 # pca.cor.dat
 ```
 ```{r}
-pca.loading.plot <-
+pca.cor.plot <-
   ggplot(pca.cor.dat) +
   geom_segment(aes(x = 0, y = 0, xend = p1, yend = p2),
                arrow = arrow(length = unit(0.15, "cm"))) +
-  # gghighlight(p.adj < 0.05, use_direct_label = FALSE) +
   geom_label_repel(aes(x = p1, y = p2, label = variable),
                    segment.alpha = 0.6, direction = "y", size = 2.7, 
                    min.segment.length = 0, force = 3) +
   theme_bw() +
   labs(x = "Correlation to PC1",
        y = "Correlation to PC2")
-pca.loading.plot
+pca.cor.plot
+```
+## Biplot
+
+Combines scores and loadings.  To make a column-principal biplot, I think I need to standardize the scores on each axis to unit variance. (or SS = 1?? Or just scale loadings up by sqrt(n)??  Or maybe it just needs to look nice?)
+
+```{r}
+scaled_loadings <- get_loadings(tom.pca) %>% 
+  mutate_if(is.numeric, ~.*sqrt(63))
+  
+ggplot(scaled_loadings) +
+  geom_segment(aes(x = 0, y = 0, xend = p1, yend = p2),
+               arrow = arrow(length = unit(0.15, "cm"))) +
+  geom_label_repel(aes(x = p1, y = p2, label = Variable),
+                   segment.alpha = 0.6, direction = "y", size = 2.7, 
+                   min.segment.length = 5, force = 10) +
+  geom_point(data = get_scores(tom.pca), aes(x = p1, y = p2, fill = tomato.filtered$precip), shape = 21, size = 2, inherit.aes = FALSE) +
+  scale_fill_viridis_c() +
+  labs(x = glue("PC1 ({tom.pca.data$axis_stats[1,1] * 100}%)"),
+       y = glue("PC2 ({tom.pca.data$axis_stats[2,1] * 100}%)"),
+       fill = "Annual Precipitation (mm)") +
+  theme_bw()
 ```
 
 
 # PCA regression
 
-Temperature, but not precipitation, is significantly related to PC1 (i.e. the LES)
+Precipitation, is not significantly related to PC1 (i.e. the LES)
 
 ```{r}
 pcr.df2 <-
-  tom.pca2.data$scores %>% 
+  tom.pca.data$scores %>% 
   add_column(temp = tomato.filtered$temp, precip = tomato.filtered$precip)
 ```
 
 ```{r}
-pcr2.temp <- lm(temp ~ p1, data = pcr.df2)
 pcr2.precip <- lm(precip ~ p1, data = pcr.df2)
-pcr2.temp.a <- lm(temp ~ -1 + p1, data = pcr.df2)
 pcr2.precip.a <- lm(precip ~ -1 + p1, data = pcr.df2)
-summary(pcr2.temp.a)
+
 summary(pcr2.precip.a)
 
 car::Anova(pcr2.precip)
-
-car::Anova(pcr2.temp)
 ```
 
 
 # PLSR
 
-Both precipitation **and** temperature are significantly related to leaf traits (but temperature has a much lower RMSEE).  They explain very little of the variation in the data (`R2X(cum)`), but a significant ammount of variation with the Y variables (`R2Y(cum)` and `pR2Y` and `pQ2`).  `Q2(cum)` is not much lower than R2Y indicating an absence of overfitting or a predictive power similar to the explanatory power.
+Precipitation is significantly related to leaf traits.  The predictive axes explain very little of the variation in the leaf traits (`R2X(cum)`), but a significant amount of variation in precipitation (`R2Y(cum)` and `pR2Y` and `pQ2`).  `Q2(cum)` is not much lower than `R2Y(cum)` indicating an absence of overfitting or a predictive power similar to the explanatory power.
 
 ```{r}
-plsr2.precip <- 
-  opls(tomato.filtered %>% dplyr::select(lma.leaflet:Rdark), tomato.filtered$precip, plotL = FALSE, permI = 1000)
-# single component model
-
-plsr2.temp <- 
-  opls(tomato.filtered %>% dplyr::select(lma.leaflet:Rdark), tomato.filtered$temp, plotL = FALSE, permI = 1000)
-
+tom.pls <- 
+  opls(X, tomato.filtered$precip, fig.pdfC = "none")
+#produces a single component model.  I will "force" two predictive axes for the sake of plotting.
+tom.pls <- 
+  opls(X, tomato.filtered$precip, fig.pdfC = "none", predI = 2, permI = 1000)
 ```
 
-View outputs in a table
+## PLSR bi-plot
 
 ```{r}
-bind_rows("Precipitation ~ leaf traits" = plsr2.precip@summaryDF, "Temperature ~ leaf traits" = plsr2.temp@summaryDF, .id = "Model") %>% 
-  select(-RMSEE, -pre, -ort)
+scaled_loadings <- get_loadings(tom.pca) %>% 
+  mutate_if(is.numeric, ~.*sqrt(63))
+  
+ggplot(scaled_loadings) +
+  geom_segment(aes(x = 0, y = 0, xend = p1, yend = p2),
+               arrow = arrow(length = unit(0.15, "cm"))) +
+  geom_label_repel(aes(x = p1, y = p2, label = Variable),
+                   segment.alpha = 0.6, direction = "y", size = 2.7, 
+                   min.segment.length = 5, force = 10) +
+  geom_point(data = get_scores(tom.pca), aes(x = p1, y = p2, fill = tomato.filtered$precip), shape = 21, size = 2, inherit.aes = FALSE) +
+  scale_fill_viridis_c() +
+  labs(x = glue("PC1 ({tom.pca.data$axis_stats[1,1] * 100}%)"),
+       y = glue("PC2 ({tom.pca.data$axis_stats[2,1] * 100}%)"),
+       fill = "Annual Precipitation (mm)") +
+  theme_bw()
 ```
+
 
 # Compare Loadings
 
 Table of PCA loadings and PLS axis loadings.
 
 ```{r}
-precip.pls.loadings <- get_loadings(plsr2.precip) %>% rename(`Precipitation PLS` = p1)
-precip.pls.vip <- get_VIP(plsr2.precip) %>% rename(`Precipitation VIP` = VIP)
-temp.pls.loadings <- get_loadings(plsr2.temp) %>% rename(`Temperature PLS` = p1)
-temp.pls.vip <- get_VIP(plsr2.temp) %>% rename(`Temperature VIP` = VIP)
-
-pca.loadings <- get_loadings(tom.pca2) %>% rename(PC1 = p1, PC2 = p2)
+pls.loadings <- get_loadings(tom.pls) %>% select(Variable, PLS = p1)
+pca.loadings <- get_loadings(tom.pca) %>% select(Variable, PCA = p1)
 
 loading.table <-
-  full_join(pca.loadings, precip.pls.loadings) %>%
-  full_join(precip.pls.vip) %>% 
-  full_join(temp.pls.loadings) %>% 
-  full_join(temp.pls.vip) %>% 
+  full_join(pca.loadings, pls.loadings) %>%
   mutate_if(is.numeric, ~round(., 3))
 
 loading.table
-write_csv(select(loading.table, PC1, `Precipitation PLS`, `Temperature PLS`),
-          here("out", "muir loading table.csv"))
+write_csv(loading.table, here("out", "muir loading table.csv"))
 ```
-
-It looks like maybe the Temperature PLS axis loadings are more similar to PC1, which makes sense because only the PCA regression for temperature was significant.
-
-
-# PLSR with two response variables (both precip and temp)
-
-Temp and precip aren't correlated, so this probably isn't useful.  That fact might be good justification for doing both separately though.
-
-```{r}
-ggplot(tomato.filtered, aes(x = precip, y = temp)) +
-  geom_point()
-
-cor.test(tomato.filtered$temp, tomato.filtered$precip)
-```
-
-
-Intermediate RMSEE. OK R2Y and Q2.  No p-value with this method.
-
-```{r}
-plsr.both <- 
-  opls(tomato.filtered %>% dplyr::select(lma.leaflet:Rdark), tomato.filtered %>% dplyr::select(temp, precip) %>% as.matrix(), plotL = FALSE, permI = 200)
-```
-
-```{r}
-getLoadingMN(plsr.both)
-
-plsr.both@cMN
-```
-
-P1 is related to temperature, P2 is related to precipitation.  This supports doing separate PLS for precipitation and temperature
