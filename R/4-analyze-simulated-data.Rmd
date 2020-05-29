@@ -23,6 +23,7 @@ library(ropls)
 library(tidyverse)
 library(furrr) #for parallelization
 source(here("R","pcr.R"))
+library(beepr) #for alerts when long-running code is finished.
 set.seed(690)
 ```
 
@@ -57,8 +58,7 @@ herring <- read_rds(here("data", "red_herring.rds"))
 ```{r}
 null.pcr.try <- 
   null %>% 
-  future_map(~safe_pcr(.x, -group, group, CV = 7))
-
+  future_map(~safe_pcr(.x, -group, group, CV = 7, predI = 2))
 # Get just the successful models
 null.pcr <-
   null.pcr.try %>%
@@ -75,7 +75,7 @@ null.pcr.try %>%
   unique()
 ```
 
-3 errors in PCA part, but also several convergence warnings in GLM part.
+2 errors in PCA part, but also several convergence warnings in GLM part.
 
 Save em!
 
@@ -88,20 +88,13 @@ write_rds(null.pcr, here("data", "models", "null-pcr.rds"))
 ```{r}
 null.pls.try <-
   null %>% 
-  future_map(~ safe_opls(select(., -group), .$group, permI = 500)) #map the opls
+  future_map(~ safe_opls(select(., -group), .$group, predI = 2, permI = 500)) #map the opls
 
 # get just succesful models
 null.pls <-
   null.pls.try %>% 
   future_map("result") %>% 
   discard(is.null) 
-
-# with one component forced
-null.pls.force <-
-  null %>% 
-  future_map(~ safe_opls(select(., -group), .$group, predI = 5, permI = 500)) %>% 
-  future_map("result") %>% 
-  discard(is.null)
 ```
 
 Any errors?
@@ -110,19 +103,10 @@ Any errors?
 length(null.pls.try) - length(null.pls)
 ```
 
-389/500 models failed.  Why?
-
-```{r}
-null.pls.try %>% 
-  map("error") %>%
-  unique()
-```
-
-They all failed because the first predictive component already wasn't significant.
+None (because forced 2 components)
 
 ```{r}
 write_rds(null.pls, here("data", "models", "null-pls.rds"))
-write_rds(null.pls.force, here("data", "models", "null-pls-force.rds"))
 ```
 
 # Control
@@ -133,7 +117,7 @@ write_rds(null.pls.force, here("data", "models", "null-pls-force.rds"))
 # map the pca function to all datasets
 control.pcr.try <-
   future_map(control,
-      ~safe_pcr(.x, -group, group, CV = 7))
+      ~safe_pcr(.x, -group, group, CV = 7, predI = 2))
 
 control.pcr <-
   control.pcr.try %>%
@@ -147,14 +131,8 @@ How many errors?
 
 ```{r}
 length(control.pcr.try) - length(control.pcr)
-
-#What was the error?
-control.pcr.try %>% 
-  future_map("error") %>% 
-  unique()
 ```
-
-1 error in PCA
+no errors.
 
 Save em!
 
@@ -168,12 +146,13 @@ write_rds(control.pcr, here("data", "models", "control-pcr.rds"))
 ```{r}
 control.pls.try <-
   future_map(control,
-      ~ safe_opls(select(., -group), .$group, permI = 500))
+      ~ safe_opls(select(., -group), .$group, predI = 2, permI = 500))
 
 control.pls <-
   control.pls.try %>% 
   future_map("result") %>% 
   discard(is.null)
+beep(sound = 4)
 ```
 
 How many failed models?
@@ -186,25 +165,10 @@ zero failed models
 
 How many components on average?
 
-```{r}
-future_map_dbl(control.pls, ~ getSummaryDF(.x)$pre) %>% mean()
-```
-
-```{r}
-# with one component forced (the average)
-control.pls.force <-
-  future_map(control,
-      ~ safe_opls(select(., -group), .$group, predI = 1, permI = 500)) %>% 
-  future_map("result") %>% 
-  discard(is.null) 
-```
-
-
 Save em!
 
 ```{r}
 write_rds(control.pls, here("data", "models", "control-pls.rds"))
-write_rds(control.pls.force, here("data", "models", "control-pls-force.rds"))
 ```
 
 # Needle in a haystack
@@ -214,12 +178,13 @@ write_rds(control.pls.force, here("data", "models", "control-pls-force.rds"))
 ```{r message=FALSE, warning=FALSE}
 needle.pcr.try <-
   future_map(needle,
-      ~safe_pcr(.x, -group, group, CV = 7))
+      ~safe_pcr(.x, -group, group, predI = 2, CV = 7))
 
 needle.pcr <-
   needle.pcr.try %>% 
   future_map("result") %>% 
   discard(is.null)
+beep(4)
 ```
 
 Any errors?
@@ -232,7 +197,7 @@ needle.pcr.try %>%
   unique()
 ```
 
-3 failed models due to the PCA part failing (exactly singular error)
+2 failed models due to the PCA part failing (exactly singular error)
 
 ```{r}
 write_rds(needle.pcr, here("data", "models", "needle-pcr.rds"))
@@ -243,12 +208,13 @@ write_rds(needle.pcr, here("data", "models", "needle-pcr.rds"))
 ```{r}
 needle.pls.try <-
   future_map(needle,
-      ~ safe_opls(select(., -group), .$group, permI = 500))
+      ~ safe_opls(select(., -group), .$group, predI = 2, permI = 500))
 
 needle.pls <-
   needle.pls.try %>% 
   future_map("result") %>% 
   discard(is.null)
+beep(4)
 ```
 
 Any errors?
@@ -259,31 +225,11 @@ length(needle.pls.try) - length(needle.pls)
 
 zero errors
 
-How many components on average?
-
-```{r}
-future_map_dbl(needle.pls, ~ getSummaryDF(.x)$pre) %>% mean()
-```
-
-Round up to 2?
-
-
-```{r}
-# with 2 components (the average) forced
-needle.pls.force <-
-  future_map(needle,
-      ~ safe_opls(select(., -group), .$group, predI = 2, permI = 500)) %>% 
-  future_map("result") %>% 
-  discard(is.null)
-```
-
-
 
 Save 'em!
 
 ```{r}
 write_rds(needle.pls, here("data", "models", "needle-pls.rds"))
-write_rds(needle.pls.force, here("data", "models", "needle-pls-force.rds"))
 ```
 
 # Red Herring
@@ -293,12 +239,13 @@ write_rds(needle.pls.force, here("data", "models", "needle-pls-force.rds"))
 ```{r message=FALSE, warning=FALSE}
 herring.pcr.try <-
   future_map(herring,
-      ~safe_pcr(.x, -group, group, CV = 7))
+      ~safe_pcr(.x, -group, group, predI = 2, CV = 7))
 
 herring.pcr <-
   herring.pcr.try %>% 
   future_map("result") %>% 
   discard(is.null)
+beep(4)
 ```
 
 Any errors?
@@ -311,7 +258,7 @@ herring.pcr.try %>%
   unique()
 ```
 
-One where the PCA failed.
+2 where the PCA errored.
 
 ```{r}
 write_rds(herring.pcr, here("data", "models", "herring-pcr.rds"))
@@ -322,38 +269,25 @@ write_rds(herring.pcr, here("data", "models", "herring-pcr.rds"))
 ```{r}
 herring.pls.try <-
   future_map(herring,
-      ~ safe_opls(select(., -group), .$group, permI = 500))
+      ~ safe_opls(select(., -group), .$group, predI = 2, permI = 500))
 
 herring.pls <-
   herring.pls.try %>% 
   future_map("result") %>% 
   discard(is.null)
+beep(4)
 ```
 
 Any errors?
 
 ```{r}
 length(herring.pls.try) - length(herring.pls)
-# What's the error
-herring.pls.try %>% 
-  future_map("error") %>% 
-  unique()
 ```
 
-427/500 error because there are no significantly predictive components.  PLS is not fooled by the red herring!
 
-```{r}
-#force one component
-herring.pls.force <-
-  future_map(herring,
-      ~ safe_opls(select(., -group), .$group, predI = 3, permI = 500)) %>% 
-  future_map("result") %>% 
-  discard(is.null)
-```
 
 Write em!
 
 ```{r}
 write_rds(herring.pls, here("data", "models", "herring-pls.rds"))
-write_rds(herring.pls.force, here("data", "models", "herring-pls-force.rds"))
 ```

@@ -10,6 +10,7 @@ library(tidyverse)
 library(glue)
 library(furrr)
 library(rlang)
+library(beepr)
 
 source(here("R", "ropls_helpers.R"))
 source(here("R", "RMSEP.R"))
@@ -28,16 +29,12 @@ These were output by "4-analyze-simulated-data.Rmd"
 
 ```{r}
 control.pls <- read_rds(here('data', 'models', 'control-pls.rds'))
-control.pls.forced <- read_rds(here('data', 'models', 'control-pls-force.rds'))
 control.pcr <- read_rds(here('data', 'models', 'control-pcr.rds'))
 null.pls <- read_rds(here('data', 'models', 'null-pls.rds'))
-null.pls.forced <- read_rds(here('data', 'models', 'null-pls-force.rds'))
 null.pcr <- read_rds(here('data', 'models', 'null-pcr.rds'))
 needle.pls <- read_rds(here('data', 'models', 'needle-pls.rds'))
-needle.pls.forced <- read_rds(here('data', 'models', 'needle-pls-force.rds'))
 needle.pcr <- read_rds(here('data', 'models', 'needle-pcr.rds'))
 herring.pls <- read_rds(here('data', 'models', 'herring-pls.rds'))
-herring.pls.forced <- read_rds(here('data', 'models', 'herring-pls-force.rds'))
 herring.pcr <- read_rds(here('data', 'models', 'herring-pcr.rds'))
 ```
 
@@ -46,74 +43,61 @@ herring.pcr <- read_rds(here('data', 'models', 'herring-pcr.rds'))
 
 ```{r message=FALSE, warning=FALSE}
 null.pls.summary <- pls.summary(null.pls)
-null.pls.forced.summary <- pls.summary(null.pls.forced)
 null.pcr.summary <- pcr.summary(null.pcr)
-
+beep(4)
 null.summary <-
-  full_join(null.pls.summary, null.pls.forced.summary, by = "Statistic") %>%
-  full_join(null.pcr.summary, by = "Statistic")
+  full_join(null.pls.summary, null.pcr.summary, by = "Statistic")
+
 write_excel_csv(null.summary, here("out", "null summary.csv"))
 ```
 
 
 ```{r message=FALSE, warning=FALSE}
 control.pls.summary <- pls.summary(control.pls)
-control.pls.forced.summary <- pls.summary(control.pls.forced)
 control.pcr.summary <- pcr.summary(control.pcr)
-
+beep(4)
 control.summary <-
-  full_join(control.pls.summary, control.pls.forced.summary, by = "Statistic") %>%
-  full_join(control.pcr.summary, by = "Statistic")
+  full_join(control.pls.summary, control.pcr.summary, by = "Statistic")
 write_excel_csv(control.summary, here("out", "control summary.csv"))
 ```
 
 
 ```{r message=FALSE, warning=FALSE}
 needle.pls.summary <- pls.summary(needle.pls)
-needle.pls.forced.summary <- pls.summary(needle.pls.forced)
 needle.pcr.summary <- pcr.summary(needle.pcr)
-
+beep(4)
 needle.summary <-
-  full_join(needle.pls.summary, needle.pls.forced.summary, by = "Statistic") %>%
-  full_join(needle.pcr.summary, by = "Statistic")
+  full_join(needle.pls.summary, needle.pcr.summary, by = "Statistic")
 write_excel_csv(needle.summary, here("out", "needle summary.csv"))
 ```
 
-Did I do something wrong because now 80% of the PCA-LR are significant?  Check manuscript and see if its close to the same.  These datasets should not be that different than the original.  Consider making "needle" smaller (~ 3 variables)
 
 ```{r}
 herring.pls.summary <- pls.summary(herring.pls)
-herring.pls.forced.summary <- pls.summary(herring.pls.forced)
 herring.pcr.summary <- pcr.summary(herring.pcr)
-
+beep(4)
 herring.summary <-
-  full_join(herring.pls.summary, herring.pls.forced.summary, by = "Statistic") %>% 
-  full_join(herring.pcr.summary, by = "Statistic")
+  full_join(herring.pls.summary, herring.pcr.summary, by = "Statistic")
 write_excel_csv(herring.summary, here("out", "herring summary.csv"))
 ```
 
 
+# Combine into one table
 
 ```{r}
-table1 <-
-  list(control = control.summary,
-       null = null.summary,
-       needle = needle.summary,
-       herring = herring.summary
-  ) %>%
-  bind_rows(.id = "Scenario")
-```
+stat_order <- c("n", "RMSEP", "R2X", "R2Y", "Q2", "%pR2 < 0.05", "%pQ2 < 0.05", "%p < 0.05")
 
-
-```{r}
-table1 <- table1 %>% 
-  # mutate(Scenario = fct_relevel(Scenario, "null", "control", "herring", "needle"),
-  #        Statistic = fct_relevel(Statistic,
-  #                                "n", "ncomp", "RMSEP", "R2X", "R2Y", "Q2", "pR2", "pQ2", "p")) %>% 
+outtable <- 
+  list(null.summary, control.summary, needle.summary) %>% 
+  map(~select(.x,Statistic, "PCA-LR" = ends_with("pcr"), "PLS-DA" = ends_with("pls"))) %>% 
+  set_names(c("No predictors", "Apparent predictors", "Hidden predictors")) %>%
+  bind_rows(.id = "Scenario") %>% 
+  filter(Statistic %in% stat_order) %>% 
+  mutate(Statistic = fct_relevel(Statistic, stat_order),
+         Scenario = fct_inorder(Scenario)) %>% 
   arrange(Scenario, Statistic)
-# write_excel_csv(table1, here("out", "model statistics table.csv"))
+
+write_excel_csv(outtable, here("out", "model statistics table.csv"), na = "-")
 ```
-
-
 
 

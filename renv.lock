@@ -196,6 +196,13 @@
       "Repository": "CRAN",
       "Hash": "50c838a310445e954bc13f26f26a6ecf"
     },
+    "audio": {
+      "Package": "audio",
+      "Version": "0.1-7",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "31dcf8bcc4b1d343d75fee98ee44550b"
+    },
     "backports": {
       "Package": "backports",
       "Version": "1.1.7",
@@ -209,6 +216,13 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "543776ae6848fde2f48ff3816d0628bc"
+    },
+    "beepr": {
+      "Package": "beepr",
+      "Version": "1.3",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "b3158a579ecef0e8f7626f4dadc369d0"
     },
     "bibtex": {
       "Package": "bibtex",
@@ -366,10 +380,15 @@
     },
     "dplyr": {
       "Package": "dplyr",
-      "Version": "0.8.5",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "57a42ddf80f429764ff7987128c3fd0a"
+      "Version": "0.8.99.9003",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteRepo": "dplyr",
+      "RemoteUsername": "tidyverse",
+      "RemoteRef": "master",
+      "RemoteSha": "8cc39f4cfccb85679e044ee31d7e9ee709e0081f",
+      "Hash": "5b517ce544c77cd24f57864cba2d126a"
     },
     "ellipsis": {
       "Package": "ellipsis",
@@ -839,6 +858,13 @@
       "Repository": "CRAN",
       "Hash": "8f7543203c7704d0d4032454f6516de7"
     },
+    "patchwork": {
+      "Package": "patchwork",
+      "Version": "1.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "16eee5b5edc41eec5af1149ccdc6b2c9"
+    },
     "pbkrtest": {
       "Package": "pbkrtest",
       "Version": "0.4-8.6",
@@ -873,13 +899,6 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "5e655fb54cceead0f095f22d7be33da3"
-    },
-    "plogr": {
-      "Package": "plogr",
-      "Version": "0.2.0",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "09eb987710984fc2905c7129c7d85e65"
     },
     "plyr": {
       "Package": "plyr",

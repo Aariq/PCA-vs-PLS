@@ -22,19 +22,6 @@ library(glue)
 library(latex2exp)
 ```
 
-```{r}
-# Function to get brackets to play nicely with ggplot2. Taken from https://stackoverflow.com/questions/35633239/add-curly-braces-to-ggplot2-and-then-use-ggsave
-
-library(pBrackets)
-bracketsGrob <- function(...){
-l <- list(...)
-e <- new.env()
-e$l <- l
-  grid:::recordGrob(  {
-    do.call(grid.brackets, l)
-  }, e)
-}
-```
 
 # Read in datasets
 I'll read in the datasets from "3-generating-datasets.Rmd" and pick individual datasets to make figures
@@ -72,7 +59,7 @@ null.cor.p <-
   ggplot(null.cor, aes(x = col, y = row, fill = cor)) +
   geom_tile() +
   scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-1,1)) +
-  labs(x = NULL, y = NULL, subtitle = '"Null"', fill = "r") +
+  labs(x = NULL, y = NULL, subtitle = '"No predictors"', fill = "r") +
   theme_minimal() +
   theme(legend.position = "right")
 
@@ -99,7 +86,7 @@ null.cor.p
 ## PCA and PLS-DA for Null
 
 ```{r}
-null.pcalr <- pca_lr(null, -group, group, CV = 7)
+null.pcalr <- pca_lr(null, -group, group, predI = 2, CV = 7)
 null.pca <- null.pcalr$pca
 null.pls <- opls(select(null, -group), null$group, fig.pdfC = "none", permI = 500, predI = 2)
 ```
@@ -137,7 +124,7 @@ needle.cor.p <-
   ggplot(needle.cor, aes(x = col, y = row, fill = cor)) +
   geom_tile() +
   scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-1,1)) +
-  labs(x = NULL, y = NULL, subtitle = '"Needle in a haystack"', fill = "r") +
+  labs(x = NULL, y = NULL, subtitle = '"Hidden predictors"', fill = "r") +
   theme_minimal() +
   theme(legend.position = "right")
 
@@ -169,7 +156,7 @@ needle.cor.p
 The PCA score plot still shows no real separation because the discriminating variables do not contribute much to the total covariation in the data.  The PLS-DA plot shows very strong separation, despite the differences between the groups being only due to 5 out of 25 variables.  The PLS-DA model performs well, with high R^2^ and Q^2^ values
 
 ```{r include=FALSE}
-needle.pcalr <- pca_lr(needle, -group, group, CV = 7)
+needle.pcalr <- pca_lr(needle, -group, group, predI = 2, CV = 7)
 needle.pca <- needle.pcalr$pca
 needle.pls <- opls(select(needle, -group), needle$group, fig.pdfC = "none", predI = 2, permI = 500)
 ```
@@ -207,7 +194,7 @@ control.cor.p <-
   ggplot(control.cor, aes(x = col, y = row, fill = cor)) +
   geom_tile() +
   scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-1,1)) +
-  labs(x = NULL, y = NULL, subtitle = '"Control"', fill = "r") +
+  labs(x = NULL, y = NULL, subtitle = '"Apparent predictors"', fill = "r") +
   theme_minimal()
 
 b1 <- bracketsGrob(10/25, 0, 0.005, 0, h = 0.05)
@@ -236,7 +223,7 @@ control.cor.p
 
 ```{r include=FALSE}
 control.pcalr <- pca_lr(control, -group, group,  CV = 7, predI = 2) 
-#force second axis so there is something to plot.
+
 control.pca <- control.pcalr$pca
 control.pls <- opls(select(control, -group), control$group, fig.pdfC = "none", predI = 2, permI = 500)
 ```
@@ -299,7 +286,7 @@ herring.cor.p
 ## PCA and PLS-DA for Red Herring
 
 ```{r}
-herring.pcalr <- pca_lr(herring, -group, group, CV = 7)
+herring.pcalr <- pca_lr(herring, -group, group, predI = 2, CV = 7)
 herring.pca <- herring.pcalr$pca
 herring.pls <- opls(select(herring, -group), null$group, fig.pdfC = "none", permI = 500, predI = 2)
 ```
@@ -327,57 +314,24 @@ Put Null, Control, and Needle together to make a figure.
 
 ```{r}
 fix_theme_cor <-
-  theme(legend.position = "none",
-        plot.subtitle = element_text(hjust = 0.5),
-        plot.margin = unit(c(0.5,0.5,1.5,0.5), "lines"))
+  theme(plot.subtitle = element_text(hjust = 0.5))
 
 fix_theme_score <-
   theme(legend.position = "none",
-        plot.margin = unit(c(0.5,0.5,0.5,0.5), "lines"))
-
-color.bar <- get_legend(needle.cor.p)
-
-three_scenarios <- 
-  plot_grid(null.cor.p + fix_theme_cor,
-            control.cor.p + fix_theme_cor,
-            needle.cor.p + fix_theme_cor,
-            null.pca.p + fix_theme_score,
-            control.pca.p + fix_theme_score,
-            needle.pca.p + fix_theme_score,
-            null.pls.p + fix_theme_score + labs(title = NULL),
-            control.pls.p + fix_theme_score + labs(title = NULL),
-            needle.pls.p + fix_theme_score + labs(title = NULL),
-            nrow = 3, ncol = 3, align = "v", axis = "l", labels = glue::glue("({letters[1:9]})"), label_x = 0.05) %>% 
-  plot_grid(color.bar, align = "h", axis = "t", rel_widths = c(12,1)) 
-
-three_scenarios %>%
-  save_plot(here("out", "three-scenarios.png"), ., ncol = 3, nrow = 3, base_height = 2.8, base_asp = 1.2)
-three_scenarios %>%
-  save_plot(here("out", "three-scenarios.eps"), ., ncol = 3, nrow = 3, base_height = 2.8, base_asp = 1.2)
+        plot.title = element_blank(),
+        panel.grid = element_blank())
 ```
 
-
-## Four Scenarios
-
-Make a plot with all four scenarios
 ```{r}
-four_scenarios <- 
-  plot_grid(null.cor.p + fix_theme_cor,
-            control.cor.p + fix_theme_cor,
-            needle.cor.p + fix_theme_cor,
-            herring.cor.p + fix_theme_cor,
-            null.pca.p + fix_theme_score,
-            control.pca.p + fix_theme_score,
-            needle.pca.p + fix_theme_score,
-            herring.pca.p + fix_theme_score,
-            null.pls.p + fix_theme_score + labs(title = NULL),
-            control.pls.p + fix_theme_score + labs(title = NULL),
-            needle.pls.p + fix_theme_score + labs(title = NULL),
-            herring.pls.p + fix_theme_score + labs(title = NULL),
-            nrow = 3, ncol = 4, align = "v", axis = "l", labels = glue::glue("({letters[1:12]})"), label_x = 0.05) %>% 
-  plot_grid(color.bar, align = "h", axis = "t", rel_widths = c(12,1)) 
+library(patchwork)
+# null.cor.p + control.cor.p + needle.cor.p + plot_layout(guides = "collect")
+# guides = "collect" currently broken with R 4.0.0, workaround until patchwork update:
+null.cor.p <- null.cor.p + theme(legend.position = "none")
+control.cor.p <- control.cor.p + theme(legend.position = "none")
 
-four_scenarios %>%
-  save_plot(here("out", "four-scenarios.png"), ., ncol = 4, nrow = 3, base_height = 2.8, base_asp = 1.2)
+(null.cor.p + control.cor.p + needle.cor.p & fix_theme_cor) /
+  (null.pca.p + control.pca.p + needle.pca.p & fix_theme_score) /
+  (null.pls.p + control.pls.p + needle.pls.p & fix_theme_score) +
+  plot_annotation(tag_levels = "a", tag_prefix = "(", tag_suffix = ")")
+ggsave(here("out", "three-scenarios.png"), width = 10, height = 9)
 ```
-

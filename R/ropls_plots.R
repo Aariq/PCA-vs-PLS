@@ -94,3 +94,16 @@ plot_plsda <- function(ropls_plsda, annotate = c("caption", "subtitle")){
                 none = p)
   out
 }
+
+
+# Function to get brackets to play nicely with ggplot2. Taken from https://stackoverflow.com/questions/35633239/add-curly-braces-to-ggplot2-and-then-use-ggsave
+
+library(pBrackets)
+bracketsGrob <- function(...){
+  l <- list(...)
+  e <- new.env()
+  e$l <- l
+  grid:::recordGrob(  {
+    do.call(grid.brackets, l)
+  }, e)
+}
