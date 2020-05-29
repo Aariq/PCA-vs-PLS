@@ -110,7 +110,14 @@ ss_scale <- function(x, f = 1) {
 ```{r}
 scaled_loadings <- get_loadings(tom.pca) %>% 
   mutate(p1 = ss_scale(p1, tom.pca.data$axis_stats$R2X[1]),
-         p2 = ss_scale(p2, tom.pca.data$axis_stats$R2X[2]))
+         p2 = ss_scale(p2, tom.pca.data$axis_stats$R2X[2])) %>% 
+  mutate(Variable = case_when(
+    Variable == "lma.leaflet" ~ "LMA",
+    Variable == "thick.vile" ~ "Thickness",
+    Variable == "ldmc" ~ "LDMC",
+    Variable == "wue" ~ "WUE",
+    TRUE ~ Variable
+  ))
 
 scaled_scores <- get_scores(tom.pca) %>% 
   mutate_if(is.numeric, ss_scale) %>% 
@@ -175,7 +182,14 @@ tom.pls <-
 tom.pls.data <- get_modelinfo(tom.pls)
 scaled_loadings <- get_loadings(tom.pls) %>% 
   mutate(p1 = ss_scale(p1, tom.pls.data$axis_stats$R2X[1]),
-         p2 = ss_scale(p2, tom.pls.data$axis_stats$R2X[2]))
+         p2 = ss_scale(p2, tom.pls.data$axis_stats$R2X[2])) %>% 
+    mutate(Variable = case_when(
+    Variable == "lma.leaflet" ~ "LMA",
+    Variable == "thick.vile" ~ "Thickness",
+    Variable == "ldmc" ~ "LDMC",
+    Variable == "wue" ~ "WUE",
+    TRUE ~ Variable
+  ))
 
 scaled_scores <- get_scores(tom.pls) %>% 
   mutate_if(is.numeric, ss_scale) %>% 
