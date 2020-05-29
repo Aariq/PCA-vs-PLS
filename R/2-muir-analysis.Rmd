@@ -93,29 +93,47 @@ pca.cor.plot
 ```
 ## Biplot
 
-Combines scores and loadings. I actually found a lot of **very confusing** and conflicting information on how to scale scores and loadings to make a bi-plot, so for now I've just multiplied the loadings by a factor that makes the plot look nice.
+Combines scores and loadings. I'm specifically making a *column-principal biplot* where the scores are in standard coordinates (sums of squares = 1 on each axis) and the loadings are in principal coordinates (sums of squares = variance explained by that axis).  This is according to
+
+Greenacre, M. & Primicerio, R. (2013) Ch12. Principal Component Analysis. In *Multivariate Analysis of Ecological Data*. pp. 151–161.
+
+```{r}
+#Function for scaling vectors to have a specific sum of squares. Shouts to Ben Tidswell for mathing this for me.
+ss_scale <- function(x, f = 1) {
+  center <- mean(x)
+  ss <- sum((x-center)^2)
+  out <- x/sqrt(ss/f)
+  return(out)
+}
+```
 
 ```{r}
 scaled_loadings <- get_loadings(tom.pca) %>% 
-  mutate_if(is.numeric, ~.*5)
-scaled_scores <- get_scores(tom.pca) 
-# prcomp(X, scale. = TRUE, rank. = 2) %>% biplot(scale = TRUE)
-# biplot.princomp() just plots the scores and loadings on different axes--not a true biplot?
+  mutate(p1 = ss_scale(p1, tom.pca.data$axis_stats$R2X[1]),
+         p2 = ss_scale(p2, tom.pca.data$axis_stats$R2X[2]))
 
-ggplot(scaled_loadings) +
-  geom_point(data = scaled_scores, aes(x = p1, y = p2, fill = tomato.filtered$precip),
-             shape = 21, size = 2, inherit.aes = FALSE) +
-  geom_segment(aes(x = 0, y = 0, xend = p1, yend = p2),
+scaled_scores <- get_scores(tom.pca) %>% 
+  mutate_if(is.numeric, ss_scale) %>% 
+  add_column(precip = tomato.filtered$precip)
+
+pca.biplot <- 
+  ggplot(scaled_scores) +
+  geom_point(aes(x = p1, y = p2, fill = precip),
+             shape = 21, size = 2) +
+  scale_fill_viridis_c() +
+  geom_segment(data = scaled_loadings, 
+               aes(x = 0, y = 0, xend = p1, yend = p2),
                alpha = 0.6,
                arrow = arrow(length = unit(0.15, "cm"))) +
-  geom_label_repel(aes(x = p1, y = p2, label = Variable),
+  geom_label_repel(data = scaled_loadings, 
+                   aes(x = p1, y = p2, label = Variable),
                    segment.alpha = 0.6, direction = "y", size = 2.7, 
                    min.segment.length = 5, force = 10) +
-  scale_fill_viridis_c() +
   labs(x = glue("PC1 ({tom.pca.data$axis_stats[1,1] * 100}%)"),
        y = glue("PC2 ({tom.pca.data$axis_stats[2,1] * 100}%)"),
        fill = "Annual Precipitation (mm)") +
   theme_bw()
+pca.biplot
 ```
 
 
@@ -156,24 +174,42 @@ tom.pls <-
 ```{r}
 tom.pls.data <- get_modelinfo(tom.pls)
 scaled_loadings <- get_loadings(tom.pls) %>% 
-  mutate_if(is.numeric, ~.*5)
+  mutate(p1 = ss_scale(p1, tom.pls.data$axis_stats$R2X[1]),
+         p2 = ss_scale(p2, tom.pls.data$axis_stats$R2X[2]))
 
-scaled_scores <- get_scores(tom.pls)
+scaled_scores <- get_scores(tom.pls) %>% 
+  mutate_if(is.numeric, ss_scale) %>% 
+  add_column(precip = tomato.filtered$precip)
   
-ggplot(scaled_loadings) +
-  geom_point(data = scaled_scores, aes(x = p1, y = p2, fill = tomato.filtered$precip),
-             shape = 21, size = 2, inherit.aes = FALSE) +
-  geom_segment(aes(x = 0, y = 0, xend = p1, yend = p2),
+pls.biplot <- 
+  ggplot(scaled_scores) +
+  geom_point(aes(x = p1, y = p2, fill = precip),
+             shape = 21, size = 2) +
+  scale_fill_viridis_c() +
+  geom_segment(data = scaled_loadings,
+               aes(x = 0, y = 0, xend = p1, yend = p2),
                alpha = 0.6,
                arrow = arrow(length = unit(0.15, "cm"))) +
-  geom_label_repel(aes(x = p1, y = p2, label = Variable),
+  geom_label_repel(data = scaled_loadings,
+                   aes(x = p1, y = p2, label = Variable),
                    segment.alpha = 0.6, direction = "y", size = 2.7, 
                    min.segment.length = 5, force = 10) +
-  scale_fill_viridis_c() +
   labs(x = glue("Predictive Component 1 ({tom.pls.data$axis_stats[1,1] * 100}%)"),
        y = glue("Predictive Component 2 ({tom.pls.data$axis_stats[2,1] * 100}%)"),
        fill = "Annual Precipitation (mm)") +
   theme_bw()
+pls.biplot
+```
+## Compose and output plot
+
+```{r}
+library(patchwork)
+patchwork <- 
+  pca.biplot + pls.biplot + plot_layout(guides = "collect") + plot_annotation(tag_levels = "A" ) & theme(panel.grid = element_blank())
+
+patchwork[[1]] <- patchwork[[1]] + theme(legend.position = "none")
+patchwork
+ggsave(here("out", "muir-biplots.png"), width = 10, height = 4)
 ```
 
 
