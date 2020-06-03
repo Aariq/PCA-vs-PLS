@@ -72,7 +72,7 @@ write_excel_csv(needle.summary, here("out", "needle summary.csv"))
 ```
 
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 herring.pls.summary <- pls.summary(herring.pls)
 herring.pcr.summary <- pcr.summary(herring.pcr)
 beep(4)

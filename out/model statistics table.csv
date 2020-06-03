@@ -1,14 +1,14 @@
 ﻿Scenario,Statistic,PCA-LR,PLS-DA
 No predictors,n,498,500
-No predictors,RMSEP,0.54 ± 0.025,0.656 ± 0.129
+No predictors,RMSEP,0.538 ± 0.024,0.654 ± 0.129
 No predictors,R2X,0.282 ± 0.015,0.192 ± 0.023
 No predictors,R2Y,0.107 ± 0.1,0.781 ± 0.091
 No predictors,Q2,-,-1.414 ± 1.213
-No predictors,%pR2 < 0.05,-,5
-No predictors,%pQ2 < 0.05,-,5
+No predictors,%pR2 < 0.05,-,4
+No predictors,%pQ2 < 0.05,-,4
 No predictors,%p < 0.05,8,-
 Apparent predictors,n,500,500
-Apparent predictors,RMSEP,0.434 ± 0.132,0.412 ± 0.112
+Apparent predictors,RMSEP,0.434 ± 0.13,0.414 ± 0.114
 Apparent predictors,R2X,0.662 ± 0.026,0.611 ± 0.042
 Apparent predictors,R2Y,0.981 ± 0.063,0.898 ± 0.042
 Apparent predictors,Q2,-,0.717 ± 0.13
@@ -16,7 +16,7 @@ Apparent predictors,%pR2 < 0.05,-,100
 Apparent predictors,%pQ2 < 0.05,-,99
 Apparent predictors,%p < 0.05,100,-
 Hidden predictors,n,498,500
-Hidden predictors,RMSEP,0.534 ± 0.065,0.38 ± 0.098
+Hidden predictors,RMSEP,0.533 ± 0.066,0.382 ± 0.102
 Hidden predictors,R2X,0.499 ± 0.042,0.405 ± 0.052
 Hidden predictors,R2Y,0.373 ± 0.268,0.905 ± 0.034
 Hidden predictors,Q2,-,0.675 ± 0.132

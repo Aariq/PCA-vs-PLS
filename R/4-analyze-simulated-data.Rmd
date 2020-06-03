@@ -64,6 +64,7 @@ null.pcr <-
   null.pcr.try %>%
   future_map("result") %>% #get only results
   discard(is.null) #get rid of any with NULL results (and therefore an error)
+beep(4)
 ```
 
 Any errors?
@@ -95,6 +96,7 @@ null.pls <-
   null.pls.try %>% 
   future_map("result") %>% 
   discard(is.null) 
+beep(4)
 ```
 
 Any errors?
@@ -103,7 +105,7 @@ Any errors?
 length(null.pls.try) - length(null.pls)
 ```
 
-None (because forced 2 components)
+None (because forced 3 components)
 
 ```{r}
 write_rds(null.pls, here("data", "models", "null-pls.rds"))
@@ -123,6 +125,7 @@ control.pcr <-
   control.pcr.try %>%
   future_map("result") %>% 
   discard(is.null)
+beep(4)
 ```
 
 This gives a bunch of convergence warnings, but it's just because fitted values are perfectly 0 or 1, which is safe to ignore (I believe).
@@ -152,7 +155,7 @@ control.pls <-
   control.pls.try %>% 
   future_map("result") %>% 
   discard(is.null)
-beep(sound = 4)
+beep(4)
 ```
 
 How many failed models?
@@ -162,8 +165,6 @@ length(control.pls.try) - length(control.pls)
 ```
 
 zero failed models
-
-How many components on average?
 
 Save em!
 
@@ -283,8 +284,6 @@ Any errors?
 ```{r}
 length(herring.pls.try) - length(herring.pls)
 ```
-
-
 
 Write em!
 
