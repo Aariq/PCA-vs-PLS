@@ -107,3 +107,12 @@ bracketsGrob <- function(...){
     do.call(grid.brackets, l)
   }, e)
 }
+
+
+#Function for scaling vectors to have a specific sum of squares. Shouts to Ben Tidswell for mathing this for me.
+ss_scale <- function(x, f = 1) {
+  center <- mean(x)
+  ss <- sum((x-center)^2)
+  out <- x/sqrt(ss/f)
+  return(out)
+}

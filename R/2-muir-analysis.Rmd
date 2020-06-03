@@ -97,15 +97,6 @@ Combines scores and loadings. I'm specifically making a *column-principal biplot
 
 Greenacre, M. & Primicerio, R. (2013) Ch12. Principal Component Analysis. In *Multivariate Analysis of Ecological Data*. pp. 151–161.
 
-```{r}
-#Function for scaling vectors to have a specific sum of squares. Shouts to Ben Tidswell for mathing this for me.
-ss_scale <- function(x, f = 1) {
-  center <- mean(x)
-  ss <- sum((x-center)^2)
-  out <- x/sqrt(ss/f)
-  return(out)
-}
-```
 
 ```{r}
 scaled_loadings <- get_loadings(tom.pca) %>% 
