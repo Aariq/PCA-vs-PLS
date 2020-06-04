@@ -380,15 +380,10 @@
     },
     "dplyr": {
       "Package": "dplyr",
-      "Version": "0.8.99.9003",
-      "Source": "GitHub",
-      "RemoteType": "github",
-      "RemoteHost": "api.github.com",
-      "RemoteRepo": "dplyr",
-      "RemoteUsername": "tidyverse",
-      "RemoteRef": "master",
-      "RemoteSha": "8cc39f4cfccb85679e044ee31d7e9ee709e0081f",
-      "Hash": "5b517ce544c77cd24f57864cba2d126a"
+      "Version": "1.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "4011f62581a34080e44105d4aa05a97f"
     },
     "ellipsis": {
       "Package": "ellipsis",

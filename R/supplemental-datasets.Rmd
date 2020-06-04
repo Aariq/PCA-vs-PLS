@@ -1,0 +1,149 @@
+---
+title: "Additional Scenarios"
+output: html_notebook
+---
+
+Here I'll simulate some additional scenarios for supplemental.
+
+1. Needle in a haystack
+
+Essentially a more extreme version of "hidden predictors". Many co-varying predictors, forming multiple axes of variation, that don't discriminate between groups, and only a few, uncorrelated, discriminating variables.
+
+2. Red Herring
+    - no discriminating variables
+    - 5 variables with cov = 0
+    - two groups of 10 variables with cov = 0.5
+    
+The idea here is that PCA-LR should find 2 principal components (on average), but neither will explain group membership.  PLS-DA should fail to find any significant components.
+
+# Packages
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(here)
+library(holodeck)
+library(ropls)
+library(furrr)
+source(here("R", "pcr.R"))
+source(here("R", "ropls_helpers.R"))
+source(here("R", "RMSEP.R"))
+```
+
+```{r message=FALSE, warning=FALSE}
+plan("multisession")
+```
+
+```{r}
+# these "safe" versions will never error, but return NULL if there is an error instead.
+safe_opls <- safely(partial(opls, info.txtC = "none", fig.pdfC = "none"), otherwise = NULL)
+safe_pcr <- safely(pca_lr, otherwise = NULL)
+```
+
+# Needle in a haystack
+
+Let's try to get like 3 or 4 main axes of variation and then a sprinkling of actually discriminating variables.
+
+```{r}
+# runif(1, 1, 1000)
+set.seed(152)
+needle <- future_map(1:100, ~{
+  sim_cat(n_obs = 20, n_groups = 2) %>% 
+  group_by(group) %>% 
+  sim_discr(n_vars = 5, var = 1, cov = 0, group_means = c(-1, 1), name = "D") %>% 
+  sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C1") %>% 
+  sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C2") %>% 
+  sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C3") %>% 
+  sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C4") %>% 
+  sim_covar(n_vars = 5, var = 1, cov = 0, name = "N") %>% 
+  ungroup()
+}) %>% set_names(paste0("needle_in_haystack_", 1:100))
+# needle[[1]]
+```
+
+
+## PCA-LR
+
+```{r}
+needle.pca <- 
+  future_map(needle, ~safe_pcr(.x, -group, group)) %>%
+  future_map("result") %>%
+  discard(is.null)
+
+get_loadings(needle.pca[[1]]$pca) %>%
+  arrange(desc(abs(p1)))
+```
+
+## PLS-DA
+
+```{r}
+needle.pls <-
+  future_map(needle, ~safe_opls(select(.x, -group), .x$group, permI = 200)) %>%
+  future_map("result") %>%
+  discard(is.null)
+```
+
+## Summary
+
+```{r}
+needle.pls.summary <- pls.summary(needle.pls)
+needle.pcr.summary <- pcr.summary(needle.pca)
+```
+
+```{r}
+needle.pcr.summary
+needle.pls.summary
+```
+
+# Red Herring
+
+
+```{r}
+herring <- 
+  future_map(1:500,
+             ~sim_cat(n_obs = 20, n_groups = 2) %>% 
+               sim_covar(n_vars = 5, var = 1, cov = 0, name = "N") %>% 
+               sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C1") %>% 
+               sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C2")
+  ) %>% 
+  set_names(paste0("herring_df_", 1:500))
+```
+
+## PCA-LR
+
+```{r}
+herring.pca <- 
+  future_map(herring, ~safe_pcr(.x, -group, group)) %>% 
+  future_map("result") %>%
+  discard(is.null)
+
+get_loadings(herring.pca[[1]]$pca) %>% arrange(desc(abs(p1)))
+```
+
+## PLS-DA
+
+```{r}
+herring.pls <-
+  future_map(herring, ~safe_opls(select(.x, -group), .x$group, permI = 200)) %>%
+  future_map("result") %>%
+  discard(is.null)
+```
+
+## Summary
+
+```{r}
+herring.pls.summary <- pls.summary(herring.pls)
+herring.pcr.summary <- pcr.summary(herring.pca)
+```
+
+```{r}
+herring.pcr.summary
+herring.pls.summary
+```
+
+The p-value % is misleading for PLS-DA since only 84 out of 500 even had 1 significant component.
+
+```{r}
+.48*84/500*100
+```
+
+It's really only 8% of the pQ2 < 0.05
