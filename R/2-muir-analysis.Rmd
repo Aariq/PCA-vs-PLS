@@ -16,6 +16,7 @@ library(glue)
 library(colorspace)
 library(ggrepel)
 source(here("R", "ropls_helpers.R"))
+source(here("R", "ropls_plots.R"))
 ```
 
 # Read in Data
@@ -232,4 +233,34 @@ loading.table <-
 
 loading.table
 write_csv(loading.table, here("out", "muir loading table.csv"))
+```
+# Correlations
+
+Make a table of axis correlations instead of loadings.  I think these are mathematically related.
+
+According to Cadima & Joliffe 1995:
+
+$$
+\rho_{ij} = a_{ij}\bigg(\frac{\lambda_i}{s_{ij}}\bigg)^{1/2}
+$$
+
+Where $a_{ij}$ is the loading for the $i$th variable in the $j$the PC, $\lambda$ is the eigenvalue of the PC, and $s_{ij}$ is the variance of the variable, which should be 1 because I scaled everything to unit variance.  So, it simplifies to:
+
+$$
+\rho_{ij} = a_{ij}\times \sqrt{\lambda_i}
+$$
+See also: https://stats.stackexchange.com/questions/143905/loadings-vs-eigenvectors-in-pca-when-to-use-one-or-another
+
+But, I'm just going to calculate this as the correlation between the scores and the data.
+
+
+```{r}
+pc1 <- get_scores(tom.pca)$p1
+p1 <- get_scores(tom.pls)$p1
+
+cor.table <- 
+  tibble(Variable = loading.table$Variable,
+       PCA = map_dbl(X, ~cor(.x, pc1)),
+       PLS = map_dbl(X, ~cor(.x, p1)))
+write_csv(cor.table, here("out", "muir correlation table.csv"))
 ```
