@@ -128,9 +128,10 @@ pca.biplot <-
                    aes(x = p1, y = p2, label = Variable),
                    segment.alpha = 0.6, direction = "y", size = 2.7, 
                    min.segment.length = 5, force = 10) +
-  labs(x = glue("PC1 ({tom.pca.data$axis_stats[1,1] * 100}%)"),
-       y = glue("PC2 ({tom.pca.data$axis_stats[2,1] * 100}%)"),
-       fill = "Annual Precipitation (mm)") +
+  labs(x = glue("Principal Component 1 ({tom.pca.data$axis_stats[1,1] * 100}%)"),
+       y = glue("Principal Component 2 ({tom.pca.data$axis_stats[2,1] * 100}%)"),
+       fill = "Annual Precipitation (mm)",
+       title = "Principal Components Analysis (PCA)") +
   theme_bw()
 pca.biplot
 ```
@@ -147,12 +148,18 @@ pcr.df2 <-
 ```
 
 ```{r}
-pcr2.precip <- lm(precip ~ p1, data = pcr.df2)
-pcr2.precip.a <- lm(precip ~ -1 + p1, data = pcr.df2)
+m0 <- lm(precip ~ 1, data = pcr.df2)
+m1 <- lm(precip ~ p1, data = pcr.df2)
+m2 <- lm(precip ~ p2, data = pcr.df2)
+m3 <- lm(precip ~ p1 + p2, data = pcr.df2)
 
-summary(pcr2.precip.a)
-
-car::Anova(pcr2.precip)
+car::Anova(m3)
+lrtest(m0, m1)
+summary(m1)
+lrtest(m0, m2)
+summary(m2)
+lrtest(m0, m3)
+summary(m3)
 ```
 
 
@@ -166,6 +173,8 @@ tom.pls <-
 #produces a single component model.  I will "force" two predictive axes for the sake of plotting.
 tom.pls <- 
   opls(X, tomato.filtered$precip, fig.pdfC = "none", predI = 2, permI = 1000)
+
+get_modelinfo(tom.pls)
 ```
 
 ## PLSR bi-plot
@@ -202,7 +211,8 @@ pls.biplot <-
                    min.segment.length = 5, force = 10) +
   labs(x = glue("Predictive Component 1 ({tom.pls.data$axis_stats[1,1] * 100}%)"),
        y = glue("Predictive Component 2 ({tom.pls.data$axis_stats[2,1] * 100}%)"),
-       fill = "Annual Precipitation (mm)") +
+       fill = "Annual Precipitation (mm)",
+       title = "Partial Least Squares (PLS) Regression") +
   theme_bw()
 pls.biplot
 ```
@@ -211,7 +221,10 @@ pls.biplot
 ```{r}
 library(patchwork)
 patchwork <- 
-  pca.biplot + pls.biplot + plot_layout(guides = "collect") + plot_annotation(tag_levels = "A" ) & theme(panel.grid = element_blank())
+  pca.biplot + pls.biplot +
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = "A") &
+  theme(panel.grid = element_blank())
 
 patchwork[[1]] <- patchwork[[1]] + theme(legend.position = "none")
 patchwork
