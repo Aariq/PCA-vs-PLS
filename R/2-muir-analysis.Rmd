@@ -15,6 +15,8 @@ library(ropls)
 library(glue)
 library(colorspace)
 library(ggrepel)
+library(lmtest)
+library(broom)
 source(here("R", "ropls_helpers.R"))
 source(here("R", "ropls_plots.R"))
 ```
@@ -35,63 +37,38 @@ tomato.filtered <-
 ```
 
 
-# PCA
+# PCA regression
 
 ```{r}
 X <-tomato.filtered %>% dplyr::select(lma.leaflet:Rdark)
 tom.pca <- opls(X, plotL = FALSE)
 ```
 
-## Score plot:
+Precipitation, is not significantly related to PC1 (i.e. the LES)
 
 ```{r}
 tom.pca.data <- get_plotdata(tom.pca)
-
-ggplot(tom.pca.data$scores, aes(x = p1, y = p2)) +
-  geom_point(aes(fill = tomato.filtered$precip), shape = 21, size = 2) +
-  scale_fill_viridis_c() +
-  labs(x = glue("PC1 ({tom.pca.data$axis_stats[1,1] * 100}%)"),
-       y = glue("PC2 ({tom.pca.data$axis_stats[2,1] * 100}%)"),
-       fill = "Annual Precipitation (mm)") +
-  theme_bw()
+pcr.df2 <-
+  tom.pca.data$scores %>% 
+  add_column(precip = tomato.filtered$precip)
 ```
-
-## Correlation plot
-
-PC1 is the leaf economics spectrum
 
 ```{r}
-pca.scores <- get_scores(tom.pca)
+m0 <- lm(precip ~ 1, data = pcr.df2)
+m1 <- lm(precip ~ p1, data = pcr.df2)
+m2 <- lm(precip ~ p2, data = pcr.df2)
+m3 <- lm(precip ~ p1 + p2, data = pcr.df2)
 
-pca.data <-
-  tom.pca@suppLs$xModelMN %>%
-  as_tibble()
+# car::Anova(m3)
+# lrtest(m0, m1)
+# summary(m1)
+# lrtest(m0, m2)
+# summary(m2)
+# lrtest(m0, m3)
+# summary(m3)
+```
 
-pca.cor.dat <-
-  cor(pca.scores[2:3], pca.data, use = "pairwise.complete.obs") %>%
-    t() %>%
-    as_tibble(rownames = "variable") %>% 
-  rowwise() %>% 
-  mutate(distance = sqrt(sum((c(p1, p2) - c(0, 0))^2))) %>% 
-  ungroup %>% 
-  mutate(t = distance * sqrt((65-2)/(1-distance^2))) %>% 
-  mutate(p.dist = pt(t, df = 65-2, lower.tail = FALSE)) %>% 
-  mutate(p.adj = p.adjust(p.dist, method = "bonf"))
-# pca.cor.dat
-```
-```{r}
-pca.cor.plot <-
-  ggplot(pca.cor.dat) +
-  geom_segment(aes(x = 0, y = 0, xend = p1, yend = p2),
-               arrow = arrow(length = unit(0.15, "cm"))) +
-  geom_label_repel(aes(x = p1, y = p2, label = variable),
-                   segment.alpha = 0.6, direction = "y", size = 2.7, 
-                   min.segment.length = 0, force = 3) +
-  theme_bw() +
-  labs(x = "Correlation to PC1",
-       y = "Correlation to PC2")
-pca.cor.plot
-```
+
 ## Biplot
 
 Combines scores and loadings. I'm specifically making a *column-principal biplot* where the scores are in standard coordinates (sums of squares = 1 on each axis) and the loadings are in principal coordinates (sums of squares = variance explained by that axis).  This is according to
@@ -115,6 +92,10 @@ scaled_scores <- get_scores(tom.pca) %>%
   mutate_if(is.numeric, ss_scale) %>% 
   add_column(precip = tomato.filtered$precip)
 
+
+xlab <- TeX(glue("Comp. 1 ($R^2_X = {tom.pca.data$axis_stats[1,1] * 100}%$, $R^2_Y = {round(glance(m1)$r.squared * 100, 1)}%$)"))
+ylab <- TeX(glue("Comp. 2 ($R^2_X = {tom.pca.data$axis_stats[2,1] * 100}%$, $R^2_Y = {round(glance(m2)$r.squared * 100, 1)}%$)"))
+
 pca.biplot <- 
   ggplot(scaled_scores) +
   geom_point(aes(x = p1, y = p2, fill = precip),
@@ -128,38 +109,12 @@ pca.biplot <-
                    aes(x = p1, y = p2, label = Variable),
                    segment.alpha = 0.6, direction = "y", size = 2.7, 
                    min.segment.length = 5, force = 10) +
-  labs(x = glue("Principal Component 1 ({tom.pca.data$axis_stats[1,1] * 100}%)"),
-       y = glue("Principal Component 2 ({tom.pca.data$axis_stats[2,1] * 100}%)"),
+  labs(x = xlab,
+       y = ylab,
        fill = "Annual Precipitation (mm)",
        title = "Principal Components Analysis (PCA)") +
   theme_bw()
 pca.biplot
-```
-
-
-# PCA regression
-
-Precipitation, is not significantly related to PC1 (i.e. the LES)
-
-```{r}
-pcr.df2 <-
-  tom.pca.data$scores %>% 
-  add_column(temp = tomato.filtered$temp, precip = tomato.filtered$precip)
-```
-
-```{r}
-m0 <- lm(precip ~ 1, data = pcr.df2)
-m1 <- lm(precip ~ p1, data = pcr.df2)
-m2 <- lm(precip ~ p2, data = pcr.df2)
-m3 <- lm(precip ~ p1 + p2, data = pcr.df2)
-
-car::Anova(m3)
-lrtest(m0, m1)
-summary(m1)
-lrtest(m0, m2)
-summary(m2)
-lrtest(m0, m3)
-summary(m3)
 ```
 
 
@@ -195,7 +150,9 @@ scaled_loadings <- get_loadings(tom.pls) %>%
 scaled_scores <- get_scores(tom.pls) %>% 
   mutate_if(is.numeric, ss_scale) %>% 
   add_column(precip = tomato.filtered$precip)
-  
+
+xlab <- TeX(glue("Comp. 1 ($R^2_X = {tom.pls.data$axis_stats[1,1] * 100}%$, $R^2_Y = {tom.pls.data$axis_stats[1,3] * 100}%$)"))
+ylab <- TeX(glue("Comp. 2 ($R^2_X = {tom.pls.data$axis_stats[2,1] * 100}%$, $R^2_Y = {tom.pls.data$axis_stats[2,3] * 100}%$)"))
 pls.biplot <- 
   ggplot(scaled_scores) +
   geom_point(aes(x = p1, y = p2, fill = precip),
@@ -209,8 +166,8 @@ pls.biplot <-
                    aes(x = p1, y = p2, label = Variable),
                    segment.alpha = 0.6, direction = "y", size = 2.7, 
                    min.segment.length = 5, force = 10) +
-  labs(x = glue("Predictive Component 1 ({tom.pls.data$axis_stats[1,1] * 100}%)"),
-       y = glue("Predictive Component 2 ({tom.pls.data$axis_stats[2,1] * 100}%)"),
+  labs(x = xlab,
+       y = ylab,
        fill = "Annual Precipitation (mm)",
        title = "Partial Least Squares (PLS) Regression") +
   theme_bw()
