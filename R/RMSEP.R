@@ -190,6 +190,10 @@ pls.summary <- function(pls) {
     summarize(n = as.character(n()),
               `%pR2 < 0.05` = as.character(round(sum(pR2<0.05)/n()*100), 2),
               `%pQ2 < 0.05` = as.character(round(sum(pQ2<0.05)/n()*100), 2),
+              num.ncomp1 = as.character(sum(ncomp == 1)),
+              num.ncomp2 = as.character(sum(ncomp == 2)),
+              num.ncomp3 = as.character(sum(ncomp ==3)),
+              num.ncompmore = as.character(sum(ncomp > 3)),
               across(where(is.numeric), meansd))
     
   summary_long <- 
@@ -220,6 +224,10 @@ pcr.summary <- function(pcr) {
     select(dataset, R2Y, p = p.value, RMSEP, R2X, ncomp) %>% 
     summarize(n = as.character(n()),
               `%p < 0.05` = as.character(round(sum(p<0.05)/n()*100), 2),
+              num.ncomp1 = as.character(sum(ncomp == 1)),
+              num.ncomp2 = as.character(sum(ncomp == 2)),
+              num.ncomp3 = as.character(sum(ncomp ==3)),
+              num.ncompmore = as.character(sum(ncomp > 3)),
               across(where(is.numeric), meansd))
   
   summary_long <- 

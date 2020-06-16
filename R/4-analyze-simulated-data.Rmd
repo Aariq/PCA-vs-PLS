@@ -14,6 +14,7 @@ For each simulated dataset in each of the three scenarios:
 - Do PLS-DA
 - Store results
   
+I'll do this both forcing 2 axes (predI = 2) as well as letting `opls()` decide how many axes to retain.
 
 # Packages and Functions
 
@@ -78,11 +79,28 @@ null.pcr.try %>%
 
 2 errors in PCA part, but also several convergence warnings in GLM part.
 
+### Allowing opls to choose ncomp
+
+```{r}
+null.pcr.auto.try <- 
+  null %>% 
+  future_map(~safe_pcr(.x, -group, group, CV = 7))
+# Get just the successful models
+null.pcr.auto <-
+  null.pcr.auto.try %>%
+  future_map("result") %>% #get only results
+  discard(is.null) #get rid of any with NULL results (and therefore an error)
+beep(4)
+```
+
+
 Save em!
 
 ```{r}
 write_rds(null.pcr, here("data", "models", "null-pcr.rds"))
+write_rds(null.pcr.auto, here("data", "models", "null-pcr-auto.rds"))
 ```
+
 
 ## Null PLSs
 
@@ -105,10 +123,26 @@ Any errors?
 length(null.pls.try) - length(null.pls)
 ```
 
-None (because forced 3 components)
+None (because forced 2 components)
+
+### Allowing opls to choose number of components
+
+```{r}
+null.pls.auto.try <-
+  null %>% 
+  future_map(~ safe_opls(select(., -group), .$group, permI = 500)) #map the opls
+
+# get just succesful models
+null.pls.auto <-
+  null.pls.auto.try %>% 
+  future_map("result") %>% 
+  discard(is.null) 
+beep(4)
+```
 
 ```{r}
 write_rds(null.pls, here("data", "models", "null-pls.rds"))
+write_rds(null.pls.auto, here("data", "models", "null-pls-auto.rds"))
 ```
 
 # Control
@@ -137,10 +171,26 @@ length(control.pcr.try) - length(control.pcr)
 ```
 no errors.
 
+### Allowing opls to decide how many components
+
+```{r message=FALSE, warning=FALSE}
+# map the pca function to all datasets
+control.pcr.auto.try <-
+  future_map(control,
+      ~safe_pcr(.x, -group, group, CV = 7))
+
+control.pcr.auto <-
+  control.pcr.auto.try %>%
+  future_map("result") %>% 
+  discard(is.null)
+beep(4)
+```
+
 Save em!
 
 ```{r}
 write_rds(control.pcr, here("data", "models", "control-pcr.rds"))
+write_rds(control.pcr.auto, here("data", "models", "control-pcr-auto.rds"))
 ```
 
 
@@ -165,11 +215,24 @@ length(control.pls.try) - length(control.pls)
 ```
 
 zero failed models
+### Allowing opls to decide how many components
 
+```{r}
+control.pls.auto.try <-
+  future_map(control,
+      ~ safe_opls(select(., -group), .$group, permI = 500))
+
+control.pls.auto <-
+  control.pls.auto.try %>% 
+  future_map("result") %>% 
+  discard(is.null)
+beep(4)
+```
 Save em!
 
 ```{r}
 write_rds(control.pls, here("data", "models", "control-pls.rds"))
+write_rds(control.pls.auto, here("data", "models", "control-pls-auto.rds"))
 ```
 
 # Needle in a haystack
@@ -200,8 +263,24 @@ needle.pcr.try %>%
 
 2 failed models due to the PCA part failing (exactly singular error)
 
+### Allowing opls to decide how many components
+
+```{r message=FALSE, warning=FALSE}
+needle.pcr.auto.try <-
+  future_map(needle,
+      ~safe_pcr(.x, -group, group, CV = 7))
+
+needle.pcr.auto <-
+  needle.pcr.auto.try %>% 
+  future_map("result") %>% 
+  discard(is.null)
+beep(4)
+```
+
+
 ```{r}
 write_rds(needle.pcr, here("data", "models", "needle-pcr.rds"))
+write_rds(needle.pcr.auto, here("data", "models", "needle-pcr-auto.rds"))
 ```
 
 ## Needle PLS-DAs
@@ -226,11 +305,23 @@ length(needle.pls.try) - length(needle.pls)
 
 zero errors
 
+```{r}
+needle.pls.auto.try <-
+  future_map(needle,
+      ~ safe_opls(select(., -group), .$group, permI = 500))
+
+needle.pls.auto <-
+  needle.pls.auto.try %>% 
+  future_map("result") %>% 
+  discard(is.null)
+beep(4)
+```
 
 Save 'em!
 
 ```{r}
 write_rds(needle.pls, here("data", "models", "needle-pls.rds"))
+write_rds(needle.pls.auto, here("data", "models", "needle-pls-auto.rds"))
 ```
 
 # Red Herring

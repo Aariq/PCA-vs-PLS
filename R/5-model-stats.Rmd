@@ -24,51 +24,85 @@ Setup parallelization with furrr
 plan(multiprocess)
 ```
 
-# Read in models
-These were output by "4-analyze-simulated-data.Rmd"
-
-```{r}
-control.pls <- read_rds(here('data', 'models', 'control-pls.rds'))
-control.pcr <- read_rds(here('data', 'models', 'control-pcr.rds'))
-null.pls <- read_rds(here('data', 'models', 'null-pls.rds'))
-null.pcr <- read_rds(here('data', 'models', 'null-pcr.rds'))
-needle.pls <- read_rds(here('data', 'models', 'needle-pls.rds'))
-needle.pcr <- read_rds(here('data', 'models', 'needle-pcr.rds'))
-herring.pls <- read_rds(here('data', 'models', 'herring-pls.rds'))
-herring.pcr <- read_rds(here('data', 'models', 'herring-pcr.rds'))
-```
-
 
 # Get Summary Stats
 
+## No Predictors
+
+```{r}
+null.pls <- read_rds(here('data', 'models', 'null-pls.rds'))
+null.pls.auto <- read_rds(here("data", "models", "null-pls-auto.rds"))
+null.pcr <- read_rds(here('data', 'models', 'null-pcr.rds'))
+null.pcr.auto <- read_rds(here("data", "models", "null-pcr-auto.rds"))
+```
+
 ```{r message=FALSE, warning=FALSE}
 null.pls.summary <- pls.summary(null.pls)
+null.pls.auto.summary <- pls.summary(null.pls.auto)
 null.pcr.summary <- pcr.summary(null.pcr)
+null.pcr.auto.summary <- pcr.summary(null.pcr.auto)
 beep(4)
 null.summary <-
-  full_join(null.pls.summary, null.pcr.summary, by = "Statistic")
+  full_join(null.pls.summary, null.pls.auto.summary, by = "Statistic") %>% 
+  full_join(null.pcr.summary) %>% full_join(null.pcr.auto.summary)
+# write_excel_csv(null.summary, here("out", "null summary.csv"))
+```
+```{r}
+rm(null.pls, null.pcr, null.pls.auto, null.pcr.auto)
+```
 
-write_excel_csv(null.summary, here("out", "null summary.csv"))
+## Apparent Predictors
+```{r}
+control.pls <- read_rds(here('data', 'models', 'control-pls.rds'))
+control.pls.auto <- read_rds(here("data", "models", "control-pls-auto.rds"))
+control.pcr <- read_rds(here('data', 'models', 'control-pcr.rds'))
+control.pcr.auto <- read_rds(here("data", "models", "control-pcr-auto.rds"))
 ```
 
 
 ```{r message=FALSE, warning=FALSE}
 control.pls.summary <- pls.summary(control.pls)
+control.pls.auto.summary <- pls.summary(control.pls.auto)
 control.pcr.summary <- pcr.summary(control.pcr)
+control.pcr.auto.summary <- pcr.summary(control.pcr.auto)
 beep(4)
 control.summary <-
-  full_join(control.pls.summary, control.pcr.summary, by = "Statistic")
-write_excel_csv(control.summary, here("out", "control summary.csv"))
+  full_join(control.pls.summary, control.pls.auto.summary, by = "Statistic") %>% 
+  full_join(control.pcr.summary) %>% full_join(control.pcr.auto.summary)
+# write_excel_csv(control.summary, here("out", "control summary.csv"))
+```
+```{r}
+rm(control.pls, control.pcr, control.pls.auto, control.pcr.auto)
 ```
 
+## Hidden Predictors
+
+```{r}
+needle.pls <- read_rds(here('data', 'models', 'needle-pls.rds'))
+needle.pls.auto <- read_rds(here("data", "models", "needle-pls-auto.rds"))
+needle.pcr <- read_rds(here('data', 'models', 'needle-pcr.rds'))
+needle.pcr.auto <- read_rds(here("data", "models", "needle-pcr-auto.rds"))
+```
 
 ```{r message=FALSE, warning=FALSE}
 needle.pls.summary <- pls.summary(needle.pls)
+needle.pls.auto.summary <- pls.summary(needle.pls.auto)
 needle.pcr.summary <- pcr.summary(needle.pcr)
+needle.pcr.auto.summary <- pcr.summary(needle.pcr.auto)
 beep(4)
 needle.summary <-
-  full_join(needle.pls.summary, needle.pcr.summary, by = "Statistic")
-write_excel_csv(needle.summary, here("out", "needle summary.csv"))
+  full_join(needle.pls.summary, needle.pls.auto.summary, by = "Statistic") %>% 
+  full_join(needle.pcr.summary) %>% full_join(needle.pcr.auto.summary)
+# write_excel_csv(needle.summary, here("out", "needle summary.csv"))
+```
+```{r}
+rm(needle.pls, needle.pcr, needle.pls.auto, needle.pcr.auto)
+```
+
+## "Red Herring"
+```{r}
+herring.pls <- read_rds(here('data', 'models', 'herring-pls.rds'))
+herring.pcr <- read_rds(here('data', 'models', 'herring-pcr.rds'))
 ```
 
 
@@ -80,16 +114,19 @@ herring.summary <-
   full_join(herring.pls.summary, herring.pcr.summary, by = "Statistic")
 write_excel_csv(herring.summary, here("out", "herring summary.csv"))
 ```
+```{r}
+rm(herring.pls, herring.pcr)
+```
 
 
 # Combine into one table
 
 ```{r}
-stat_order <- c("n", "RMSEP", "R2X", "R2Y", "Q2", "%pR2 < 0.05", "%pQ2 < 0.05", "%p < 0.05")
+stat_order <- c("n", "RMSEP", "R2X", "R2Y", "Q2", "%pR2 < 0.05", "%pQ2 < 0.05", "%p < 0.05", "ncomp", "num.ncomp1", "num.ncomp2", "num.ncomp3", "num.ncompmore")
 
 outtable <- 
   list(null.summary, control.summary, needle.summary) %>% 
-  map(~select(.x,Statistic, "PCA-LR" = ends_with("pcr"), "PLS-DA" = ends_with("pls"))) %>% 
+  map(~select(.x,Statistic, "PCA" = ends_with("pcr"), "PLS" = ends_with("pls"), "PCA (autofit)" = ends_with("pcr.auto"), "PLS (autofit)" = ends_with("pls.auto"))) %>% 
   set_names(c("No predictors", "Apparent predictors", "Hidden predictors")) %>%
   bind_rows(.id = "Scenario") %>% 
   filter(Statistic %in% stat_order) %>% 
