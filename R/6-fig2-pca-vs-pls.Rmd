@@ -341,207 +341,125 @@ ggsave(here("out", "three-scenarios.png"), width = 10, height = 9)
 
 Make biblots for each scenario for supplemental.
 
+```{r}
+y = rep(c("a", "b"), each = 10)
+mytheme <- theme_bw() + theme(panel.grid = element_blank(),
+                 text = element_text(size = 14))
+```
+
 
 ## No predictors bi-plot
 
-Get data and scale scores and loadings
 
 ```{r}
+null.pca.p <- my_biplot(null.pca, y)
 null.pca.stats <- get_modelinfo(null.pca)
-null.pcalr
-
-null.pca.load <-
-  get_loadings(null.pca) %>% 
-  mutate(p1 = ss_scale(p1, null.pca.stats$axis_stats$R2X[1]),
-         p2 = ss_scale(p2, null.pca.stats$axis_stats$R2X[2]))
-  
-null.pca.score <-
-  get_scores(null.pca) %>% 
-  mutate_if(is.numeric, ss_scale) %>% 
-  add_column(group = rep(c("a", "b"), each = 10))
-```
-
-```{r fig.height=3.5, fig.width=4.5}
-library(ggrepel)
-ggplot(null.pca.load) +
-  geom_point(data = null.pca.score,
-             aes(x = p1, y = p2, color = group),
-             size = 2) +
-  geom_segment(aes(x = 0, y = 0, xend = p1, yend = p2),
-               arrow = arrow(length = unit(0.15, "cm"))) +
-  geom_label_repel(data = null.pca.load, 
-                   aes(x = p1, y = p2, label = Variable),
-                   segment.alpha = 0.6, size = 2.7, 
-                   min.segment.length = 0) +
-  labs(x = glue("PC1 ({null.pca.stats$axis_stats[1,1] * 100}%)"),
-       y = glue("PC2 ({null.pca.stats$axis_stats[2,1] * 100}%)")) +
-  theme_bw() +
-  theme(panel.grid = element_blank(),
-        text = element_text(size = 14))
-ggsave(here("out", "supplemental", "null pca biplot.png"))
 ```
 
 
 ```{r}
-null.pls.stats <- get_modelinfo(null.pls)
+r2_1 <-pca_lr(null, -group, group, reg_pcs = 1, predI = 2, CV = 7)$mod.stats$R2Y
+r2_2 <-pca_lr(null, -group, group, reg_pcs = 2, predI = 2, CV = 7)$mod.stats$R2Y
+xlab <- TeX(glue("Comp. 1 ($R^2_X = {null.pca.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {round(r2_1*100, 2)}%$)"))
+ylab <- TeX(glue("Comp. 2 ($R^2_X = {null.pca.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {round(r2_2*100, 2)}%$)"))
 
-null.pls.load <-
-  get_loadings(null.pls) %>% 
-  mutate(p1 = ss_scale(p1, null.pls.stats$axis_stats$R2X[1]),
-         p2 = ss_scale(p2, null.pls.stats$axis_stats$R2X[2]))
-  
-null.pls.score <-
-  get_scores(null.pls) %>% 
-  mutate_if(is.numeric, ss_scale) %>% 
-  add_column(group = rep(c("a", "b"), each = 10))
+null.pca.p +
+  labs(x = xlab,
+       y = ylab,
+       color = "Group", shape = "Group") +
+  mytheme + coord_fixed()
+ggsave(here("out", "supplemental", "none pca biplot.png"), scale = 1.5)
+```
+```{r}
+null.pls.p <- my_biplot(null.pls)
+null.pls.stats <- get_modelinfo(null.pls)
 ```
 
-```{r fig.height=3.5, fig.width=4.5}
-library(ggrepel)
-ggplot(null.pls.load) +
-  geom_point(data = null.pls.score,
-             aes(x = p1, y = p2, color = group),
-             size = 2) +
-  geom_segment(aes(x = 0, y = 0, xend = p1, yend = p2),
-               arrow = arrow(length = unit(0.15, "cm"))) +
-  geom_label_repel(data = null.pls.load, 
-                   aes(x = p1, y = p2, label = Variable),
-                   segment.alpha = 0.6, size = 2.7, 
-                   min.segment.length = 0) +
-  labs(x = glue("P1 ({null.pls.stats$axis_stats[1,1] * 100}%)"),
-       y = glue("P2 ({null.pls.stats$axis_stats[2,1] * 100}%)")) +
-  theme_bw() +
-  theme(panel.grid = element_blank(),
-        text = element_text(size = 14))
-ggsave(here("out", "supplemental", "null pls biplot.png"))
+
+```{r}
+xlab <- TeX(glue("Comp. 1 ($R^2_X = {null.pls.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {null.pls.stats$axis_stats[1,3] * 100}%$)"))
+ylab <- TeX(glue("Comp. 2 ($R^2_X = {null.pls.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {null.pls.stats$axis_stats[2,3] * 100}%$)"))
+
+null.pls.p +
+  labs(x = xlab,
+       y = ylab,
+       color = "Group", shape = "Group") +
+  mytheme + coord_fixed()
+ggsave(here("out", "supplemental", "none pls biplot.png"), scale = 1.5)
 ```
 
 ## Apparent predictors
-
 ```{r}
+control.pca.p <- my_biplot(control.pca, group = y)
 control.pca.stats <- get_modelinfo(control.pca)
-
-control.pca.load <-
-  get_loadings(control.pca) %>% 
-  mutate(p1 = ss_scale(p1, control.pca.stats$axis_stats$R2X[1]),
-         p2 = ss_scale(p2, control.pca.stats$axis_stats$R2X[2]))
-  
-control.pca.score <-
-  get_scores(control.pca) %>% 
-  mutate_if(is.numeric, ss_scale) %>% 
-  add_column(group = rep(c("a", "b"), each = 10))
 ```
 
-```{r fig.height=3.5, fig.width=4.5}
-ggplot(control.pca.load) +
-  geom_point(data = control.pca.score,
-             aes(x = p1, y = p2, color = group),
-             size = 2) +
-  geom_segment(aes(x = 0, y = 0, xend = p1, yend = p2),
-               arrow = arrow(length = unit(0.15, "cm"))) +
-  geom_label_repel(aes(x = p1, y = p2, label = Variable),
-                   segment.alpha = 0.6, size = 2.7, 
-                   min.segment.length = 0) +
-  labs(x = glue("PC1 ({control.pca.stats$axis_stats[1,1] * 100}%)"),
-       y = glue("PC2 ({control.pca.stats$axis_stats[2,1] * 100}%)")) +
-  theme_bw() +
-  theme(panel.grid = element_blank(),
-        text = element_text(size = 14))
-ggsave(here("out", "supplemental", "control pca biplot.png"))
+```{r}
+r2_1 <-pca_lr(control, -group, group, reg_pcs = 1, predI = 2, CV = 7)$mod.stats$R2Y
+r2_2 <-pca_lr(control, -group, group, reg_pcs = 2, predI = 2, CV = 7)$mod.stats$R2Y
+xlab <- TeX(glue("Comp. 1 ($R^2_X = {control.pca.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {round(r2_1*100, 2)}%$)"))
+ylab <- TeX(glue("Comp. 2 ($R^2_X = {control.pca.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {round(r2_2*100, 2)}%$)"))
+
+control.pca.p +
+  labs(x = xlab,
+       y = ylab,
+       color = "Group", shape = "Group") +
+  mytheme + coord_fixed()
+ggsave(here("out", "supplemental", "apparent pca biplot.png"), scale = 1.5)
 ```
 ```{r}
+control.pls.p <- my_biplot(control.pls)
 control.pls.stats <- get_modelinfo(control.pls)
-
-control.pls.load <-
-  get_loadings(control.pls) %>% 
-  mutate(p1 = ss_scale(p1, control.pls.stats$axis_stats$R2X[1]),
-         p2 = ss_scale(p2, control.pls.stats$axis_stats$R2X[2]))
-  
-control.pls.score <-
-  get_scores(control.pls) %>% 
-  mutate_if(is.numeric, ss_scale) %>% 
-  add_column(group = rep(c("a", "b"), each = 10))
 ```
 
-```{r fig.height=3.5, fig.width=4.5}
-ggplot(control.pls.load) +
-  geom_point(data = control.pls.score,
-             aes(x = p1, y = p2, color = group),
-             size = 2) +
-  geom_segment(aes(x = 0, y = 0, xend = p1, yend = p2),
-               arrow = arrow(length = unit(0.15, "cm"))) +
-  geom_label_repel(aes(x = p1, y = p2, label = Variable),
-                   segment.alpha = 0.6, size = 2.7, 
-                   min.segment.length = 0) +
-  labs(x = glue("P1 ({control.pls.stats$axis_stats[1,1] * 100}%)"),
-       y = glue("P2 ({control.pls.stats$axis_stats[2,1] * 100}%)")) +
-  theme_bw() +
-  theme(panel.grid = element_blank(),
-        text = element_text(size = 14))
-ggsave(here("out", "supplemental", "control pls biplot.png"))
+```{r}
+xlab <- TeX(glue("Comp. 1 ($R^2_X = {control.pls.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {control.pls.stats$axis_stats[1,3] * 100}%$)"))
+ylab <- TeX(glue("Comp. 2 ($R^2_X = {control.pls.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {control.pls.stats$axis_stats[2,3] * 100}%$)"))
+
+control.pls.p +
+  labs(x = xlab,
+       y = ylab,
+       color = "Group", shape = "Group") +
+  mytheme + coord_fixed()
+ggsave(here("out", "supplemental", "apparent pls biplot.png"), scale =1.5)
 ```
 ## Hidden predictors
 ```{r}
+needle.pca.p <- my_biplot(needle.pca, group = y)
 needle.pca.stats <- get_modelinfo(needle.pca)
-
-needle.pca.load <-
-  get_loadings(needle.pca) %>% 
-  mutate(p1 = ss_scale(p1, needle.pca.stats$axis_stats$R2X[1]),
-         p2 = ss_scale(p2, needle.pca.stats$axis_stats$R2X[2]))
-  
-needle.pca.score <-
-  get_scores(needle.pca) %>% 
-  mutate_if(is.numeric, ss_scale) %>% 
-  add_column(group = rep(c("a", "b"), each = 10))
 ```
 
-```{r fig.height=3.5, fig.width=4.5}
-ggplot(needle.pca.load) +
-  geom_point(data = needle.pca.score,
-             aes(x = p1, y = p2, color = group),
-             size = 2) +
-  geom_segment(aes(x = 0, y = 0, xend = p1, yend = p2),
-               arrow = arrow(length = unit(0.15, "cm"))) +
-  geom_label_repel(aes(x = p1, y = p2, label = Variable),
-                   segment.alpha = 0.6, size = 2.7, 
-                   min.segment.length = 0) +
-  labs(x = glue("PC1 ({needle.pca.stats$axis_stats[1,1] * 100}%)"),
-       y = glue("PC2 ({needle.pca.stats$axis_stats[2,1] * 100}%)")) +
-  theme_bw() +
-  theme(panel.grid = element_blank(),
-        text = element_text(size = 14))
-ggsave(here("out", "supplemental", "needle pca biplot.png"))
+```{r}
+r2_1 <-pca_lr(needle, -group, group, reg_pcs = 1, predI = 2, CV = 7)$mod.stats$R2Y
+r2_2 <-pca_lr(needle, -group, group, reg_pcs = 2, predI = 2, CV = 7)$mod.stats$R2Y
+xlab <- TeX(glue("Comp. 1 ($R^2_X = {needle.pca.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {round(r2_1*100, 2)}%$)"))
+ylab <- TeX(glue("Comp. 2 ($R^2_X = {needle.pca.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {round(r2_2*100, 2)}%$)"))
+
+needle.pca.p +
+  labs(x = xlab,
+       y = ylab,
+       color = "Group", shape = "Group") +
+  mytheme +
+  coord_fixed()
+ggsave(here("out", "supplemental", "hidden pca biplot.png"), scale = 1.5)
 ```
 
 
 ```{r}
+needle.pls.p <- my_biplot(needle.pls)
 needle.pls.stats <- get_modelinfo(needle.pls)
-
-needle.pls.load <-
-  get_loadings(needle.pls) %>% 
-  mutate(p1 = ss_scale(p1, needle.pls.stats$axis_stats$R2X[1]),
-         p2 = ss_scale(p2, needle.pls.stats$axis_stats$R2X[2]))
-  
-needle.pls.score <-
-  get_scores(needle.pls) %>% 
-  mutate_if(is.numeric, ss_scale) %>% 
-  add_column(group = rep(c("a", "b"), each = 10))
 ```
 
-```{r fig.height=3.5, fig.width=4.5}
-ggplot(needle.pls.load) +
-  geom_point(data = needle.pls.score,
-             aes(x = p1, y = p2, color = group),
-             size = 2) +
-  geom_segment(aes(x = 0, y = 0, xend = p1, yend = p2),
-               arrow = arrow(length = unit(0.15, "cm"))) +
-  geom_label_repel(aes(x = p1, y = p2, label = Variable),
-                   segment.alpha = 0.6, size = 2.7, 
-                   min.segment.length = 0) +
-  labs(x = glue("P1 ({needle.pls.stats$axis_stats[1,1] * 100}%)"),
-       y = glue("P2 ({needle.pls.stats$axis_stats[2,1] * 100}%)")) +
-  theme_bw() +
-  theme(panel.grid = element_blank(),
-        text = element_text(size = 14))
-ggsave(here("out", "supplemental", "needle pls biplot.png"))
+```{r}
+xlab <- TeX(glue("Comp. 1 ($R^2_X = {needle.pls.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {needle.pls.stats$axis_stats[1,3] * 100}%$)"))
+ylab <- TeX(glue("Comp. 2 ($R^2_X = {needle.pls.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {needle.pls.stats$axis_stats[2,3] * 100}%$)"))
+
+
+needle.pls.p +
+  labs(x = xlab,
+       y = ylab,
+       color = "Group", shape = "Group") +
+  mytheme + 
+  coord_fixed()
+ggsave(here("out", "supplemental", "hidden pls biplot.png"), scale = 1.5)
 ```

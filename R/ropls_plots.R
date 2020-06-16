@@ -1,8 +1,7 @@
 library(latex2exp)
 library(ggplot2)
-
-#to appease R CMD check
-p1 <- p2 <- o1 <- y1 <- NULL
+library(glue)
+library(ggrepel)
 
 #' Plot PCA models created by `ropls::opls()`
 #'
@@ -115,4 +114,49 @@ ss_scale <- function(x, f = 1) {
   ss <- sum((x-center)^2)
   out <- x/sqrt(ss/f)
   return(out)
+}
+
+
+#' Plots a column-principal biplot of a PLS-DA or PCA made with ropls::opls()
+#' Makes a column-principal biplot where the scores are in standard coordinates
+#' (sums of squares = 1 on each axis) and the loadings are in principal
+#' coordinates (sums of squares = variance explained by that axis).  This is
+#' according to Greenacre, M. & Primicerio, R. (2013) Ch12. Principal Component
+#' Analysis. In *Multivariate Analysis of Ecological Data*. pp. 151–161.
+#' 
+#'
+#' @param model a PLS-DA or PCA produced with opls()
+#' @param group if PLS-DA, then this is extracted from the PLS-DA model.  For
+#'   PCA, please provide a grouping variable as a vector of the same length as
+#'   the data.
+#'
+#' @return a ggplot object
+#' 
+my_biplot <- function(model, group = NULL) {
+  
+  stats <- get_modelinfo(model)
+  
+  load <-
+    get_loadings(model) %>% 
+    mutate(p1 = ss_scale(p1, stats$axis_stats$R2X[1]),
+           p2 = ss_scale(p2, stats$axis_stats$R2X[2]))
+  
+  score <-
+    get_scores(model) %>% 
+    mutate_if(is.numeric, ss_scale)
+  
+  if (!is.null(group)) {
+    score <-  score %>% add_column(y1 = group)
+  }
+  
+  p <- ggplot(load) +
+    geom_point(data = score,
+               aes_string(x = "p1", y = "p2", color = "y1", shape = "y1"),
+               size = 2) +
+    geom_segment(aes(x = 0, y = 0, xend = p1, yend = p2),
+                 arrow = arrow(length = unit(0.15, "cm"))) +
+    geom_label_repel(aes(x = p1, y = p2, label = Variable),
+                     segment.alpha = 0.6, size = 2.7, 
+                     min.segment.length = 0) 
+  return(p)
 }

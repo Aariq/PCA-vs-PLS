@@ -14,8 +14,9 @@ source(here("R", "ropls_helpers.R"))
 #' @param X_vars 
 #' @param Y_var 
 #' @param data 
-#' @param reg_pcs how many pricipal components to use in the regression portion?
-#'   Either an integer or "max" to use all PCs retained by PCA as predictors
+#' @param reg_pcs which principal components to use in the regression portion?
+#'   Either a vector (e.g. 1:3 to use first three PCs) or "max" to use all PCs
+#'   retained by PCA as predictors
 #' @param ... other arguments passed to opls()
 #' @import glue
 #' @import rlang
@@ -66,11 +67,11 @@ pca_lr <- function(data, X_vars, Y_var, reg_pcs = "max", CV = 7, ...){
   if (reg_pcs == "max") {
     pcs <- glue("p{1:npcs}")
   } else {
-    if (reg_pcs > npcs) {
+    if (max(reg_pcs) > npcs) {
       warn(glue("Only {npcs} PCs were retained.  Using all PCs as predictors."))
       pcs <- glue("p{1:npcs}")
     } else {
-      pcs <- glue("p{1:reg_pcs}")
+      pcs <- glue("p{reg_pcs}")
     }
   }
   
