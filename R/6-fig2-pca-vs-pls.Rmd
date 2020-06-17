@@ -363,11 +363,13 @@ r2_2 <-pca_lr(null, -group, group, reg_pcs = 2, predI = 2, CV = 7)$mod.stats$R2Y
 xlab <- TeX(glue("Comp. 1 ($R^2_X = {null.pca.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {round(r2_1*100, 2)}%$)"))
 ylab <- TeX(glue("Comp. 2 ($R^2_X = {null.pca.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {round(r2_2*100, 2)}%$)"))
 
-null.pca.p +
+null.pca.p <- 
+  null.pca.p +
   labs(x = xlab,
        y = ylab,
        color = "Group", shape = "Group") +
-  mytheme + coord_fixed()
+  mytheme 
+null.pca.p
 ggsave(here("out", "supplemental", "none pca biplot.png"), scale = 1.5)
 ```
 ```{r}
@@ -380,11 +382,13 @@ null.pls.stats <- get_modelinfo(null.pls)
 xlab <- TeX(glue("Comp. 1 ($R^2_X = {null.pls.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {null.pls.stats$axis_stats[1,3] * 100}%$)"))
 ylab <- TeX(glue("Comp. 2 ($R^2_X = {null.pls.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {null.pls.stats$axis_stats[2,3] * 100}%$)"))
 
-null.pls.p +
+null.pls.p <- 
+  null.pls.p +
   labs(x = xlab,
        y = ylab,
        color = "Group", shape = "Group") +
-  mytheme + coord_fixed()
+  mytheme 
+null.pls.p
 ggsave(here("out", "supplemental", "none pls biplot.png"), scale = 1.5)
 ```
 
@@ -400,11 +404,13 @@ r2_2 <-pca_lr(control, -group, group, reg_pcs = 2, predI = 2, CV = 7)$mod.stats$
 xlab <- TeX(glue("Comp. 1 ($R^2_X = {control.pca.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {round(r2_1*100, 2)}%$)"))
 ylab <- TeX(glue("Comp. 2 ($R^2_X = {control.pca.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {round(r2_2*100, 2)}%$)"))
 
-control.pca.p +
+control.pca.p <- 
+  control.pca.p +
   labs(x = xlab,
        y = ylab,
        color = "Group", shape = "Group") +
-  mytheme + coord_fixed()
+  mytheme 
+control.pca.p
 ggsave(here("out", "supplemental", "apparent pca biplot.png"), scale = 1.5)
 ```
 ```{r}
@@ -416,11 +422,13 @@ control.pls.stats <- get_modelinfo(control.pls)
 xlab <- TeX(glue("Comp. 1 ($R^2_X = {control.pls.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {control.pls.stats$axis_stats[1,3] * 100}%$)"))
 ylab <- TeX(glue("Comp. 2 ($R^2_X = {control.pls.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {control.pls.stats$axis_stats[2,3] * 100}%$)"))
 
-control.pls.p +
+control.pls.p <- 
+  control.pls.p +
   labs(x = xlab,
        y = ylab,
        color = "Group", shape = "Group") +
-  mytheme + coord_fixed()
+  mytheme 
+control.pls.p
 ggsave(here("out", "supplemental", "apparent pls biplot.png"), scale =1.5)
 ```
 ## Hidden predictors
@@ -435,12 +443,13 @@ r2_2 <-pca_lr(needle, -group, group, reg_pcs = 2, predI = 2, CV = 7)$mod.stats$R
 xlab <- TeX(glue("Comp. 1 ($R^2_X = {needle.pca.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {round(r2_1*100, 2)}%$)"))
 ylab <- TeX(glue("Comp. 2 ($R^2_X = {needle.pca.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {round(r2_2*100, 2)}%$)"))
 
-needle.pca.p +
+needle.pca.p <- 
+  needle.pca.p +
   labs(x = xlab,
        y = ylab,
        color = "Group", shape = "Group") +
-  mytheme +
-  coord_fixed()
+  mytheme 
+needle.pca.p
 ggsave(here("out", "supplemental", "hidden pca biplot.png"), scale = 1.5)
 ```
 
@@ -455,11 +464,30 @@ xlab <- TeX(glue("Comp. 1 ($R^2_X = {needle.pls.stats$axis_stats[1,1] * 100}%$, 
 ylab <- TeX(glue("Comp. 2 ($R^2_X = {needle.pls.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {needle.pls.stats$axis_stats[2,3] * 100}%$)"))
 
 
-needle.pls.p +
+needle.pls.p <- 
+  needle.pls.p +
   labs(x = xlab,
        y = ylab,
        color = "Group", shape = "Group") +
-  mytheme + 
-  coord_fixed()
+  mytheme
+needle.pls.p
 ggsave(here("out", "supplemental", "hidden pls biplot.png"), scale = 1.5)
 ```
+
+## Combine Biplots
+
+I think I want 4 panels, PCA on the top, PLS on the bottom, apparent on the left, hidden on the right (to match figure 3)
+
+```{r fig.height=7, fig.width=7.5}
+(control.pca.p + labs(subtitle = "PCA", title = "Apparent Predictors"))+
+  (needle.pca.p + labs(subtitle = "PCA", title = "Hidden Predictors")) +
+  (control.pls.p + labs(subtitle = "PLS")) +
+  (needle.pls.p + labs(subtitle = "PLS")) &
+  theme(text = element_text(size=10),
+        legend.position = "none", plot.title = element_text(hjust=0.5, vjust = 9)) &
+  plot_annotation(tag_levels = "a", tag_prefix = "(", tag_suffix = ")")
+ggsave(here("out", "scenario biplots.png"))
+```
+
+
+
