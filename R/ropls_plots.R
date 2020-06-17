@@ -139,7 +139,8 @@ my_biplot <- function(model, group = NULL) {
   load <-
     get_loadings(model) %>% 
     mutate(p1 = ss_scale(p1, stats$axis_stats$R2X[1]),
-           p2 = ss_scale(p2, stats$axis_stats$R2X[2]))
+           p2 = ss_scale(p2, stats$axis_stats$R2X[2])) %>% 
+    mutate(type = str_extract(Variable, "\\w\\d?"))
   
   score <-
     get_scores(model) %>% 
@@ -151,12 +152,10 @@ my_biplot <- function(model, group = NULL) {
   
   p <- ggplot(load) +
     geom_point(data = score,
-               aes_string(x = "p1", y = "p2", color = "y1", shape = "y1"),
-               size = 2) +
-    geom_segment(aes(x = 0, y = 0, xend = p1, yend = p2),
-                 arrow = arrow(length = unit(0.15, "cm")), size = 0.2) +
-    geom_label_repel(aes(x = p1, y = p2, label = Variable),
-                     segment.alpha = 0.6, size = 2, 
-                     min.segment.length = 0) 
+               aes_string(x = "p1", y = "p2", shape = "y1"),
+               size = 2,
+               alpha = 0.7) +
+    geom_segment(aes(x = 0, y = 0, xend = p1, yend = p2, color = type),
+                 arrow = arrow(length = unit(0.15, "cm")), size = 0.5) 
   return(p)
 }

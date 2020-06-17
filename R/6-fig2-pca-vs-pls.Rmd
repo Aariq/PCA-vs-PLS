@@ -366,8 +366,8 @@ ylab <- TeX(glue("Comp. 2 ($R^2_X = {null.pca.stats$axis_stats[2,1] * 100}%$, $R
 null.pca.p <- 
   null.pca.p +
   labs(x = xlab,
-       y = ylab,
-       color = "Group", shape = "Group") +
+       y = ylab) +
+  scale_color_manual(values = c("N" = "grey30")) +
   mytheme 
 null.pca.p
 ggsave(here("out", "supplemental", "none pca biplot.png"), scale = 1.5)
@@ -385,8 +385,8 @@ ylab <- TeX(glue("Comp. 2 ($R^2_X = {null.pls.stats$axis_stats[2,1] * 100}%$, $R
 null.pls.p <- 
   null.pls.p +
   labs(x = xlab,
-       y = ylab,
-       color = "Group", shape = "Group") +
+       y = ylab) +
+  scale_color_manual(values = c("N" = "grey30")) +
   mytheme 
 null.pls.p
 ggsave(here("out", "supplemental", "none pls biplot.png"), scale = 1.5)
@@ -407,8 +407,8 @@ ylab <- TeX(glue("Comp. 2 ($R^2_X = {control.pca.stats$axis_stats[2,1] * 100}%$,
 control.pca.p <- 
   control.pca.p +
   labs(x = xlab,
-       y = ylab,
-       color = "Group", shape = "Group") +
+       y = ylab) +
+  scale_color_manual(values = c("D1" = "#9B0000", "D2" = "#FF3939", "N" = "grey30")) +
   mytheme 
 control.pca.p
 ggsave(here("out", "supplemental", "apparent pca biplot.png"), scale = 1.5)
@@ -425,8 +425,8 @@ ylab <- TeX(glue("Comp. 2 ($R^2_X = {control.pls.stats$axis_stats[2,1] * 100}%$,
 control.pls.p <- 
   control.pls.p +
   labs(x = xlab,
-       y = ylab,
-       color = "Group", shape = "Group") +
+       y = ylab) +
+    scale_color_manual(values = c("D1" = "#9B0000", "D2" = "#FF3939", "N" = "grey30")) +
   mytheme 
 control.pls.p
 ggsave(here("out", "supplemental", "apparent pls biplot.png"), scale =1.5)
@@ -446,8 +446,8 @@ ylab <- TeX(glue("Comp. 2 ($R^2_X = {needle.pca.stats$axis_stats[2,1] * 100}%$, 
 needle.pca.p <- 
   needle.pca.p +
   labs(x = xlab,
-       y = ylab,
-       color = "Group", shape = "Group") +
+       y = ylab) +
+    scale_color_manual(values = c("C1" = "#082568", "C2" = "#5777C0", "D" = "#9B0000")) +
   mytheme 
 needle.pca.p
 ggsave(here("out", "supplemental", "hidden pca biplot.png"), scale = 1.5)
@@ -467,8 +467,8 @@ ylab <- TeX(glue("Comp. 2 ($R^2_X = {needle.pls.stats$axis_stats[2,1] * 100}%$, 
 needle.pls.p <- 
   needle.pls.p +
   labs(x = xlab,
-       y = ylab,
-       color = "Group", shape = "Group") +
+       y = ylab) +
+      scale_color_manual(values = c("C1" = "#082568", "C2" = "#5777C0", "D" = "#9B0000")) +
   mytheme
 needle.pls.p
 ggsave(here("out", "supplemental", "hidden pls biplot.png"), scale = 1.5)
@@ -482,12 +482,11 @@ I think I want 4 panels, PCA on the top, PLS on the bottom, apparent on the left
 (control.pca.p + labs(subtitle = "PCA", title = "Apparent Predictors"))+
   (needle.pca.p + labs(subtitle = "PCA", title = "Hidden Predictors")) +
   (control.pls.p + labs(subtitle = "PLS")) +
-  (needle.pls.p + labs(subtitle = "PLS")) &
+  (needle.pls.p + labs(subtitle = "PLS")) & scale_shape_manual(values = c("a" = "circle", "b" = "triangle open")) &
   theme(text = element_text(size=10),
         legend.position = "none", plot.title = element_text(hjust=0.5, vjust = 9)) &
   plot_annotation(tag_levels = "a", tag_prefix = "(", tag_suffix = ")")
-ggsave(here("out", "scenario biplots.png"))
+ggsave(here("out", "simulation biplots.png"))
 ```
-
 
 
