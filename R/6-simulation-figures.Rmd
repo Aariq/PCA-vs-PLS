@@ -8,10 +8,10 @@ This generates figure 2 showing the correlation structure and results from PCA-L
 
 **IMPORTANT:** The random number generator in R was updated in version 3.6.0.  For this to be fully reproducible, run with version > 3.6.0
 
-```{r message=FALSE, warning=FALSE}
+```{r setup, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(ropls) #for opls(), which does pca and pls-da
-library(cowplot) #for plot_grid()
+# library(cowplot) #for plot_grid()
 theme_set(theme_gray())
 library(here)
 library(colorspace)
@@ -20,6 +20,7 @@ source(here("R", "ropls_helpers.R"))
 source(here("R", "pcr.R"))
 library(glue)
 library(latex2exp)
+library(patchwork)
 ```
 
 
@@ -333,7 +334,10 @@ control.cor.p <- control.cor.p + theme(legend.position = "none")
 (null.cor.p + control.cor.p + needle.cor.p & fix_theme_cor) /
   (null.pca.p + control.pca.p + needle.pca.p & fix_theme_score) /
   (null.pls.p + control.pls.p + needle.pls.p & fix_theme_score) +
-  plot_annotation(tag_levels = "a", tag_prefix = "(", tag_suffix = ")")
+  plot_annotation(tag_levels = "A",
+                  # tag_prefix = "(",
+                  # tag_suffix = ")"
+                  )
 ggsave(here("out", "three-scenarios.png"), width = 10, height = 9)
 ```
 
@@ -485,7 +489,7 @@ I think I want 4 panels, PCA on the top, PLS on the bottom, apparent on the left
   (needle.pls.p + labs(subtitle = "PLS")) & scale_shape_manual(values = c("a" = "circle", "b" = "triangle open")) &
   theme(text = element_text(size=10),
         legend.position = "none", plot.title = element_text(hjust=0.5, vjust = 9)) &
-  plot_annotation(tag_levels = "a", tag_prefix = "(", tag_suffix = ")")
+  plot_annotation(tag_levels = "A")
 ggsave(here("out", "simulation biplots.png"))
 ```
 
