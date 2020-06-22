@@ -1,5 +1,5 @@
 ---
-title: "PCA vs. PLS-DA"
+title: "PCA vs. PLS figures"
 author: "Eric R. Scott"
 output: html_notebook
 ---
@@ -11,16 +11,15 @@ This generates figure 2 showing the correlation structure and results from PCA-L
 ```{r setup, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(ropls) #for opls(), which does pca and pls-da
-# library(cowplot) #for plot_grid()
-theme_set(theme_gray())
 library(here)
-library(colorspace)
-source(here("R", "ropls_plots.R"))
-source(here("R", "ropls_helpers.R"))
-source(here("R", "pcr.R"))
 library(glue)
 library(latex2exp)
 library(patchwork)
+library(colorspace)
+
+source(here("R", "ropls_plots.R"))
+source(here("R", "ropls_helpers.R"))
+source(here("R", "pcr.R"))
 ```
 
 
@@ -28,10 +27,9 @@ library(patchwork)
 I'll read in the datasets from "3-generating-datasets.Rmd" and pick individual datasets to make figures
 
 ```{r}
-null.list <- read_rds(here::here("data", "null.rds"))
-control.list <- read_rds(here::here("data", "control.rds"))
-needle.list <- read_rds(here::here("data", "needle.rds"))
-herring.list <- read_rds(here::here("data", "red_herring.rds"))
+none.list <- read_rds(here::here("data", "none.rds"))
+apparent.list <- read_rds(here::here("data", "apparent.rds"))
+hidden.list <- read_rds(here::here("data", "hidden.rds"))
 ```
 
 Sample one dataset as an example
@@ -39,26 +37,25 @@ Sample one dataset as an example
 ```{r}
 # set.seed(719)
 set.seed(720)
-null <- sample(null.list, 1)[[1]]
-needle <- sample(needle.list, 1)[[1]]
-control <- sample(control.list, 1)[[1]]
-herring <- sample(herring.list, 1)[[1]]
+none <- sample(none.list, 1)[[1]]
+hidden <- sample(hidden.list, 1)[[1]]
+apparent <- sample(apparent.list, 1)[[1]]
 ```
 
-# Null
+# "No Predictors"
 
-## Correlation heatmap for Null
+## Correlation heatmap for "no predictors"
 
 ```{r}
-null.cor <-
-  null %>% 
+none.cor <-
+  none %>% 
   select(-group) %>% 
   cor() %>%
   as_tibble(rownames = "row") %>% 
   gather(-row, key = col, value = cor)
 
-null.cor.p <-
-  ggplot(null.cor, aes(x = col, y = row, fill = cor)) +
+none.cor.p <-
+  ggplot(none.cor, aes(x = col, y = row, fill = cor)) +
   geom_tile() +
   scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-1,1)) +
   labs(x = NULL, y = NULL, subtitle = '"No predictors"', fill = "r") +
@@ -70,8 +67,8 @@ b <- bracketsGrob(0.995, 0, 0.005, 0, h = 0.05)
 
 bracket_labels <- tibble(x = 13, y = -1.75, label = "N")
 
-null.cor.p <-
-  null.cor.p +
+none.cor.p <-
+  none.cor.p +
   coord_cartesian(ylim = c(1,25), clip = "off") + #allows brackets to show up off plot
   theme(
     axis.text = element_blank(), #turns off axis labels
@@ -81,49 +78,49 @@ null.cor.p <-
   annotation_custom(b) +
   geom_text(data = bracket_labels, inherit.aes = FALSE, aes(x=x, y=y, label = label))
 
-null.cor.p
+none.cor.p
 ```
 
 
-## PCA and PLS-DA for Null
+## PCA and PLS-DA for "No Predictors"
 
 ```{r}
-null.pcalr <- pca_lr(null, -group, group, predI = 2, CV = 7)
-null.pca <- null.pcalr$pca
-null.pls <- opls(select(null, -group), null$group, fig.pdfC = "none", permI = 500, predI = 2)
+none.pcalr <- pca_lr(none, -group, group, predI = 2, CV = 7)
+none.pca <- none.pcalr$pca
+none.pls <- opls(select(none, -group), none$group, fig.pdfC = "none", permI = 500, predI = 2)
 ```
 
-## Create plots for Null
+## Create plots for "No Predictors"
 
 ```{r message=FALSE, warning=FALSE}
-null.pca.p <-
-  plot_pca(null.pca, null$group, annotate = "subtitle") +
+none.pca.p <-
+  plot_pca(none.pca, none$group, annotate = "subtitle") +
   labs(title = NULL,
-       subtitle =TeX(glue("$R^2_Y = {signif(null.pcalr$mod.stats$R2Y, 2)}$; $p = {signif(null.pcalr$mod.stats$p.value, 2)}$"))) +
+       subtitle =TeX(glue("$R^2_Y = {signif(none.pcalr$mod.stats$R2Y, 2)}$; $p = {signif(none.pcalr$mod.stats$p.value, 2)}$"))) +
   scale_color_discrete_qualitative(palette = "Dark 3")
 
-null.pls.p <-
-  plot_plsda(null.pls, annotate = "subtitle") +
+none.pls.p <-
+  plot_plsda(none.pls, annotate = "subtitle") +
   scale_color_discrete_qualitative(palette = "Dark 3")
-null.pca.p
-null.pls.p
+none.pca.p
+none.pls.p
 ```
 
 
-# Needle in a haystack
+# "Hidden Predictors"
 
-## Correlation heatmap for needle-in-a-haystack
+## Correlation heatmap for "hidden predictors"
 
 ```{r}
-needle.cor <-
-  needle %>% 
+hidden.cor <-
+  hidden %>% 
   select(-group) %>% 
   cor() %>%
   as_tibble(rownames = "row") %>%  
   gather(-row, key = col, value = cor)
 
-needle.cor.p <-
-  ggplot(needle.cor, aes(x = col, y = row, fill = cor)) +
+hidden.cor.p <-
+  ggplot(hidden.cor, aes(x = col, y = row, fill = cor)) +
   geom_tile() +
   scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-1,1)) +
   labs(x = NULL, y = NULL, subtitle = '"Hidden predictors"', fill = "r") +
@@ -138,8 +135,8 @@ bracket_labels <- tibble(x = c(5.5, 15.5, 23), #where to put labels on x-axis
                          y = rep(-1.75, 3), #how far below bracket to place labels
                          label = c("C1", "C2", "D")) #labels for groups of variables
 
-needle.cor.p <-
-  needle.cor.p +
+hidden.cor.p <-
+  hidden.cor.p +
   coord_cartesian(ylim = c(1,25), clip = "off") + #allows brackets to show up off plot
   theme(
     axis.text = element_blank(), #turns off axis labels
@@ -150,50 +147,50 @@ needle.cor.p <-
   annotation_custom(b2) +
   annotation_custom(b3) +
   geom_text(data = bracket_labels, inherit.aes = FALSE, aes(x=x, y=y, label = label))
-needle.cor.p
+hidden.cor.p
 ```
 
-## PCA and PLS-DA for needle-in-a-haystack
+## PCA and PLS-DA for "hidden predictors"
 
 The PCA score plot still shows no real separation because the discriminating variables do not contribute much to the total covariation in the data.  The PLS-DA plot shows very strong separation, despite the differences between the groups being only due to 5 out of 25 variables.  The PLS-DA model performs well, with high R^2^ and Q^2^ values
 
 ```{r include=FALSE}
-needle.pcalr <- pca_lr(needle, -group, group, predI = 2, CV = 7)
-needle.pca <- needle.pcalr$pca
-needle.pls <- opls(select(needle, -group), needle$group, fig.pdfC = "none", predI = 2, permI = 500)
+hidden.pcalr <- pca_lr(hidden, -group, group, predI = 2, CV = 7)
+hidden.pca <- hidden.pcalr$pca
+hidden.pls <- opls(select(hidden, -group), hidden$group, fig.pdfC = "none", predI = 2, permI = 500)
 ```
 
-## Plots for needle-in-a-haystack
+## Plots for "hidden predictors"
 
 ```{r message=FALSE, warning=FALSE}
-needle.pca.p <-
-  plot_pca(needle.pca, needle$group, annotate = "subtitle") +
+hidden.pca.p <-
+  plot_pca(hidden.pca, hidden$group, annotate = "subtitle") +
   labs(title = NULL,
-       subtitle =TeX(glue("$R^2_Y = {signif(needle.pcalr$mod.stats$R2Y, 2)}$; $p = {signif(needle.pcalr$mod.stats$p.value, 2)}$"))) +
+       subtitle =TeX(glue("$R^2_Y = {signif(hidden.pcalr$mod.stats$R2Y, 2)}$; $p = {signif(hidden.pcalr$mod.stats$p.value, 2)}$"))) +
   scale_color_discrete_qualitative(palette = "Dark 3")
 
-needle.pls.p <-
-  plot_plsda(needle.pls, annotate = "subtitle") +
+hidden.pls.p <-
+  plot_plsda(hidden.pls, annotate = "subtitle") +
   scale_color_discrete_qualitative(palette = "Dark 3")
-needle.pca.p
-needle.pls.p
+hidden.pca.p
+hidden.pls.p
 ```
 
 
-# Control
+# "Apparent Predictors"
 
-## Correlation heatmap for Control
+## Correlation heatmap for "Apparent Predictors"
 
 ```{r}
-control.cor <-
-  control %>% 
+apparent.cor <-
+  apparent %>% 
   select(-group) %>% 
   cor() %>%
   as_tibble(rownames = "row") %>% 
   gather(-row, key = col, value = cor)
 
-control.cor.p <-
-  ggplot(control.cor, aes(x = col, y = row, fill = cor)) +
+apparent.cor.p <-
+  ggplot(apparent.cor, aes(x = col, y = row, fill = cor)) +
   geom_tile() +
   scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-1,1)) +
   labs(x = NULL, y = NULL, subtitle = '"Apparent predictors"', fill = "r") +
@@ -206,8 +203,8 @@ b3 <- bracketsGrob(0.995, 0, 20/25, 0, h = 0.05)
 bracket_labels <- tibble(x = c(5.5, 15.5, 23), #where to put labels on x-axis
                          y = rep(-1.75, 3), #how far below bracket to place labels
                          label = c("D1", "D2", "N")) #labels for groups of variables
-control.cor.p <-
-  control.cor.p +
+apparent.cor.p <-
+  apparent.cor.p +
   coord_cartesian(ylim = c(1,25), clip = "off") + #allows brackets to show up off plot
   theme(
     axis.text = element_blank(), #turns off axis labels
@@ -218,101 +215,38 @@ control.cor.p <-
   annotation_custom(b2) +
   annotation_custom(b3) +
   geom_text(data = bracket_labels, inherit.aes = FALSE, aes(x=x, y=y, label = label))
-control.cor.p
+apparent.cor.p
 ```
 
-## PCA and PLS-DA for Control
+## PCA and PLS-DA for "Apparent Predictors"
 
 ```{r include=FALSE}
-control.pcalr <- pca_lr(control, -group, group,  CV = 7, predI = 2) 
+apparent.pcalr <- pca_lr(apparent, -group, group,  CV = 7, predI = 2) 
 
-control.pca <- control.pcalr$pca
-control.pls <- opls(select(control, -group), control$group, fig.pdfC = "none", predI = 2, permI = 500)
+apparent.pca <- apparent.pcalr$pca
+apparent.pls <- opls(select(apparent, -group), apparent$group, fig.pdfC = "none", predI = 2, permI = 500)
 ```
 
-## Plots for Control
+## Plots for "Apparent Predictors"
 
 ```{r message=FALSE, warning=FALSE}
-control.pca.p <-
-  plot_pca(control.pca, control$group, annotate = "subtitle") +
+apparent.pca.p <-
+  plot_pca(apparent.pca, apparent$group, annotate = "subtitle") +
   labs(title = NULL,
        subtitle =TeX(glue("$R^2_Y = 0.99$; $p < 0.001$"))) +
   scale_color_discrete_qualitative(palette = "Dark 3")
 
-control.pls.p <-
-  plot_plsda(control.pls, annotate = "subtitle") +
+apparent.pls.p <-
+  plot_plsda(apparent.pls, annotate = "subtitle") +
   scale_color_discrete_qualitative(palette = "Dark 3")
-control.pca.p
-control.pls.p
-```
-# Red Herring
-
-## Correlation heatmap for Red Herring
-
-```{r}
-herring.cor <-
-  herring %>% 
-  select(-group) %>% 
-  cor() %>%
-  as_tibble(rownames = "row") %>% 
-  gather(-row, key = col, value = cor)
-
-herring.cor.p <-
-  ggplot(herring.cor, aes(x = col, y = row, fill = cor)) +
-  geom_tile() +
-  scale_fill_continuous_diverging(palette = "Blue-Red 3", limits = c(-1,1)) +
-  labs(x = NULL, y = NULL, subtitle = '"Red Herring"', fill = "r") +
-  theme_minimal()
-
-b1 <- bracketsGrob(10/25, 0, 0.005, 0, h = 0.05)
-b2 <- bracketsGrob(20/25, 0, 10/25, 0, h = 0.05)
-b3 <- bracketsGrob(0.995, 0, 20/25, 0, h = 0.05)
-
-bracket_labels <- tibble(x = c(5.5, 15.5, 23), #where to put labels on x-axis
-                         y = rep(-1.75, 3), #how far below bracket to place labels
-                         label = c("C1", "C2", "N")) #labels for groups of variables
-herring.cor.p <-
-  herring.cor.p +
-  coord_cartesian(ylim = c(1,25), clip = "off") + #allows brackets to show up off plot
-  theme(
-    axis.text = element_blank(), #turns off axis labels
-    axis.ticks = element_blank(), #turns off axis ticks
-    plot.margin = unit(c(1,1,1.5,1), "lines") #padds margin to make room
-  ) +
-  annotation_custom(b1) +
-  annotation_custom(b2) +
-  annotation_custom(b3) +
-  geom_text(data = bracket_labels, inherit.aes = FALSE, aes(x=x, y=y, label = label))
-herring.cor.p
-```
-## PCA and PLS-DA for Red Herring
-
-```{r}
-herring.pcalr <- pca_lr(herring, -group, group, predI = 2, CV = 7)
-herring.pca <- herring.pcalr$pca
-herring.pls <- opls(select(herring, -group), null$group, fig.pdfC = "none", permI = 500, predI = 2)
-```
-
-## Create plots for Null
-
-```{r message=FALSE, warning=FALSE}
-herring.pca.p <-
-  plot_pca(herring.pca, null$group, annotate = "subtitle") +
-  labs(title = NULL,
-       subtitle =TeX(glue("$R^2_Y = {signif(herring.pcalr$mod.stats$R2Y, 2)}$; $p = {signif(herring.pcalr$mod.stats$p.value, 2)}$"))) +
-  scale_color_discrete_qualitative(palette = "Dark 3")
-
-herring.pls.p <-
-  plot_plsda(herring.pls, annotate = "subtitle") +
-  scale_color_discrete_qualitative(palette = "Dark 3")
-herring.pca.p
-herring.pls.p
+apparent.pca.p
+apparent.pls.p
 ```
 
 # Make figure
 
 ## Three Scenarios
-Put Null, Control, and Needle together to make a figure.
+Put three scenarios together to make a figure.
 
 ```{r}
 fix_theme_cor <-
@@ -325,15 +259,14 @@ fix_theme_score <-
 ```
 
 ```{r}
-library(patchwork)
-# null.cor.p + control.cor.p + needle.cor.p + plot_layout(guides = "collect")
+# none.cor.p + apparent.cor.p + hidden.cor.p + plot_layout(guides = "collect")
 # guides = "collect" currently broken with R 4.0.0, workaround until patchwork update:
-null.cor.p <- null.cor.p + theme(legend.position = "none")
-control.cor.p <- control.cor.p + theme(legend.position = "none")
+none.cor.p <- none.cor.p + theme(legend.position = "none")
+apparent.cor.p <- apparent.cor.p + theme(legend.position = "none")
 
-(null.cor.p + control.cor.p + needle.cor.p & fix_theme_cor) /
-  (null.pca.p + control.pca.p + needle.pca.p & fix_theme_score) /
-  (null.pls.p + control.pls.p + needle.pls.p & fix_theme_score) +
+(none.cor.p + apparent.cor.p + hidden.cor.p & fix_theme_cor) /
+  (none.pca.p + apparent.pca.p + hidden.pca.p & fix_theme_score) /
+  (none.pls.p + apparent.pls.p + hidden.pls.p & fix_theme_score) +
   plot_annotation(tag_levels = "A",
                   # tag_prefix = "(",
                   # tag_suffix = ")"
@@ -343,7 +276,7 @@ ggsave(here("out", "three-scenarios.png"), width = 10, height = 9)
 
 # Biplots
 
-Make biblots for each scenario for supplemental.
+Make biplots for each scenario for supplemental.
 
 ```{r}
 y = rep(c("a", "b"), each = 10)
@@ -356,126 +289,120 @@ mytheme <- theme_bw() + theme(panel.grid = element_blank(),
 
 
 ```{r}
-null.pca.p <- my_biplot(null.pca, y)
-null.pca.stats <- get_modelinfo(null.pca)
+none.pca.bp <- my_biplot(none.pca, y)
+none.pca.stats <- get_modelinfo(none.pca)
 ```
 
 
 ```{r}
-r2_1 <-pca_lr(null, -group, group, reg_pcs = 1, predI = 2, CV = 7)$mod.stats$R2Y
-r2_2 <-pca_lr(null, -group, group, reg_pcs = 2, predI = 2, CV = 7)$mod.stats$R2Y
-xlab <- TeX(glue("Comp. 1 ($R^2_X = {null.pca.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {round(r2_1*100, 2)}%$)"))
-ylab <- TeX(glue("Comp. 2 ($R^2_X = {null.pca.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {round(r2_2*100, 2)}%$)"))
+r2_1 <-pca_lr(none, -group, group, reg_pcs = 1, predI = 2, CV = 7)$mod.stats$R2Y
+r2_2 <-pca_lr(none, -group, group, reg_pcs = 2, predI = 2, CV = 7)$mod.stats$R2Y
+xlab <- TeX(glue("Comp. 1 ($R^2_X = {none.pca.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {round(r2_1*100, 2)}%$)"))
+ylab <- TeX(glue("Comp. 2 ($R^2_X = {none.pca.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {round(r2_2*100, 2)}%$)"))
 
-null.pca.p <- 
-  null.pca.p +
+none.pca.bp <- 
+  none.pca.bp +
   labs(x = xlab,
        y = ylab) +
   scale_color_manual(values = c("N" = "grey30")) +
   mytheme 
-null.pca.p
-ggsave(here("out", "supplemental", "none pca biplot.png"), scale = 1.5)
+none.pca.bp
 ```
 ```{r}
-null.pls.p <- my_biplot(null.pls)
-null.pls.stats <- get_modelinfo(null.pls)
+none.pls.bp <- my_biplot(none.pls)
+none.pls.stats <- get_modelinfo(none.pls)
 ```
 
 
 ```{r}
-xlab <- TeX(glue("Comp. 1 ($R^2_X = {null.pls.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {null.pls.stats$axis_stats[1,3] * 100}%$)"))
-ylab <- TeX(glue("Comp. 2 ($R^2_X = {null.pls.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {null.pls.stats$axis_stats[2,3] * 100}%$)"))
+xlab <- TeX(glue("Comp. 1 ($R^2_X = {none.pls.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {none.pls.stats$axis_stats[1,3] * 100}%$)"))
+ylab <- TeX(glue("Comp. 2 ($R^2_X = {none.pls.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {none.pls.stats$axis_stats[2,3] * 100}%$)"))
 
-null.pls.p <- 
-  null.pls.p +
+none.pls.bp <- 
+  none.pls.bp +
   labs(x = xlab,
        y = ylab) +
   scale_color_manual(values = c("N" = "grey30")) +
   mytheme 
-null.pls.p
-ggsave(here("out", "supplemental", "none pls biplot.png"), scale = 1.5)
+none.pls.bp
 ```
 
 ## Apparent predictors
 ```{r}
-control.pca.p <- my_biplot(control.pca, group = y)
-control.pca.stats <- get_modelinfo(control.pca)
+apparent.pca.bp <- my_biplot(apparent.pca, group = y)
+apparent.pca.stats <- get_modelinfo(apparent.pca)
 ```
 
 ```{r}
-r2_1 <-pca_lr(control, -group, group, reg_pcs = 1, predI = 2, CV = 7)$mod.stats$R2Y
-r2_2 <-pca_lr(control, -group, group, reg_pcs = 2, predI = 2, CV = 7)$mod.stats$R2Y
-xlab <- TeX(glue("Comp. 1 ($R^2_X = {control.pca.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {round(r2_1*100, 2)}%$)"))
-ylab <- TeX(glue("Comp. 2 ($R^2_X = {control.pca.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {round(r2_2*100, 2)}%$)"))
+r2_1 <-pca_lr(apparent, -group, group, reg_pcs = 1, predI = 2, CV = 7)$mod.stats$R2Y
+r2_2 <-pca_lr(apparent, -group, group, reg_pcs = 2, predI = 2, CV = 7)$mod.stats$R2Y
+xlab <- TeX(glue("Comp. 1 ($R^2_X = {apparent.pca.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {round(r2_1*100, 2)}%$)"))
+ylab <- TeX(glue("Comp. 2 ($R^2_X = {apparent.pca.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {round(r2_2*100, 2)}%$)"))
 
-control.pca.p <- 
-  control.pca.p +
+apparent.pca.bp <- 
+  apparent.pca.bp +
   labs(x = xlab,
        y = ylab) +
   scale_color_manual(values = c("D1" = "#9B0000", "D2" = "#FF3939", "N" = "grey30")) +
   mytheme 
-control.pca.p
-ggsave(here("out", "supplemental", "apparent pca biplot.png"), scale = 1.5)
+apparent.pca.bp
 ```
 ```{r}
-control.pls.p <- my_biplot(control.pls)
-control.pls.stats <- get_modelinfo(control.pls)
+apparent.pls.bp <- my_biplot(apparent.pls)
+apparent.pls.stats <- get_modelinfo(apparent.pls)
 ```
 
 ```{r}
-xlab <- TeX(glue("Comp. 1 ($R^2_X = {control.pls.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {control.pls.stats$axis_stats[1,3] * 100}%$)"))
-ylab <- TeX(glue("Comp. 2 ($R^2_X = {control.pls.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {control.pls.stats$axis_stats[2,3] * 100}%$)"))
+xlab <- TeX(glue("Comp. 1 ($R^2_X = {apparent.pls.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {apparent.pls.stats$axis_stats[1,3] * 100}%$)"))
+ylab <- TeX(glue("Comp. 2 ($R^2_X = {apparent.pls.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {apparent.pls.stats$axis_stats[2,3] * 100}%$)"))
 
-control.pls.p <- 
-  control.pls.p +
+apparent.pls.bp <- 
+  apparent.pls.bp +
   labs(x = xlab,
        y = ylab) +
     scale_color_manual(values = c("D1" = "#9B0000", "D2" = "#FF3939", "N" = "grey30")) +
   mytheme 
-control.pls.p
-ggsave(here("out", "supplemental", "apparent pls biplot.png"), scale =1.5)
+apparent.pls.bp
 ```
 ## Hidden predictors
 ```{r}
-needle.pca.p <- my_biplot(needle.pca, group = y)
-needle.pca.stats <- get_modelinfo(needle.pca)
+hidden.pca.bp <- my_biplot(hidden.pca, group = y)
+hidden.pca.stats <- get_modelinfo(hidden.pca)
 ```
 
 ```{r}
-r2_1 <-pca_lr(needle, -group, group, reg_pcs = 1, predI = 2, CV = 7)$mod.stats$R2Y
-r2_2 <-pca_lr(needle, -group, group, reg_pcs = 2, predI = 2, CV = 7)$mod.stats$R2Y
-xlab <- TeX(glue("Comp. 1 ($R^2_X = {needle.pca.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {round(r2_1*100, 2)}%$)"))
-ylab <- TeX(glue("Comp. 2 ($R^2_X = {needle.pca.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {round(r2_2*100, 2)}%$)"))
+r2_1 <-pca_lr(hidden, -group, group, reg_pcs = 1, predI = 2, CV = 7)$mod.stats$R2Y
+r2_2 <-pca_lr(hidden, -group, group, reg_pcs = 2, predI = 2, CV = 7)$mod.stats$R2Y
+xlab <- TeX(glue("Comp. 1 ($R^2_X = {hidden.pca.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {round(r2_1*100, 2)}%$)"))
+ylab <- TeX(glue("Comp. 2 ($R^2_X = {hidden.pca.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {round(r2_2*100, 2)}%$)"))
 
-needle.pca.p <- 
-  needle.pca.p +
+hidden.pca.bp <- 
+  hidden.pca.bp +
   labs(x = xlab,
        y = ylab) +
     scale_color_manual(values = c("C1" = "#082568", "C2" = "#5777C0", "D" = "#9B0000")) +
   mytheme 
-needle.pca.p
-ggsave(here("out", "supplemental", "hidden pca biplot.png"), scale = 1.5)
+hidden.pca.bp
 ```
 
 
 ```{r}
-needle.pls.p <- my_biplot(needle.pls)
-needle.pls.stats <- get_modelinfo(needle.pls)
+hidden.pls.bp <- my_biplot(hidden.pls)
+hidden.pls.stats <- get_modelinfo(hidden.pls)
 ```
 
 ```{r}
-xlab <- TeX(glue("Comp. 1 ($R^2_X = {needle.pls.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {needle.pls.stats$axis_stats[1,3] * 100}%$)"))
-ylab <- TeX(glue("Comp. 2 ($R^2_X = {needle.pls.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {needle.pls.stats$axis_stats[2,3] * 100}%$)"))
+xlab <- TeX(glue("Comp. 1 ($R^2_X = {hidden.pls.stats$axis_stats[1,1] * 100}%$, $R^2_Y = {hidden.pls.stats$axis_stats[1,3] * 100}%$)"))
+ylab <- TeX(glue("Comp. 2 ($R^2_X = {hidden.pls.stats$axis_stats[2,1] * 100}%$, $R^2_Y = {hidden.pls.stats$axis_stats[2,3] * 100}%$)"))
 
 
-needle.pls.p <- 
-  needle.pls.p +
+hidden.pls.bp <- 
+  hidden.pls.bp +
   labs(x = xlab,
        y = ylab) +
       scale_color_manual(values = c("C1" = "#082568", "C2" = "#5777C0", "D" = "#9B0000")) +
   mytheme
-needle.pls.p
-ggsave(here("out", "supplemental", "hidden pls biplot.png"), scale = 1.5)
+hidden.pls.bp
 ```
 
 ## Combine Biplots
@@ -483,10 +410,10 @@ ggsave(here("out", "supplemental", "hidden pls biplot.png"), scale = 1.5)
 I think I want 4 panels, PCA on the top, PLS on the bottom, apparent on the left, hidden on the right (to match figure 3)
 
 ```{r fig.height=7, fig.width=7.5}
-(control.pca.p + labs(subtitle = "PCA", title = "Apparent Predictors"))+
-  (needle.pca.p + labs(subtitle = "PCA", title = "Hidden Predictors")) +
-  (control.pls.p + labs(subtitle = "PLS")) +
-  (needle.pls.p + labs(subtitle = "PLS")) & scale_shape_manual(values = c("a" = "circle", "b" = "triangle open")) &
+(apparent.pca.bp + labs(subtitle = "PCA", title = "Apparent Predictors"))+
+  (hidden.pca.bp + labs(subtitle = "PCA", title = "Hidden Predictors")) +
+  (apparent.pls.bp + labs(subtitle = "PLS")) +
+  (hidden.pls.bp + labs(subtitle = "PLS")) & scale_shape_manual(values = c("a" = "circle", "b" = "triangle open")) &
   theme(text = element_text(size=10),
         legend.position = "none", plot.title = element_text(hjust=0.5, vjust = 9)) &
   plot_annotation(tag_levels = "A")

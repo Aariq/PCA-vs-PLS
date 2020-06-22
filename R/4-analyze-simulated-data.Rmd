@@ -45,24 +45,23 @@ safe_pcr <- safely(pca_lr, otherwise = NULL)
 # Load Data
 
 ```{r}
-null <- read_rds(here("data", "null.rds"))
-needle <- read_rds(here("data", "needle.rds"))
-control <- read_rds(here("data", "control.rds"))
-herring <- read_rds(here("data", "red_herring.rds"))
+none <- read_rds(here("data", "none.rds"))
+hidden <- read_rds(here("data", "hidden.rds"))
+apparent <- read_rds(here("data", "apparent.rds"))
 ```
 
 
-# Null
+# "No Predictors"
 
-## Null PCAs
+## "No Predictors" PCAs
 
 ```{r}
-null.pcr.try <- 
-  null %>% 
+none.pcr.try <- 
+  none %>% 
   future_map(~safe_pcr(.x, -group, group, CV = 7, predI = 2))
 # Get just the successful models
-null.pcr <-
-  null.pcr.try %>%
+none.pcr <-
+  none.pcr.try %>%
   future_map("result") %>% #get only results
   discard(is.null) #get rid of any with NULL results (and therefore an error)
 beep(4)
@@ -71,8 +70,8 @@ beep(4)
 Any errors?
 
 ```{r}
-length(null.pcr.try) - length(null.pcr)
-null.pcr.try %>% 
+length(none.pcr.try) - length(none.pcr)
+none.pcr.try %>% 
   map("error") %>%
   unique()
 ```
@@ -82,12 +81,12 @@ null.pcr.try %>%
 ### Allowing opls to choose ncomp
 
 ```{r}
-null.pcr.auto.try <- 
-  null %>% 
+none.pcr.auto.try <- 
+  none %>% 
   future_map(~safe_pcr(.x, -group, group, CV = 7))
 # Get just the successful models
-null.pcr.auto <-
-  null.pcr.auto.try %>%
+none.pcr.auto <-
+  none.pcr.auto.try %>%
   future_map("result") %>% #get only results
   discard(is.null) #get rid of any with NULL results (and therefore an error)
 beep(4)
@@ -97,21 +96,21 @@ beep(4)
 Save em!
 
 ```{r}
-write_rds(null.pcr, here("data", "models", "null-pcr.rds"))
-write_rds(null.pcr.auto, here("data", "models", "null-pcr-auto.rds"))
+write_rds(none.pcr, here("data", "models", "none-pcr.rds"))
+write_rds(none.pcr.auto, here("data", "models", "none-pcr-auto.rds"))
 ```
 
 
-## Null PLSs
+## "No Predictors" PLSs
 
 ```{r}
-null.pls.try <-
-  null %>% 
+none.pls.try <-
+  none %>% 
   future_map(~ safe_opls(select(., -group), .$group, predI = 2, permI = 500)) #map the opls
 
 # get just succesful models
-null.pls <-
-  null.pls.try %>% 
+none.pls <-
+  none.pls.try %>% 
   future_map("result") %>% 
   discard(is.null) 
 beep(4)
@@ -120,7 +119,7 @@ beep(4)
 Any errors?
 
 ```{r}
-length(null.pls.try) - length(null.pls)
+length(none.pls.try) - length(none.pls)
 ```
 
 None (because forced 2 components)
@@ -128,35 +127,35 @@ None (because forced 2 components)
 ### Allowing opls to choose number of components
 
 ```{r}
-null.pls.auto.try <-
-  null %>% 
+none.pls.auto.try <-
+  none %>% 
   future_map(~ safe_opls(select(., -group), .$group, permI = 500)) #map the opls
 
 # get just succesful models
-null.pls.auto <-
-  null.pls.auto.try %>% 
+none.pls.auto <-
+  none.pls.auto.try %>% 
   future_map("result") %>% 
   discard(is.null) 
 beep(4)
 ```
 
 ```{r}
-write_rds(null.pls, here("data", "models", "null-pls.rds"))
-write_rds(null.pls.auto, here("data", "models", "null-pls-auto.rds"))
+write_rds(none.pls, here("data", "models", "none-pls.rds"))
+write_rds(none.pls.auto, here("data", "models", "none-pls-auto.rds"))
 ```
 
-# Control
+# "Apparent Predictors:
 
-## Control PCAs
+## "Apparent Predictors" PCAs
 
 ```{r message=FALSE, warning=FALSE}
 # map the pca function to all datasets
-control.pcr.try <-
-  future_map(control,
+apparent.pcr.try <-
+  future_map(apparent,
       ~safe_pcr(.x, -group, group, CV = 7, predI = 2))
 
-control.pcr <-
-  control.pcr.try %>%
+apparent.pcr <-
+  apparent.pcr.try %>%
   future_map("result") %>% 
   discard(is.null)
 beep(4)
@@ -167,7 +166,7 @@ This gives a bunch of convergence warnings, but it's just because fitted values 
 How many errors? 
 
 ```{r}
-length(control.pcr.try) - length(control.pcr)
+length(apparent.pcr.try) - length(apparent.pcr)
 ```
 no errors.
 
@@ -175,12 +174,12 @@ no errors.
 
 ```{r message=FALSE, warning=FALSE}
 # map the pca function to all datasets
-control.pcr.auto.try <-
-  future_map(control,
+apparent.pcr.auto.try <-
+  future_map(apparent,
       ~safe_pcr(.x, -group, group, CV = 7))
 
-control.pcr.auto <-
-  control.pcr.auto.try %>%
+apparent.pcr.auto <-
+  apparent.pcr.auto.try %>%
   future_map("result") %>% 
   discard(is.null)
 beep(4)
@@ -189,20 +188,20 @@ beep(4)
 Save em!
 
 ```{r}
-write_rds(control.pcr, here("data", "models", "control-pcr.rds"))
-write_rds(control.pcr.auto, here("data", "models", "control-pcr-auto.rds"))
+write_rds(apparent.pcr, here("data", "models", "apparent-pcr.rds"))
+write_rds(apparent.pcr.auto, here("data", "models", "apparent-pcr-auto.rds"))
 ```
 
 
-## Control PLS-DAs
+## "Apparent Predictors: PLS-DAs
 
 ```{r}
-control.pls.try <-
-  future_map(control,
+apparent.pls.try <-
+  future_map(apparent,
       ~ safe_opls(select(., -group), .$group, predI = 2, permI = 500))
 
-control.pls <-
-  control.pls.try %>% 
+apparent.pls <-
+  apparent.pls.try %>% 
   future_map("result") %>% 
   discard(is.null)
 beep(4)
@@ -211,19 +210,19 @@ beep(4)
 How many failed models?
 
 ```{r}
-length(control.pls.try) - length(control.pls)
+length(apparent.pls.try) - length(apparent.pls)
 ```
 
 zero failed models
 ### Allowing opls to decide how many components
 
 ```{r}
-control.pls.auto.try <-
-  future_map(control,
+apparent.pls.auto.try <-
+  future_map(apparent,
       ~ safe_opls(select(., -group), .$group, permI = 500))
 
-control.pls.auto <-
-  control.pls.auto.try %>% 
+apparent.pls.auto <-
+  apparent.pls.auto.try %>% 
   future_map("result") %>% 
   discard(is.null)
 beep(4)
@@ -231,21 +230,21 @@ beep(4)
 Save em!
 
 ```{r}
-write_rds(control.pls, here("data", "models", "control-pls.rds"))
-write_rds(control.pls.auto, here("data", "models", "control-pls-auto.rds"))
+write_rds(apparent.pls, here("data", "models", "apparent-pls.rds"))
+write_rds(apparent.pls.auto, here("data", "models", "apparent-pls-auto.rds"))
 ```
 
-# Needle in a haystack
+# "Hidden Predictors"
 
-## Needle PCAs
+## "Hidden Predictors" PCAs
 
 ```{r message=FALSE, warning=FALSE}
-needle.pcr.try <-
-  future_map(needle,
+hidden.pcr.try <-
+  future_map(hidden,
       ~safe_pcr(.x, -group, group, predI = 2, CV = 7))
 
-needle.pcr <-
-  needle.pcr.try %>% 
+hidden.pcr <-
+  hidden.pcr.try %>% 
   future_map("result") %>% 
   discard(is.null)
 beep(4)
@@ -254,9 +253,9 @@ beep(4)
 Any errors?
 
 ```{r}
-length(needle.pcr.try) - length(needle.pcr)
+length(hidden.pcr.try) - length(hidden.pcr)
 #What was the error?
-needle.pcr.try %>% 
+hidden.pcr.try %>% 
   future_map("error") %>% 
   unique()
 ```
@@ -266,12 +265,12 @@ needle.pcr.try %>%
 ### Allowing opls to decide how many components
 
 ```{r message=FALSE, warning=FALSE}
-needle.pcr.auto.try <-
-  future_map(needle,
+hidden.pcr.auto.try <-
+  future_map(hidden,
       ~safe_pcr(.x, -group, group, CV = 7))
 
-needle.pcr.auto <-
-  needle.pcr.auto.try %>% 
+hidden.pcr.auto <-
+  hidden.pcr.auto.try %>% 
   future_map("result") %>% 
   discard(is.null)
 beep(4)
@@ -279,19 +278,19 @@ beep(4)
 
 
 ```{r}
-write_rds(needle.pcr, here("data", "models", "needle-pcr.rds"))
-write_rds(needle.pcr.auto, here("data", "models", "needle-pcr-auto.rds"))
+write_rds(hidden.pcr, here("data", "models", "hidden-pcr.rds"))
+write_rds(hidden.pcr.auto, here("data", "models", "hidden-pcr-auto.rds"))
 ```
 
 ## Needle PLS-DAs
 
 ```{r}
-needle.pls.try <-
-  future_map(needle,
+hidden.pls.try <-
+  future_map(hidden,
       ~ safe_opls(select(., -group), .$group, predI = 2, permI = 500))
 
-needle.pls <-
-  needle.pls.try %>% 
+hidden.pls <-
+  hidden.pls.try %>% 
   future_map("result") %>% 
   discard(is.null)
 beep(4)
@@ -300,18 +299,18 @@ beep(4)
 Any errors?
 
 ```{r}
-length(needle.pls.try) - length(needle.pls)
+length(hidden.pls.try) - length(hidden.pls)
 ```
 
 zero errors
 
 ```{r}
-needle.pls.auto.try <-
-  future_map(needle,
+hidden.pls.auto.try <-
+  future_map(hidden,
       ~ safe_opls(select(., -group), .$group, permI = 500))
 
-needle.pls.auto <-
-  needle.pls.auto.try %>% 
+hidden.pls.auto <-
+  hidden.pls.auto.try %>% 
   future_map("result") %>% 
   discard(is.null)
 beep(4)
@@ -320,64 +319,7 @@ beep(4)
 Save 'em!
 
 ```{r}
-write_rds(needle.pls, here("data", "models", "needle-pls.rds"))
-write_rds(needle.pls.auto, here("data", "models", "needle-pls-auto.rds"))
+write_rds(hidden.pls, here("data", "models", "hidden-pls.rds"))
+write_rds(hidden.pls.auto, here("data", "models", "hidden-pls-auto.rds"))
 ```
 
-# Red Herring
-
-## Red Herring PCAs
-
-```{r message=FALSE, warning=FALSE}
-herring.pcr.try <-
-  future_map(herring,
-      ~safe_pcr(.x, -group, group, predI = 2, CV = 7))
-
-herring.pcr <-
-  herring.pcr.try %>% 
-  future_map("result") %>% 
-  discard(is.null)
-beep(4)
-```
-
-Any errors?
-
-```{r}
-length(herring.pcr.try) - length(herring.pcr)
-#What was the error?
-herring.pcr.try %>% 
-  future_map("error") %>% 
-  unique()
-```
-
-2 where the PCA errored.
-
-```{r}
-write_rds(herring.pcr, here("data", "models", "herring-pcr.rds"))
-```
-
-## Red Herring PLS-DAs
-
-```{r}
-herring.pls.try <-
-  future_map(herring,
-      ~ safe_opls(select(., -group), .$group, predI = 2, permI = 500))
-
-herring.pls <-
-  herring.pls.try %>% 
-  future_map("result") %>% 
-  discard(is.null)
-beep(4)
-```
-
-Any errors?
-
-```{r}
-length(herring.pls.try) - length(herring.pls)
-```
-
-Write em!
-
-```{r}
-write_rds(herring.pls, here("data", "models", "herring-pls.rds"))
-```

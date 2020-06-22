@@ -13,11 +13,10 @@ myseed <- 258
 #set up parallelization
 plan(multiprocess)
 ```
+
 **IMPORTANT:** These datasets were generated under R version 3.6.1.  The random number generator in R was updated in version 3.6.0.  For this to be fully reproducible, run with version > 3.6.0.
 
 **NOTE:** This script used the `furrr` package which adds parallelization support to `map()` and other functions from the `purrr` package.  If your machine doesn't support parallelization, or you run into problems, you can replace `future_map()` with `map()`.
-
-It makes sense to make randomly generated datasets under my three scenarios **once** and then save them as .RDS files.  Then, I can do comparisons of PCA and PLS-DA, pick individual datasets to make figures out of, etc. using these saved files.
 
 **For all datasets:**
 
@@ -25,83 +24,53 @@ It makes sense to make randomly generated datasets under my three scenarios **on
  - n_obs (number of observations) = 20
  - var (variation parameter, passed to mvrnorm) = 1
  - Number of groups = 2
- - Number of datasets generated = 100
+ - Number of datasets generated = 500
  
-**New Scenarios:**
-1. NULL
+**Scenarios:**
+1. "No predictors"
     - no discriminating variables
     - 25 variables with cov = 0
-    
-2. Correlated variables are not predictive ("red herring")
-    - no discriminating variables
-    - 5 variables with cov = 0
-    - two groups of 10 variables with cov = 0.5
 
-3. Correlated variables are predictive ("control")
+2. "Apparent predictors" (i.e. correlated variables are also predictive)
     - 5 variables with cov = 0
     - two groups of 10 variables that discriminate between groups with difference in means of 2 and cov = 0.5 
 
-4. Predictive variables are not correlated ("needle in a haystack")
+3. "Hidden Predictors" (i.e. predictive variables are not correlated and not the main axis of variation)
     - 5 variables that discriminate between groups with a difference in means of 2, cov = 0
     - two groups of 10 variables with cov = 0.5
 
 
 # Simulate Data
 
-## 1. NULL
+## 1. "No Predictors"
 
 ```{r}
 set.seed(myseed)
-null <-
+none <-
   future_map(1:500,
       ~ sim_cat(n_obs = 20, n_groups = 2) %>% 
         sim_covar(n_vars = 25, var = 1, cov = 0, name = "N")
   ) %>%
-  set_names(paste0("null_df_", 1:500))
+  set_names(paste0("none_df_", 1:500))
 ```
 
 Inspect one:
 
 ```{r}
 set.seed(myseed)
-null[[sample(1:500, 1)]] %>%
+none[[sample(1:500, 1)]] %>%
   dplyr::select(-group) %>% 
   cor() %>% 
   iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
 ```
 
-## 2. Correlated variables are not predictive ("red herring")
-    
-```{r}
-set.seed(myseed)
 
-herring <- 
-  future_map(1:500,
-             ~sim_cat(n_obs = 20, n_groups = 2) %>% 
-               sim_covar(n_vars = 5, var = 1, cov = 0, name = "N") %>% 
-               sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C1") %>% 
-               sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C2")
-  ) %>% 
-  set_names(paste0("herring_df_", 1:500))
-
-```
-
-Inspect one:
-
-```{r}
-set.seed(myseed)
-herring[[sample(1:500, 1)]] %>%
-  dplyr::select(-group) %>% 
-  cor() %>% 
-  iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
-```
-
-## 3. Correlated variables are predictive ("control")
+## 2. Apparent Predictors
 
 ```{r}
 set.seed(myseed)
 
-control <- 
+apparent <- 
   future_map(1:500,
              ~sim_cat(n_obs = 20, n_groups = 2) %>% 
                sim_covar(n_vars = 5, var = 1, cov = 0, name = "N") %>% 
@@ -110,27 +79,24 @@ control <-
                sim_discr(n_vars = 10, var = 1, cov = 0.5, group_means = c(1, -1), name = "D2") %>% 
                ungroup()
   ) %>% 
-  set_names(paste0("control_df_", 1:500))
+  set_names(paste0("apparent_df_", 1:500))
 ```
 
 Inspect one:
 
 ```{r}
 set.seed(myseed)
-control[[sample(1:500, 1)]] %>%
+apparent[[sample(1:500, 1)]] %>%
   dplyr::select(-group) %>% 
   cor() %>% 
   iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
 ```
 
-## 4. Predictive variables are not correlated ("needle in a haystack")
-
-
-Needle:
+## 3. "Hidden Predictors:
 
 ```{r}
 set.seed(myseed)
-needle <-
+hidden <-
   future_map(1:500,
       ~ sim_cat(n_obs = 20, n_groups = 2) %>% 
         sim_covar(n_vars = 10, var = 1, cov = 0.5, name = "C1") %>% 
@@ -139,13 +105,13 @@ needle <-
         sim_discr(n_vars = 5, var = 1, cov = 0, group_means = c(-1, 1), name = "D") %>% 
         ungroup()
   ) %>%
-  set_names(paste0("needle_in_haystack_", 1:500))
+  set_names(paste0("hidden", 1:500))
 ```
 
 Inspect one:
 
 ```{r}
-needle[[sample(1:500, 1)]] %>%
+hidden[[sample(1:500, 1)]] %>%
   dplyr::select(-group) %>% 
   cor() %>% 
   iheatmap(row_labels = TRUE, col_labels = TRUE, name = "cor")
@@ -153,9 +119,8 @@ needle[[sample(1:500, 1)]] %>%
 
 
 ```{r}
-write_rds(null, here("data", "null.rds"))
-write_rds(needle, here("data", "needle.rds"))
-write_rds(control, here("data", "control.rds"))
-write_rds(herring, here("data", "red_herring.rds"))
+write_rds(none, here("data", "none.rds"))
+write_rds(hidden, here("data", "hidden.rds"))
+write_rds(apparent, here("data", "apparent.rds"))
 ```
 
