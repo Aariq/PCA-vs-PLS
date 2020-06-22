@@ -17,6 +17,8 @@ library(colorspace)
 library(ggrepel)
 library(lmtest)
 library(broom)
+library(patchwork)
+
 source(here("R", "ropls_helpers.R"))
 source(here("R", "ropls_plots.R"))
 ```
@@ -176,7 +178,6 @@ pls.biplot
 ## Compose and output plot
 
 ```{r}
-library(patchwork)
 patchwork <- 
   pca.biplot + pls.biplot +
   plot_layout(guides = "collect") +

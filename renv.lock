@@ -31,19 +31,6 @@
       "Source": "Bioconductor",
       "Hash": "ae191b5608f175de0f69b6302390c705"
     },
-    "BiocManager": {
-      "Package": "BiocManager",
-      "Version": "1.30.10",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "db75371846625725e221470b310da1d5"
-    },
-    "BiocVersion": {
-      "Package": "BiocVersion",
-      "Version": "3.11.1",
-      "Source": "Bioconductor",
-      "Hash": "2331d61d077a7a0a5afe8c907ea9106b"
-    },
     "DBI": {
       "Package": "DBI",
       "Version": "1.1.0",
