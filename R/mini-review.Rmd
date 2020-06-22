@@ -13,11 +13,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
 
-*Last compiled: `r Sys.Date()`*
-
-```{r packages, include=FALSE}
 library(tidyverse)
 library(here)
 library(googlesheets4)
@@ -27,6 +23,8 @@ library(rcrossref)
 library(ggforce)
 library(limma)
 ```
+
+*Last compiled: `r Sys.Date()`*
 
 # Mini-review methods
 
