@@ -271,7 +271,7 @@ apparent.cor.p <- apparent.cor.p + theme(legend.position = "none")
                   # tag_prefix = "(",
                   # tag_suffix = ")"
                   )
-ggsave(here("out", "three-scenarios.png"), width = 10, height = 9)
+ggsave(here("out", "three-scenarios.png"), width = 9.5, height = 8.5)
 ```
 
 # Biplots
@@ -409,7 +409,7 @@ hidden.pls.bp
 
 I think I want 4 panels, PCA on the top, PLS on the bottom, apparent on the left, hidden on the right (to match figure 3)
 
-```{r fig.height=7, fig.width=7.5}
+```{r fig.height=6, fig.width=6.5}
 (apparent.pca.bp + labs(subtitle = "PCA", title = "Apparent Predictors"))+
   (hidden.pca.bp + labs(subtitle = "PCA", title = "Hidden Predictors")) +
   (apparent.pls.bp + labs(subtitle = "PLS")) +

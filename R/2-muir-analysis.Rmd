@@ -102,7 +102,7 @@ pca.biplot <-
   ggplot(scaled_scores) +
   geom_point(aes(x = p1, y = p2, fill = precip),
              shape = 21, size = 2) +
-  scale_fill_viridis_c() +
+  scale_fill_viridis_b(guide = guide_bins(reverse = TRUE, show.limits = TRUE, title.vjust = 2)) +
   geom_segment(data = scaled_loadings, 
                aes(x = 0, y = 0, xend = p1, yend = p2),
                alpha = 0.6,
@@ -114,7 +114,7 @@ pca.biplot <-
   labs(x = xlab,
        y = ylab,
        fill = "Annual Precipitation (mm)",
-       title = "Principal Components Analysis (PCA)") +
+       subtitle = "Principal Components Analysis (PCA)") +
   theme_bw()
 pca.biplot
 ```
@@ -159,7 +159,7 @@ pls.biplot <-
   ggplot(scaled_scores) +
   geom_point(aes(x = p1, y = p2, fill = precip),
              shape = 21, size = 2) +
-  scale_fill_viridis_c() +
+  scale_fill_viridis_b(guide = guide_bins(reverse = TRUE, show.limits = TRUE, title.vjust = 2)) +
   geom_segment(data = scaled_loadings,
                aes(x = 0, y = 0, xend = p1, yend = p2),
                alpha = 0.6,
@@ -171,7 +171,7 @@ pls.biplot <-
   labs(x = xlab,
        y = ylab,
        fill = "Annual Precipitation (mm)",
-       title = "Partial Least Squares (PLS) Regression") +
+       subtitle = "Partial Least Squares (PLS) Regression") +
   theme_bw()
 pls.biplot
 ```
@@ -179,14 +179,14 @@ pls.biplot
 
 ```{r}
 patchwork <- 
-  pca.biplot + pls.biplot +
+  pca.biplot + pls.biplot  +
   plot_layout(guides = "collect") +
   plot_annotation(tag_levels = "A") &
-  theme(panel.grid = element_blank())
+  theme(panel.grid = element_blank()) &
+  labs(fill = "Precip. (mm)")
 
-patchwork[[1]] <- patchwork[[1]] + theme(legend.position = "none")
 patchwork
-ggsave(here("out", "muir-biplots.png"), width = 10, height = 4)
+ggsave(here("out", "muir-biplots.png"), width = 9, height = 4)
 ```
 
 
