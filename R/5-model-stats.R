@@ -33,6 +33,16 @@ none.summary <-
   full_join(none.pcr.summary) %>% full_join(none.pcr.auto.summary)
 # write_excel_csv(none.summary, here("out", "none summary.csv"))
 
+### how often is each axis significant?
+none.anova <-
+  none.pcr.auto %>%
+  future_map("anova") %>%
+  bind_rows(.id = "dataset") %>% 
+  group_by(term) %>% 
+  summarize(n = n(),
+            n.sig = sum(p.value < 0.05),
+            `%p < 0.05` = n.sig/n*100)
+
 rm(none.pls, none.pcr, none.pls.auto, none.pcr.auto)
 
 
@@ -52,6 +62,16 @@ apparent.summary <-
   full_join(apparent.pls.summary, apparent.pls.auto.summary, by = "Statistic") %>% 
   full_join(apparent.pcr.summary) %>% full_join(apparent.pcr.auto.summary)
 # write_excel_csv(apparent.summary, here("out", "apparent summary.csv"))
+
+### how often is each axis significant?
+apparent.anova <-
+  apparent.pcr.auto %>%
+  future_map("anova") %>%
+  bind_rows(.id = "dataset") %>% 
+  group_by(term) %>% 
+  summarize(n = n(),
+            n.sig = sum(p.value < 0.05),
+            `%p < 0.05` = n.sig/n*100)
 
 rm(apparent.pls, apparent.pcr, apparent.pls.auto, apparent.pcr.auto)
 
@@ -73,6 +93,16 @@ hidden.summary <-
   full_join(hidden.pls.summary, hidden.pls.auto.summary, by = "Statistic") %>% 
   full_join(hidden.pcr.summary) %>% full_join(hidden.pcr.auto.summary)
 # write_excel_csv(hidden.summary, here("out", "hidden summary.csv"))
+
+### how often is each axis significant?
+hidden.anova <-
+  hidden.pcr.auto %>%
+  future_map("anova") %>%
+  bind_rows(.id = "dataset") %>% 
+  group_by(term) %>% 
+  summarize(n = n(),
+            n.sig = sum(p.value < 0.05),
+            `%p < 0.05` = n.sig/n*100)
 
 rm(hidden.pls, hidden.pcr, hidden.pls.auto, hidden.pcr.auto)
 
@@ -117,5 +147,6 @@ outtable <-
 
 write_excel_csv(outtable, here("out", "model statistics table.csv"), na = "-")
 
-
-
+none.anova
+apparent.anova
+hidden.anova

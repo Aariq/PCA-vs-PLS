@@ -405,6 +405,7 @@ hidden.pls.bp <-
 hidden.pls.bp
 ```
 
+
 ## Combine Biplots
 
 I think I want 4 panels, PCA on the top, PLS on the bottom, apparent on the left, hidden on the right (to match figure 3)

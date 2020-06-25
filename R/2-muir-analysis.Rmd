@@ -183,7 +183,7 @@ patchwork <-
   plot_layout(guides = "collect") +
   plot_annotation(tag_levels = "A") &
   theme(panel.grid = element_blank()) &
-  labs(fill = "Precip. (mm)")
+  labs(fill = "Precip.\n(mm/yr)")
 
 patchwork
 ggsave(here("out", "muir-biplots.png"), width = 9, height = 4)

@@ -7,6 +7,9 @@ library(rsample)
 library(purrr)
 library(here)
 library(lmtest)
+library(broom)
+library(car)
+
 source(here("R", "ropls_helpers.R"))
 
 #' Do PCA logistic regression (PCA-LR) using ropls::opls() and logistic glm.
@@ -91,8 +94,8 @@ pca_lr <- function(data, X_vars, Y_var, reg_pcs = "max", CV = 7, ...){
                  summarize(R2_tjur = diff(means), .groups = "drop_last") %>%
                  as.numeric(),
                p.value = lik.test$`Pr(>Chisq)`[2])
-  
-  return(list(pca = pca, scores = scores, glm = m, mod.stats = mod.stats, data = data))
+  marginal <- broom::tidy(car::Anova(m))
+  return(list(pca = pca, scores = scores, glm = m, mod.stats = mod.stats, data = data, anova = marginal))
 }
 
 
