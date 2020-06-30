@@ -16,9 +16,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 library(here)
-library(googlesheets4)
-library(googledrive)
-library(rcrossref)
 #for venn diagram
 library(ggforce)
 library(limma)
@@ -43,83 +40,13 @@ Search terms:
 - first round:  PCA OR PLS OR "principal component" OR "partial least squares" OR "partial least square"
 - second round: RDA or "redundancy analysis"
 
-# Purpose
-
-To pull my mini review table from google sheets, get full citations from DOIs in URLs, extract the year, and re-upload.
-
-# Get sheet
-
-```{r}
-review_id <- drive_get(id = "1W5ChtX-bKpJJL8-znfeCWFeuenM7btjL9XUD2nxDxnE")
-sheets_get(review_id)
-sheets_sheets(review_id)
-df <- read_sheet(review_id, "Mini-review", col_types = "ccnccccccccccc")
-```
-
-# Get Citations from DOI
-
-Extract the DOI from the URL
-
-```{r}
-df2 <-
-  df %>%
-  mutate(doi = str_extract(url, "10\\..+"))
-
-#check for duplicate rows
-any(duplicated(df2$doi))
-```
-
-Get citations and year for any entries without them
-
-```{r}
-safe_cr_cn <- possibly(cr_cn, NA)
-df3 <- 
-  df2 %>% 
-  mutate(citation = ifelse(is.na(citation),
-                           safe_cr_cn(doi, format = "text", style = "apa"),
-                           citation))
-
-df4 <- 
-  df3 %>% 
-  unnest(citation) %>% 
-  mutate(year = ifelse(is.na(year),
-                       str_extract(citation, "\\d{4}"),
-                       year)) %>% 
-  select(-doi, -pca_use_old)
-head(df4)
-```
-
-## Write "raw" data locally and update google sheet.
-
-```{r}
-write_csv(df4, here::here("data", "mini-review.csv"))
-```
-```{r}
-write_sheet(df4, "1W5ChtX-bKpJJL8-znfeCWFeuenM7btjL9XUD2nxDxnE", sheet = "out")
-```
-
-
-# Create supplementary and summary tables
-
-
-Filter by year, write to .csv as a supplementary table
-
-```{r}
-df_supp <-
-  df4 %>% 
-  filter(year == 2018) %>% 
-  #remove studies that don't use at least one of the three methods.
-  filter_at(vars(pls_use, rda_use, pca_use), any_vars(!is.na(.)))
-  
-write_excel_csv(df_supp, here("out", "TableS1.csv"), na = " ")
-```
 
 # Explore and create Table
 
 To skip the wrangling above and just re-run these analyses:
 
 ```{r}
-df_supp <- read_csv(here::here("out", "TableS1.csv"))
+df_supp <- read_csv(here::here("data", "mini-review.csv"))
 ```
 
 ## How many papers total and broken down by journal?
@@ -190,8 +117,6 @@ ggplot(df.venn, aes(x0 = x, y0 = y, r = 1.5, fill = labels)) +
   annotate("text", x = df.vdc$x, y = df.vdc$y, label = df.vdc$Counts, size = 5) +
         theme_void()
 ```
-
-
 
 
 ## How is PLS used?
@@ -280,14 +205,13 @@ bind_rows(pls_use, rda_use, pca_use, pc_variable_use, supervised_alt) %>%
   write_csv(here("out", "review-table-rough.csv"))
 ```
 
-
-
 ## How often are other multivariate methods used?
 
 ```{r}
 df_supp %>% 
   filter(!is.na(other_supervised)) %>% count()
 ```
+
 ## How manuy uses of each "other" supervised method, etc.
 
 ```{r}

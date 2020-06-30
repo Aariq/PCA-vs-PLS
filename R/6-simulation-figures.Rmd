@@ -272,6 +272,8 @@ apparent.cor.p <- apparent.cor.p + theme(legend.position = "none")
                   # tag_suffix = ")"
                   )
 ggsave(here("out", "three-scenarios.png"), width = 9.5, height = 8.5)
+# ggsave(here("out", "three-scenarios.eps"), width = 9.5, height = 8.5)
+# ggsave(here("out", "three-scenarios.pdf"), width = 9.5, height = 8.5)
 ```
 
 # Biplots
@@ -419,6 +421,8 @@ I think I want 4 panels, PCA on the top, PLS on the bottom, apparent on the left
         legend.position = "none", plot.title = element_text(hjust=0.5, vjust = 9)) &
   plot_annotation(tag_levels = "A")
 ggsave(here("out", "simulation biplots.png"))
+# ggsave(here("out", "simulation biplots.eps"))
+# ggsave(here("out", "simulation biplots.pdf"))
 ```
 
 

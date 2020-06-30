@@ -187,6 +187,7 @@ patchwork <-
 
 patchwork
 ggsave(here("out", "muir-biplots.png"), width = 9, height = 4)
+# ggsave(here("out", "muir-biplots.pdf"), width = 9, height = 4)
 ```
 
 
