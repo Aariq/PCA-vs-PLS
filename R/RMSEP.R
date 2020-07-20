@@ -202,6 +202,21 @@ pls.summary <- function(pls) {
   return(summary_long)
 }
 
+
+pls.stats <- function(pls) {
+  pls_name <- enquo(pls)
+  
+  stats <- 
+    pls %>%
+    # do RMSEP on successful models and store in summaryDF 
+    future_map_dfr(~.x@summaryDF %>%
+                 mutate(RMSEP = plsda_RMSEP(.x, CV = 7)), .id = "dataset") %>% 
+    select(dataset, Q2 = `Q2(cum)`, R2Y = `R2Y(cum)`, R2X = `R2X(cum)`, pR2 = pR2Y, pQ2 = pQ2, RMSEP, ncomp = pre) %>% 
+    as_tibble()
+
+  return(stats)
+}
+
 #' Summarize results from multiple PCA-LR models
 #'
 #' @param pcr a list of models made with pca_lr()
@@ -234,4 +249,18 @@ pcr.summary <- function(pcr) {
     summary_wide %>%
     pivot_longer(everything(), names_to = "Statistic", values_to = as_name(pcr_name))
   return(summary_long)
+}
+
+pcr.stats <- function(pcr) {
+  pcr_name <- enquo(pcr)
+  
+  stats <-
+    pcr %>% 
+    future_map_dfr(~.$mod.stats, .id = "dataset") %>% 
+    mutate(RMSEP = future_map_dbl(pcr, ~pca_lr_RMSEP(.x, CV = 7)),
+           R2X = future_map_dbl(pcr, ~.$pca@summaryDF$`R2X(cum)`),
+           ncomp = future_map_dbl(pcr, ~.$pca@summaryDF$pre)) %>% 
+    select(dataset, R2Y, p = p.value, RMSEP, R2X, ncomp) 
+  
+  return(stats)
 }

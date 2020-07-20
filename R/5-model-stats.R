@@ -11,27 +11,38 @@ source(here("R", "RMSEP.R"))
 set.seed(464)
 
 
-# Setup parallelization with furrr
+# Setup parallelization with furrr -----------
 plan(multiprocess)
 
 # Get Summary Stats
 
-## No Predictors
+## No Predictors ---------
 
 none.pls <- read_rds(here('data', 'models', 'none-pls.rds'))
 none.pls.auto <- read_rds(here("data", "models", "none-pls-auto.rds"))
 none.pcr <- read_rds(here('data', 'models', 'none-pcr.rds'))
 none.pcr.auto <- read_rds(here("data", "models", "none-pcr-auto.rds"))
 
-none.pls.summary <- pls.summary(none.pls)
-none.pls.auto.summary <- pls.summary(none.pls.auto)
-none.pcr.summary <- pcr.summary(none.pcr)
-none.pcr.auto.summary <- pcr.summary(none.pcr.auto)
+none.pls.stats <- 
+  pls.stats(none.pls) %>% 
+  add_column(Scenario = "No predictors",
+             analysis = "PLS")
+none.pls.auto.stats <-
+  pls.stats(none.pls.auto) %>% 
+  add_column(Scenario = "No predictors",
+             analysis = "PLS (autofit)")
+none.pcr.stats <-
+  pcr.stats(none.pcr) %>% 
+  add_column(Scenario = "No predictors",
+             analysis = "PCA")
+none.pcr.auto.stats <- 
+  pcr.stats(none.pcr.auto) %>% 
+  add_column(Scenario = "No predictors",
+             analysis = "PCA (autofit)")
 beep(4)
-none.summary <-
-  full_join(none.pls.summary, none.pls.auto.summary, by = "Statistic") %>% 
-  full_join(none.pcr.summary) %>% full_join(none.pcr.auto.summary)
-# write_excel_csv(none.summary, here("out", "none summary.csv"))
+
+### Combine 
+none.stats <- bind_rows(none.pls.stats, none.pls.auto.stats, none.pcr.stats, none.pcr.auto.stats)
 
 ### how often is each axis significant?
 none.anova <-
@@ -46,22 +57,33 @@ none.anova <-
 rm(none.pls, none.pcr, none.pls.auto, none.pcr.auto)
 
 
-## Apparent Predictors
+## Apparent Predictors------------
 
 apparent.pls <- read_rds(here('data', 'models', 'apparent-pls.rds'))
 apparent.pls.auto <- read_rds(here("data", "models", "apparent-pls-auto.rds"))
 apparent.pcr <- read_rds(here('data', 'models', 'apparent-pcr.rds'))
 apparent.pcr.auto <- read_rds(here("data", "models", "apparent-pcr-auto.rds"))
 
-apparent.pls.summary <- pls.summary(apparent.pls)
-apparent.pls.auto.summary <- pls.summary(apparent.pls.auto)
-apparent.pcr.summary <- pcr.summary(apparent.pcr)
-apparent.pcr.auto.summary <- pcr.summary(apparent.pcr.auto)
+apparent.pls.stats <-
+  pls.stats(apparent.pls) %>% 
+  add_column(Scenario = "Apparent predictors",
+             analysis = "PLS")
+apparent.pls.auto.stats <- 
+  pls.stats(apparent.pls.auto) %>% 
+  add_column(Scenario = "Apparent predictors",
+             analysis = "PLS (autofit)")
+apparent.pcr.stats <- 
+  pcr.stats(apparent.pcr) %>% 
+  add_column(Scenario = "Apparent predictors",
+             analysis = "PCA")
+apparent.pcr.auto.stats <- 
+  pcr.stats(apparent.pcr.auto) %>% 
+  add_column(Scenario = "Apparent predictors",
+             analysis = "PCA (autofit)")
 beep(4)
-apparent.summary <-
-  full_join(apparent.pls.summary, apparent.pls.auto.summary, by = "Statistic") %>% 
-  full_join(apparent.pcr.summary) %>% full_join(apparent.pcr.auto.summary)
-# write_excel_csv(apparent.summary, here("out", "apparent summary.csv"))
+
+## Combine
+apparent.stats <- bind_rows(apparent.pls.stats, apparent.pls.auto.stats, apparent.pcr.stats, apparent.pcr.auto.stats)
 
 ### how often is each axis significant?
 apparent.anova <-
@@ -84,15 +106,26 @@ hidden.pls.auto <- read_rds(here("data", "models", "hidden-pls-auto.rds"))
 hidden.pcr <- read_rds(here('data', 'models', 'hidden-pcr.rds'))
 hidden.pcr.auto <- read_rds(here("data", "models", "hidden-pcr-auto.rds"))
 
-hidden.pls.summary <- pls.summary(hidden.pls)
-hidden.pls.auto.summary <- pls.summary(hidden.pls.auto)
-hidden.pcr.summary <- pcr.summary(hidden.pcr)
-hidden.pcr.auto.summary <- pcr.summary(hidden.pcr.auto)
+hidden.pls.stats <-
+  pls.stats(hidden.pls) %>% 
+  add_column(Scenario = "Hidden predictors",
+             analysis = "PLS")
+hidden.pls.auto.stats <-
+  pls.stats(hidden.pls.auto) %>% 
+  add_column(Scenario = "Hidden predictors",
+             analysis = "PLS (autofit)")
+hidden.pcr.stats <-
+  pcr.stats(hidden.pcr) %>% 
+  add_column(Scenario = "Hidden predictors",
+             analysis = "PCA")
+hidden.pcr.auto.stats <-
+  pcr.stats(hidden.pcr.auto) %>% 
+  add_column(Scenario = "Hidden predictors",
+             analysis = "PCA (autofit)")
 beep(4)
-hidden.summary <-
-  full_join(hidden.pls.summary, hidden.pls.auto.summary, by = "Statistic") %>% 
-  full_join(hidden.pcr.summary) %>% full_join(hidden.pcr.auto.summary)
-# write_excel_csv(hidden.summary, here("out", "hidden summary.csv"))
+
+## Combine
+hidden.stats <- bind_rows(hidden.pls.stats, hidden.pls.auto.stats, hidden.pcr.stats, hidden.pcr.auto.stats)
 
 ### how often is each axis significant?
 hidden.anova <-
@@ -106,9 +139,30 @@ hidden.anova <-
 
 rm(hidden.pls, hidden.pcr, hidden.pls.auto, hidden.pcr.auto)
 
-
 # Combine into one table
 
+meansd <- function(x) {
+  if (all(is.na(x))) {
+    NA
+  } else {
+    glue("{round(mean(x, na.rm = TRUE), 3)} ± {round(sd(x, na.rm = TRUE), 3)}")
+  }
+}
+
+all.stats <- bind_rows(none.stats, apparent.stats, hidden.stats)
+summary_wide <- all.stats %>% 
+  group_by(Scenario, analysis) %>% 
+  summarize(n = as.character(n()),
+            `%p < 0.05` = first(ifelse(str_detect(analysis, "PCA"),
+                                       as.character(round(sum(p < 0.05)/500*100), 2),
+                                       as.character(round(sum(pQ2 < 0.05)/500*100), 2))),
+            num.ncomp1 = as.character(sum(ncomp == 1)),
+            num.ncomp2 = as.character(sum(ncomp == 2)),
+            num.ncomp3 = as.character(sum(ncomp ==3)),
+            num.ncompmore = as.character(sum(ncomp > 3)),
+            across(where(is.numeric), meansd))
+
+# rearrange so columns are analyses and rows are different stats
 stat_order <-
   c(
     "n",
@@ -116,8 +170,6 @@ stat_order <-
     "R2X",
     "R2Y",
     "Q2",
-    "%pR2 < 0.05",
-    "%pQ2 < 0.05",
     "%p < 0.05",
     "ncomp",
     "num.ncomp1",
@@ -126,20 +178,10 @@ stat_order <-
     "num.ncompmore"
   )
 
-outtable <-
-  list(none.summary, apparent.summary, hidden.summary) %>%
-  future_map(
-    ~ select(
-      .x,
-      Statistic,
-      "PCA" = ends_with("pcr"),
-      "PLS" = ends_with("pls"),
-      "PCA (autofit)" = ends_with("pcr.auto"),
-      "PLS (autofit)" = ends_with("pls.auto")
-    )
-  ) %>%
-  set_names(c("No predictors", "Apparent predictors", "Hidden predictors")) %>%
-  bind_rows(.id = "Scenario") %>%
+outtable <- 
+  summary_wide %>% 
+  pivot_longer(n:p, names_to = "Statistic") %>% 
+  pivot_wider(names_from = analysis, values_from = value) %>% 
   filter(Statistic %in% stat_order) %>%
   mutate(Statistic = fct_relevel(Statistic, stat_order),
          Scenario = fct_inorder(Scenario)) %>%
