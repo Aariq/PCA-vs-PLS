@@ -244,6 +244,61 @@ apparent.pls.p
 ```
 
 # Make figure
+For ESA talk:
+## Apparent
+
+```{r}
+apparent.p <-
+  (apparent.pca.p +
+     labs(title = "PCA-LR",
+          subtitle = NULL,
+          x = "PC 1 (51.4%)",
+          y = "PC 2 (11.2%)")) /
+  (apparent.pls.p +
+     labs(title = "PLS-DA",
+          subtitle = NULL,
+          x = "Predictive Comp. 1 (51.2%)",
+          y = "Predictive Comp. 2 (8.41%)")) &
+  theme(legend.position = "none", text = element_text(size = 14))
+ggsave(here("out", "apparent.png"), apparent.p, height = 8, width = 4)
+```
+
+## Hidden
+
+```{r}
+hidden.p <-
+  (hidden.pca.p +
+     labs(title = "PCA-LR",
+          subtitle = NULL,
+          x = "PC 1 (25.2%)",
+          y = "PC 2 (24%)")) /
+  (hidden.pls.p +
+     labs(title = "PLS-DA",
+          subtitle = NULL,
+          x = "Predictive Comp. 1 (18.8%)",
+          y = "Predictive Comp. 2 (17.5%)")) &
+  theme(legend.position = "none", text = element_text(size = 14))
+ggsave(here("out", "hidden.png"), hidden.p, height = 8, width = 4)
+```
+
+## None
+
+```{r}
+none.p <-
+  (none.pca.p +
+     labs(title = "PCA-LR",
+          subtitle = NULL,
+          x = "PC 1 (14.1%)",
+          y = "PC 2 (11.6%)")) /
+  (none.pls.p +
+     labs(title = "PLS-DA",
+          subtitle = NULL,
+          x = "Predictive Comp. 1 (7.94%)",
+          y = "Predictive Comp. 2 (7.23%)")) &
+  theme(legend.position = "none", text = element_text(size = 14))
+ggsave(here("out", "none.png"), none.p, height = 8, width = 4)
+```
+
 
 ## Three Scenarios
 Put three scenarios together to make a figure.

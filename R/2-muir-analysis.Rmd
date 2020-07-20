@@ -236,3 +236,26 @@ cor.table <-
        PLS = map_dbl(X, ~cor(.x, p1)))
 write_csv(cor.table, here("out", "muir correlation table.csv"))
 ```
+
+# Plots for ESA talk
+
+```{r}
+pca.biplot +
+  labs(x = "PC1 (31.9%)", y = "PC2 (24.2%)", fill = "Precip.\n(mm/yr)") +
+  theme(text = element_text(size = 14))
+ggsave(here("out", "muir_pca.png"), height = 4, width = 5)
+```
+
+```{r}
+pls.biplot +
+  labs(x = "Pred. 1 (19.5%)", y = "Pred. 2 (25.4%)", fill = "Precip.\n(mm/yr)") +
+  theme(text = element_text(size = 14))
+ggsave(here("out", "muir_pls.png"), height = 4, width = 5)
+```
+
+```{r}
+
+bind_cols(tomato.filtered, get_scores(tom.pca)) %>% 
+  arrange(ldmc)
+```
+
