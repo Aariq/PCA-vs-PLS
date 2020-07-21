@@ -192,3 +192,9 @@ write_excel_csv(outtable, here("out", "model statistics table.csv"), na = "-")
 none.anova
 apparent.anova
 hidden.anova
+
+# Plots ------
+
+ggplot(all.stats, aes(x = Scenario, y = R2Y, fill = analysis)) +
+  # geom_violin(draw_quantiles = 0.5)
+  geom_boxplot()
