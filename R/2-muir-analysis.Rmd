@@ -248,7 +248,7 @@ ggsave(here("out", "muir_pca.png"), height = 4, width = 5)
 
 ```{r}
 pls.biplot +
-  labs(x = "Pred. 1 (19.5%)", y = "Pred. 2 (25.4%)", fill = "Precip.\n(mm/yr)") +
+  labs(x = "Predictive Comp. 1 (19.5%)", y = "Predictive Comp. 2 (25.4%)", fill = "Precip.\n(mm/yr)") +
   theme(text = element_text(size = 14))
 ggsave(here("out", "muir_pls.png"), height = 4, width = 5)
 ```
