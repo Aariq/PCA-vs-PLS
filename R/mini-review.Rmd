@@ -180,6 +180,14 @@ pc_variable_use
 sum(pc_variable_use[2]) == pca_use[4, 2]
 ```
 
+When PCs are used as variables in other models, do the studies have multivariate responses or multivariate predictors/explanatory variables?
+
+```{r}
+df_supp %>% 
+  filter(pca_use == "PCs used as variables") %>% 
+  count(mv_response_or_predictor)
+```
+
 
 
 
