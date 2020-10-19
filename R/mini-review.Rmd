@@ -180,6 +180,34 @@ pc_variable_use
 sum(pc_variable_use[2]) == pca_use[4, 2]
 ```
 
+When PCs are used as variables in other models, do the studies have multivariate responses or multivariate predictors/explanatory variables?
+
+```{r}
+df_supp %>% 
+  filter(pca_use == "PCs used as variables") %>% 
+  count(mv_response_or_predictor)
+```
+
+How many components are retained?
+
+```{r}
+df_supp %>% 
+  filter(!is.na(pca_use)) %>% 
+  group_by(pca_use) %>% 
+  summarize(mean_n_pcs = mean(pcs_retained, na.rm = TRUE),
+            median_n_pcs = median(pcs_retained, na.rm = TRUE),
+            min_n_pcs = min(pcs_retained, na.rm = TRUE),
+            max_n_pcs = max(pcs_retained, na.rm = TRUE))
+
+df_supp %>% 
+  filter(pca_use == "PCs used as variables") %>% 
+  count(pcs_retained) %>% 
+  ggplot(aes(x = pcs_retained, y = n)) + geom_col() +
+  scale_x_continuous("Number of PCs retained", n.breaks = 10) +
+  scale_y_continuous("Number of Studies") +
+  theme_bw()
+ggsave(here("out", "Fig S1.png"), height = 4, width = 5)
+```
 
 
 

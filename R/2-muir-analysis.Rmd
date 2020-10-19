@@ -58,16 +58,9 @@ pcr.df2 <-
 ```{r}
 m0 <- lm(precip ~ 1, data = pcr.df2)
 m1 <- lm(precip ~ p1, data = pcr.df2)
-m2 <- lm(precip ~ p2, data = pcr.df2)
-m3 <- lm(precip ~ p1 + p2, data = pcr.df2)
 
-# car::Anova(m3)
-# lrtest(m0, m1)
-# summary(m1)
-# lrtest(m0, m2)
-# summary(m2)
-# lrtest(m0, m3)
-# summary(m3)
+lrtest(m0, m1)
+summary(m1)
 ```
 
 
@@ -96,7 +89,7 @@ scaled_scores <- get_scores(tom.pca) %>%
 
 
 xlab <- TeX(glue("Comp. 1 ($R^2_X = {tom.pca.data$axis_stats[1,1] * 100}%$, $R^2_Y = {round(glance(m1)$r.squared * 100, 1)}%$)"))
-ylab <- TeX(glue("Comp. 2 ($R^2_X = {tom.pca.data$axis_stats[2,1] * 100}%$, $R^2_Y = {round(glance(m2)$r.squared * 100, 1)}%$)"))
+ylab <- TeX(glue("Comp. 2 ($R^2_X = {tom.pca.data$axis_stats[2,1] * 100}%$)"))
 
 pca.biplot <- 
   ggplot(scaled_scores) +
@@ -126,19 +119,24 @@ Precipitation is significantly related to leaf traits.  The predictive axes expl
 
 ```{r}
 tom.pls <- 
-  opls(X, tomato.filtered$precip, fig.pdfC = "none")
+  opls(X, tomato.filtered$precip,
+       fig.pdfC = "none",
+       permI = 1000)
 #produces a single component model.  I will "force" two predictive axes for the sake of plotting.
-tom.pls <- 
-  opls(X, tomato.filtered$precip, fig.pdfC = "none", predI = 2, permI = 1000)
+tom.pls2 <- 
+  opls(X, tomato.filtered$precip,
+       fig.pdfC = "none", 
+       predI = 2, permI = 1000)
 
 get_modelinfo(tom.pls)
 ```
 
+
 ## PLSR bi-plot
 
 ```{r}
-tom.pls.data <- get_modelinfo(tom.pls)
-scaled_loadings <- get_loadings(tom.pls) %>% 
+tom.pls.data <- get_modelinfo(tom.pls2)
+scaled_loadings <- get_loadings(tom.pls2) %>% 
   mutate(p1 = ss_scale(p1, tom.pls.data$axis_stats$R2X[1]),
          p2 = ss_scale(p2, tom.pls.data$axis_stats$R2X[2])) %>% 
     mutate(Variable = case_when(
@@ -149,7 +147,7 @@ scaled_loadings <- get_loadings(tom.pls) %>%
     TRUE ~ Variable
   ))
 
-scaled_scores <- get_scores(tom.pls) %>% 
+scaled_scores <- get_scores(tom.pls2) %>% 
   mutate_if(is.numeric, ss_scale) %>% 
   add_column(precip = tomato.filtered$precip)
 
@@ -234,6 +232,7 @@ cor.table <-
   tibble(Variable = loading.table$Variable,
        PCA = map_dbl(X, ~cor(.x, pc1)),
        PLS = map_dbl(X, ~cor(.x, p1)))
+cor.table
 write_csv(cor.table, here("out", "muir correlation table.csv"))
 ```
 
@@ -248,7 +247,7 @@ ggsave(here("out", "muir_pca.png"), height = 4, width = 5)
 
 ```{r}
 pls.biplot +
-  labs(x = "Pred. 1 (19.5%)", y = "Pred. 2 (25.4%)", fill = "Precip.\n(mm/yr)") +
+  labs(x = "Predictive Comp. 1 (19.5%)", y = "Predictive Comp. 2 (25.4%)", fill = "Precip.\n(mm/yr)") +
   theme(text = element_text(size = 14))
 ggsave(here("out", "muir_pls.png"), height = 4, width = 5)
 ```
