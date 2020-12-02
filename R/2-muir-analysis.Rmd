@@ -107,7 +107,7 @@ pca.biplot <-
   labs(x = xlab,
        y = ylab,
        fill = "Annual Precipitation (mm)",
-       subtitle = "Principal Components Analysis (PCA)") +
+       subtitle = "a) Principal Components Analysis (PCA)") +
   theme_bw()
 pca.biplot
 ```
@@ -169,23 +169,40 @@ pls.biplot <-
   labs(x = xlab,
        y = ylab,
        fill = "Annual Precipitation (mm)",
-       subtitle = "Partial Least Squares (PLS) Regression") +
+       subtitle = "b) Partial Least Squares (PLS) Regression") +
   theme_bw()
 pls.biplot
 ```
 ## Compose and output plot
 
+Oecologia wants panel labels *inside* of plot borders and a "Fig. 2" label outside of the panel borders.
+
 ```{r}
 patchwork <- 
   pca.biplot + pls.biplot  +
-  plot_layout(guides = "collect") +
-  plot_annotation(tag_levels = "A") &
-  theme(panel.grid = element_blank()) &
+  plot_layout(guides = "collect") &
+  theme_classic() &
+  theme(panel.grid = element_blank(),
+        panel.border = element_blank()) &
   labs(fill = "Precip.\n(mm/yr)")
+```
 
-patchwork
+
+```{r}
+patchwork2 <-
+  patchwork + 
+  #for Oecologia final submission:
+  plot_annotation(title = "Fig. 3", tag_levels = "a", tag_suffix = ")") &
+  labs(subtitle = NULL) & #temporary.  want to keep these, but have them inside of plot boundaries.
+  theme(
+    plot.tag.position = c(0,1),
+    plot.tag = element_text(vjust = 1.5, hjust = -4)
+  ) 
+
+
+patchwork2
 ggsave(here("out", "muir-biplots.png"), width = 9, height = 4)
-# ggsave(here("out", "muir-biplots.pdf"), width = 9, height = 4)
+ggsave(here("out", "muir-biplots.pdf"), width = 9, height = 4)
 ```
 
 

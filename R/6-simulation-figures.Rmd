@@ -94,14 +94,22 @@ none.pls <- opls(select(none, -group), none$group, fig.pdfC = "none", permI = 50
 
 ```{r message=FALSE, warning=FALSE}
 none.pca.p <-
-  plot_pca(none.pca, none$group, annotate = "subtitle") +
-  labs(title = NULL,
-       subtitle =TeX(glue("$R^2_Y = {signif(none.pcalr$mod.stats$R2Y, 2)}$; $p = {signif(none.pcalr$mod.stats$p.value, 2)}$"))) +
-  scale_color_discrete_qualitative(palette = "Dark 3")
+  plot_pca(none.pca, none$group, annotate = "caption") +
+  scale_color_discrete_qualitative(palette = "Dark 3") +
+  labs(caption =TeX(glue("$R^2_Y = {signif(none.pcalr$mod.stats$R2Y, 2)}$; $p = {signif(none.pcalr$mod.stats$p.value, 2)}$"))) +
+  theme_classic() +
+  theme(plot.title = element_blank(),
+        plot.caption.position = "panel",
+        plot.caption = element_text(vjust = 25, hjust = 0.02))
+
 
 none.pls.p <-
-  plot_plsda(none.pls, annotate = "subtitle") +
-  scale_color_discrete_qualitative(palette = "Dark 3")
+  plot_plsda(none.pls, annotate = "caption") +
+  scale_color_discrete_qualitative(palette = "Dark 3") +
+  theme_classic() +
+  theme(plot.title = element_blank(),
+        plot.caption.position = "panel",
+        plot.caption = element_text(vjust = 25, hjust = 0.02))
 none.pca.p
 none.pls.p
 ```
@@ -164,14 +172,21 @@ hidden.pls <- opls(select(hidden, -group), hidden$group, fig.pdfC = "none", pred
 
 ```{r message=FALSE, warning=FALSE}
 hidden.pca.p <-
-  plot_pca(hidden.pca, hidden$group, annotate = "subtitle") +
-  labs(title = NULL,
-       subtitle =TeX(glue("$R^2_Y = {signif(hidden.pcalr$mod.stats$R2Y, 2)}$; $p = {signif(hidden.pcalr$mod.stats$p.value, 2)}$"))) +
-  scale_color_discrete_qualitative(palette = "Dark 3")
+  plot_pca(hidden.pca, hidden$group, annotate = "caption") +
+  scale_color_discrete_qualitative(palette = "Dark 3") +
+  labs(caption =TeX(glue("$R^2_Y = {signif(hidden.pcalr$mod.stats$R2Y, 2)}$; $p = {signif(hidden.pcalr$mod.stats$p.value, 2)}$"))) +
+  theme_classic() +
+  theme(plot.title = element_blank(),
+        plot.caption.position = "panel",
+        plot.caption = element_text(vjust = 25, hjust = 0.02))
 
 hidden.pls.p <-
-  plot_plsda(hidden.pls, annotate = "subtitle") +
-  scale_color_discrete_qualitative(palette = "Dark 3")
+  plot_plsda(hidden.pls, annotate = "caption") +
+  scale_color_discrete_qualitative(palette = "Dark 3") +
+  theme_classic() +
+  theme(plot.title = element_blank(),
+        plot.caption.position = "panel",
+        plot.caption = element_text(vjust = 25, hjust = 0.02))
 hidden.pca.p
 hidden.pls.p
 ```
@@ -231,14 +246,21 @@ apparent.pls <- opls(select(apparent, -group), apparent$group, fig.pdfC = "none"
 
 ```{r message=FALSE, warning=FALSE}
 apparent.pca.p <-
-  plot_pca(apparent.pca, apparent$group, annotate = "subtitle") +
-  labs(title = NULL,
-       subtitle =TeX(glue("$R^2_Y = 0.99$; $p < 0.001$"))) +
-  scale_color_discrete_qualitative(palette = "Dark 3")
-
+  plot_pca(apparent.pca, apparent$group, annotate = "caption") +
+  scale_color_discrete_qualitative(palette = "Dark 3") +
+  labs(caption = TeX(glue("$R^2_Y = 0.99$; $p < 0.001$"))) +
+  theme_classic() +
+  theme(plot.title = element_blank(),
+        plot.caption.position = "panel",
+        plot.caption = element_text(vjust = 25, hjust = 0.02))
+  
 apparent.pls.p <-
-  plot_plsda(apparent.pls, annotate = "subtitle") +
-  scale_color_discrete_qualitative(palette = "Dark 3")
+  plot_plsda(apparent.pls, annotate = "caption") +
+  scale_color_discrete_qualitative(palette = "Dark 3") +
+  theme_classic() +
+  theme(plot.title = element_blank(),
+        plot.caption.position = "panel",
+        plot.caption = element_text(vjust = 25, hjust = 0.02))
 apparent.pca.p
 apparent.pls.p
 ```
@@ -303,32 +325,52 @@ ggsave(here("out", "none.png"), none.p, height = 8, width = 5)
 ## Three Scenarios
 Put three scenarios together to make a figure.
 
-```{r}
-fix_theme_cor <-
-  theme(plot.subtitle = element_text(hjust = 0.5))
 
-fix_theme_score <-
-  theme(legend.position = "none",
-        plot.title = element_blank(),
-        panel.grid = element_blank())
+```{r fig.width=9.5, fig.height=2.833}
+r1 <-
+  (none.cor.p | apparent.cor.p | hidden.cor.p) +
+  plot_layout(guides = "collect") &
+  #center subtitles
+  theme(plot.subtitle = element_text(hjust = 0.5))
+r1
 ```
 
-```{r}
-# none.cor.p + apparent.cor.p + hidden.cor.p + plot_layout(guides = "collect")
-# guides = "collect" currently broken with R 4.0.0, workaround until patchwork update:
-none.cor.p <- none.cor.p + theme(legend.position = "none")
-apparent.cor.p <- apparent.cor.p + theme(legend.position = "none")
 
-(none.cor.p + apparent.cor.p + hidden.cor.p & fix_theme_cor) /
-  (none.pca.p + apparent.pca.p + hidden.pca.p & fix_theme_score) /
-  (none.pls.p + apparent.pls.p + hidden.pls.p & fix_theme_score) +
-  plot_annotation(tag_levels = "A",
-                  # tag_prefix = "(",
-                  # tag_suffix = ")"
-                  )
+```{r fig.width=9.5, fig.height=2.833}
+r2 <-
+  (none.pca.p | apparent.pca.p | hidden.pca.p) &
+  scale_y_continuous(expand = expansion(mult = c(0.12, 0.05))) &
+  theme(legend.position = "none")
+r2
+```
+
+
+```{r fig.width=9.5, fig.height=2.833}
+r3 <-
+  (none.pls.p | apparent.pls.p | hidden.pls.p) &
+  scale_y_continuous(expand = expansion(mult = c(0.12, 0.05))) &
+  theme(legend.position = "none")
+r3
+```
+Can't get tags inside of plots with patchwork
+
+```{r fig.width=9.5, fig.height=8.5}
+(r1/r2/r3)  & plot_annotation(tag_levels = "a", tag_suffix = ")") &
+  theme(
+    plot.tag.position = c(0,1),
+    plot.tag = element_text(vjust = 3, hjust = 0)
+  )
+```
+
+
+Gonna make a version with no tags and just add them in the pdf I guess?
+
+```{r fig.width=9.5, fig.height=8.5}
+r1/r2/r3
+
 ggsave(here("out", "three-scenarios.png"), width = 9.5, height = 8.5)
 ggsave(here("out", "three-scenarios.eps"), width = 9.5, height = 8.5)
-# ggsave(here("out", "three-scenarios.pdf"), width = 9.5, height = 8.5)
+ggsave(here("out", "three-scenarios.pdf"), width = 9.5, height = 8.5)
 ```
 
 # Biplots
