@@ -310,7 +310,7 @@ Can't get tags inside of plots with patchwork
 Gonna make a version with no tags and just add them in the pdf I guess?
 
 ```{r fig.width=9.5, fig.height=8.5}
-r1/r2/r3
+r1/r2/r3 + plot_annotation(title = "Fig. 4")
 
 ggsave(here("out", "three-scenarios.png"), width = 9.5, height = 8.5)
 ggsave(here("out", "three-scenarios.eps"), width = 9.5, height = 8.5)
@@ -454,15 +454,20 @@ hidden.pls.bp
 I think I want 4 panels, PCA on the top, PLS on the bottom, apparent on the left, hidden on the right (to match figure 3)
 
 ```{r fig.height=6, fig.width=6.5}
-(apparent.pca.bp + labs(subtitle = "PCA", title = "Apparent Predictors"))+
-  (hidden.pca.bp + labs(subtitle = "PCA", title = "Hidden Predictors")) +
-  (apparent.pls.bp + labs(subtitle = "PLS")) +
-  (hidden.pls.bp + labs(subtitle = "PLS")) & scale_shape_manual(values = c("a" = "circle", "b" = "triangle open")) &
+biplots <-
+  (apparent.pca.bp + labs(subtitle = "a) PCA, Apparent Predictors"))+
+  (hidden.pca.bp + labs(subtitle = "b) PCA, Hidden Predictors")) +
+  (apparent.pls.bp + labs(subtitle = "c) PLS, Apparent Predictors")) +
+  (hidden.pls.bp + labs(subtitle = "d) PLS, Hidden Predictors")) &
+  scale_shape_manual(values = c("a" = "circle", "b" = "triangle open")) &
+  scale_y_continuous(expand = expansion(mult = c(0.05, 0.15))) &
+  theme_classic() &
   theme(text = element_text(size=10),
-        legend.position = "none", plot.title = element_text(hjust=0.5, vjust = 9)) &
-  plot_annotation(tag_levels = "A")
-ggsave(here("out", "simulation biplots.png"))
-ggsave(here("out", "simulation biplots.pdf"))
+        legend.position = "none",
+        plot.subtitle = element_text(hjust=0.1, vjust = -8)) 
+biplots + plot_annotation(title = "Fig. 5")
+ggsave(here("out", "simulation biplots.png"), height = 84*2, width = 84*2, units = "mm")
+ggsave(here("out", "simulation biplots.pdf"), height = 84*2, width = 84*2, units = "mm")
 ```
 
 
