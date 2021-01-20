@@ -272,7 +272,9 @@ Put three scenarios together to make a figure.
 
 ```{r fig.width=9.5, fig.height=2.833}
 r1 <-
-  (none.cor.p | apparent.cor.p | hidden.cor.p) +
+  (none.cor.p +       annotate("text", x = -Inf, y = Inf, label = "(a)", hjust = -0.2, vjust = 1.2) |
+     apparent.cor.p + annotate("text", x = -Inf, y = Inf, label = "(b)", hjust = -0.2, vjust = 1.2)|
+     hidden.cor.p +   annotate("text", x = -Inf, y = Inf, label = "(c)", hjust = -0.2, vjust = 1.2)) +
   plot_layout(guides = "collect") &
   #center subtitles
   theme(plot.subtitle = element_text(hjust = 0.5))
@@ -282,7 +284,9 @@ r1
 
 ```{r fig.width=9.5, fig.height=2.833}
 r2 <-
-  (none.pca.p | apparent.pca.p | hidden.pca.p) &
+  (none.pca.p +       annotate("text", x = -Inf, y = Inf, label = "(d)", hjust = -0.2, vjust = 1.2)| 
+     apparent.pca.p + annotate("text", x = -Inf, y = Inf, label = "(e)", hjust = -0.2, vjust = 1.2) | 
+     hidden.pca.p +   annotate("text", x = -Inf, y = Inf, label = "(f)", hjust = -0.2, vjust = 1.2)) &
   scale_y_continuous(expand = expansion(mult = c(0.12, 0.05))) &
   theme(legend.position = "none")
 r2
@@ -291,19 +295,17 @@ r2
 
 ```{r fig.width=9.5, fig.height=2.833}
 r3 <-
-  (none.pls.p | apparent.pls.p | hidden.pls.p) &
+  (none.pls.p +       annotate("text", x = -Inf, y = Inf, label = "(g)", hjust = -0.2, vjust = 1.2)| 
+     apparent.pls.p + annotate("text", x = -Inf, y = Inf, label = "(h)", hjust = -0.2, vjust = 1.2)|
+     hidden.pls.p +   annotate("text", x = -Inf, y = Inf, label = "(i)", hjust = -0.2, vjust = 1.2)) &
   scale_y_continuous(expand = expansion(mult = c(0.12, 0.05))) &
   theme(legend.position = "none")
 r3
 ```
-Can't get tags inside of plots with patchwork
+Can't get tags inside of plots with patchwork, using `annotate()` instead
 
 ```{r fig.width=9.5, fig.height=8.5}
-(r1/r2/r3)  & plot_annotation(tag_levels = "a", tag_suffix = ")") &
-  theme(
-    plot.tag.position = c(0,1),
-    plot.tag = element_text(vjust = 3, hjust = 0)
-  )
+(r1/r2/r3) 
 ```
 
 
